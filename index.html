@@ -1633,6 +1633,9 @@ const TERMS = {
   'corner-block':'<b>Corner block</b> — a triangular 1/4″ plywood gusset reinforcing a corner joint, held 3/4″ in from the edge.',
   'keystone'   : '<b>Keystone</b> — a 1/4″ plywood gusset reinforcing a toggle (mid-rail) joint.',
   'crossbrace' : '<b>Crossbrace</b> — a diagonal member that keeps a flat square.',
+  'rack'       : '<b>Rack</b> — when a rectangular frame skews out of square, leaning into a parallelogram. Diagonal braces and corner blocks <b>triangulate</b> the frame so it can’t rack.',
+  'stringer'   : '<b>Stringer</b> — a long outer side member of a platform frame (the platform’s version of a stile).',
+  'joist'      : '<b>Joist</b> — an interior cross-member of a platform that carries the load of the lid between the stringers (the platform’s version of a toggle).',
   'flat-orient': '<b>Flat (orientation)</b> — the board lies face-down, so its wide 2-1/2″ face is in the plane of the flat. Typical for Broadway rails.',
   'on-edge'    : '<b>On edge</b> — the board stands on its narrow edge, so only its 3/4″ thickness faces out. Used for Hollywood frames and platform joists.'
 };
@@ -1642,11 +1645,14 @@ const TERM_MATCHERS = [
   {key:'on-edge',      re:/\bon edge\b/gi},
   {key:'crossbrace',   re:/\bcross-?braces?\b/gi},
   {key:'keystone',     re:/\bkeystones?\b/gi},
+  {key:'stringer',     re:/\bstringers?\b/gi},
+  {key:'joist',        re:/\bjoists?\b/gi},
   {key:'stile',        re:/\bstiles?\b/gi},
   {key:'rail',         re:/\brails?\b/gi},
   {key:'toggle',       re:/\btoggles?\b/gi},
   {key:'muslin',       re:/\bmuslin\b/gi},
-  {key:'reveal',       re:/\breveal\b/gi}
+  {key:'reveal',       re:/\breveal\b/gi},
+  {key:'rack',         re:/\brack(?:ing|ed|s)?\b/gi}
 ];
 /* wrap known terms in text only (never inside HTML tags) */
 function glossify(html){
@@ -2691,14 +2697,17 @@ function verifyBuild(style, wFt, hFt){
   if (!leftStile || !rightStile) issues.push('Frame needs a vertical <b>stile</b> on each side.');
   if (!topRail || !botRail)      issues.push('Frame needs a <b>rail</b> across the top and the bottom.');
 
-  // interior toggles
-  const toggles = horiz.filter(h=> (h.cy - minY >= 4) && (maxY - h.cy >= 4)).length;
+  // interior toggles — genuinely horizontal cross-members. Exclude diagonal
+  // braces, whose bounding box is tall (a board's face is only ~2-3" high).
+  const realTog = horiz.filter(h=> (h.cy - minY >= 4) && (maxY - h.cy >= 4) && (h.b.maxy - h.b.miny) <= 6);
+  const toggles = realTog.length;
   const longIn = Math.max(frameW, frameH);
   const expTog = Math.max(1, Math.round(longIn/24) - 1);   // ~2'-on-centre
+  const innerTerm = (style==='platform') ? 'joist' : 'toggle';
   if (style==='broadway'){
     if (toggles < 1) issues.push('Broadway flat needs a <b>toggle</b> (a centre rail).');
   } else {
-    if (toggles < expTog) issues.push(`Needs <b>${expTog} toggle${expTog>1?'s':''}</b> on ~2′ centres — you have ${toggles}.`);
+    if (toggles < expTog) issues.push(`Needs <b>${expTog} ${innerTerm}${expTog>1?'s':''}</b> on ~2′ centres — you have ${toggles}.`);
   }
 
   // cover sheet helper — a face counts if it overlaps most of the frame,
@@ -2717,6 +2726,12 @@ function verifyBuild(style, wFt, hFt){
     const corners=[[minX,minY],[maxX,minY],[minX,maxY],[maxX,maxY]];
     const covered = corners.filter(c=> cbs.some(cb=>{ const ic=centerInches(cb); return Math.hypot(ic[0]-c[0], ic[1]-c[1]) < 18; })).length;
     if (cbs.length<4 || covered<4) issues.push('Broadway flats are reinforced with a <b>corner block at all 4 corners</b>.');
+    // keystone over each end of every toggle, where it lands on a stile
+    const keys = pieces.filter(p=>p.type==='fab-key');
+    let kNeed=0, kHave=0;
+    realTog.forEach(t=>{ [minX,maxX].forEach(jx=>{ kNeed++;
+      if (keys.some(k=>{ const ic=centerInches(k); return Math.hypot(ic[0]-jx, ic[1]-t.cy) < 16; })) kHave++; }); });
+    if (kNeed && kHave<kNeed) issues.push('Reinforce the <b>toggle</b> with a <b>keystone</b> over each end — where it lands on a stile.');
     if (sheets.length) issues.push('A Broadway flat is covered in <b>muslin</b> (soft) — remove the hard sheet.');
   } else if (style==='hollywood'){
     const luan = sheets.filter(s=>s.type==='sh-luan');
@@ -2762,7 +2777,10 @@ function quizRequiredList(style, wFt, hFt){
     items.push({kind:'lumber', role:'Toggle', type:lumType, orient, qty:2*rows, lengthIn:(W-3*faceW)/2, lumLbl});
   else
     items.push({kind:'lumber', role:'Toggle', type:lumType, orient, qty:rows, lengthIn:W-2*faceW, lumLbl});
-  if (style==='broadway')       items.push({kind:'fab',   role:'Corner block', type:'fab-cb', qty:4});
+  if (style==='broadway'){
+    items.push({kind:'fab', role:'Corner block', type:'fab-cb',  qty:4});
+    items.push({kind:'fab', role:'Keystone',     type:'fab-key', qty:2*rows});
+  }
   else if (style==='hollywood') items.push({kind:'sheet', role:'Luan face',    type:'sh-luan', qty:1, lengthIn:H, widthIn:W});
   else                          items.push({kind:'sheet', role:'Plywood lid',  type:'sh-ply',  qty:1, lengthIn:H, widthIn:W});
   return items;
@@ -3028,7 +3046,11 @@ function buildTraining(style){
       toggles.push(H_(Win/2, cy, Win - 2*w));
     }
   }
-  const corners = [CB(7,7,0), CB(Win-7,7,90), CB(Win-7,Hin-7,180), CB(7,Hin-7,270)];
+  // corner blocks: 10" legs, held the standard 3/4" reveal in from the outer
+  // edges so the right-angle corner sits on the wood (not out over the opening).
+  // Centre = half a 10" leg (5") + 3/4" reveal in from each outer edge.
+  const cbOff = 5 + 0.75;
+  const corners = [CB(cbOff,cbOff,0), CB(Win-cbOff,cbOff,90), CB(Win-cbOff,Hin-cbOff,180), CB(cbOff,Hin-cbOff,270)];
 
   const dim = `${fmtIn(Win)} W × ${fmtIn(Hin)} H`;
   const steps = [];
@@ -3042,8 +3064,15 @@ function buildTraining(style){
     const S = 30;                              // 45° leg length along each member
     const topA=[w + S, w],        topB=[w, w + S];          // upper brace: top rail → left stile
     const botA=[w, Hin - w - S],  botB=[w + S, Hin - w];    // lower brace: left stile → bottom rail
-    const braceTop = ANG(topA[0],topA[1], topB[0],topB[1]);
-    const braceBot = ANG(botA[0],botA[1], botB[0],botB[1]);
+    // The 45° miter pulls each parallelogram end-face W/2 inboard of its centre-line
+    // endpoint, so a brace whose endpoints sit on the inner edges leaves a small gap.
+    // Push each endpoint W/2 (=w/2) outward along the brace axis so the faces butt flush.
+    const extend = (from, to)=>{ const dx=from[0]-to[0], dy=from[1]-to[1], L=Math.hypot(dx,dy);
+      return [from[0] + dx/L*(w/2), from[1] + dy/L*(w/2)]; };
+    const topA2=extend(topA,topB), topB2=extend(topB,topA);
+    const botA2=extend(botA,botB), botB2=extend(botB,botA);
+    const braceTop = ANG(topA2[0],topA2[1], topB2[0],topB2[1]);
+    const braceBot = ANG(botA2[0],botA2[1], botB2[0],botB2[1]);
     const dT = braceTop.rot, dB = braceBot.rot;
     // keystones over the toggle/stile joints
     const keys = [ KEY(w + 3, Hin/2, 0), KEY(Win - w - 3, Hin/2, 0) ];
@@ -3060,7 +3089,7 @@ function buildTraining(style){
     steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Start with the two <b>stiles</b> — the verticals that fit <b>between</b> the rails, <b>${fmtIn(Hin-2*w)}</b> long, one on each side.`});
     steps.push({title:'2 · Rails', pieces:frame, body:`Cap the top and bottom with full-width <b>rails</b> — <b>${fmtIn(Win)}</b> — covering the ends of the stiles. Rails + stiles make the 4′×8′ rectangle.`});
     steps.push({title:'3 · Toggle', pieces:withToggle, body:`Drop in one full-width <span class="gloss-term" data-term="toggle">toggle</span> across the middle. It keeps the long stiles from bowing and gives the muslin something to land on.`});
-    steps.push({title:'4 · Cross bracing', pieces:withBraces, body:`Add two <b>diagonal braces</b> — one from the top rail down to the left stile, one from the left stile down to the bottom rail. Each end is cut with a <b>45° miter</b> so it sits flush. The diagonals triangulate the rectangle so the flat can't <b>rack</b> (lean out of square).`});
+    steps.push({title:'4 · Cross bracing', pieces:withBraces, body:`Add two <b>diagonal braces</b> — one from the top rail down to the left stile, one from the left stile down to the bottom rail. Each end is cut with a <b>45° miter</b> so it sits flush. The diagonals triangulate the rectangle so the flat can't <span class="gloss-term" data-term="rack">rack</span> (lean out of square).`});
     steps.push({title:'5 · Blocks, keystones & straps', pieces:withFab, body:`Glue &amp; staple a <span class="gloss-term" data-term="corner-block">corner block</span> at each of the 4 corners, a <span class="gloss-term" data-term="keystone">keystone</span> over each toggle joint, and a <b>half strap</b> over each end of the diagonal braces — held <span class="gloss-term" data-term="reveal">3/4″ in</span> from the frame edges. Notice they reveal the framing beneath as <b>dashed hidden lines</b>.`});
     steps.push({title:'✓ Finished frame', pieces:withFab, body:`That's a complete Broadway flat frame. Next it gets <b>covered in muslin</b> and painted. Try <b>Isometric View</b> to see it in 3-D, or <b>Finish</b> to exit.`});
   } else if (style==='hollywood'){
@@ -3075,8 +3104,8 @@ function buildTraining(style){
     steps.push({title:'✓ Finished flat', pieces:[...upto,...toggles, SHEET('sh-luan')], body:`A complete hard-faced Hollywood flat. Switch to <b>Isometric View</b> to see the depth, or <b>Finish</b> to exit.`});
   } else { // platform
     steps.push({title:'— overview', pieces:[], body:`A <b>platform</b> (${dim} deck) is a load-bearing box of <b>2×4 ${orientLbl}</b> topped with a <b>3/4″ plywood lid</b>. On edge gives the deck its strength and height.`});
-    steps.push({title:'1 · Outer frame', pieces:[stileL,stileR,topRail,botRail], body:`Build the perimeter box first: two long <b>stringers</b> (${fmtIn(Hin-2*w)}) with full-width <b>end rails</b> (${fmtIn(Win)}) capping their ends — all 2×4 <b>on edge</b>.`});
-    steps.push({title:'2 · Joists', pieces:[stileL,stileR,topRail,botRail,...toggles], body:`Add <b>${toggles.length} internal joist${toggles.length>1?'s':''}</b> on ~2′ centres. Joists carry the load between the rails so the lid won't deflect underfoot.`});
+    steps.push({title:'1 · Outer frame', pieces:[stileL,stileR,topRail,botRail], body:`Build the perimeter box first: two long <span class="gloss-term" data-term="stringer">stringers</span> (${fmtIn(Hin-2*w)}) with full-width <b>end rails</b> (${fmtIn(Win)}) capping their ends — all 2×4 <b>on edge</b>.`});
+    steps.push({title:'2 · Joists', pieces:[stileL,stileR,topRail,botRail,...toggles], body:`Add <b>${toggles.length} internal <span class="gloss-term" data-term="joist">joist</span>${toggles.length>1?'s':''}</b> on ~2′ centres. Joists carry the load between the rails so the lid won't deflect underfoot.`});
     steps.push({title:'3 · Plywood lid', pieces:[stileL,stileR,topRail,botRail,...toggles, SHEET('sh-ply')], body:`Screw a <b>3/4″ plywood lid</b> over the top. The framing shows through as <b>dashed hidden lines</b>. (In the shop you'd then <b>leg it up</b> to performance height.)`});
     steps.push({title:'✓ Finished platform', pieces:[stileL,stileR,topRail,botRail,...toggles, SHEET('sh-ply')], body:`A complete platform deck. Try <b>Isometric View</b> to see the box, or <b>Finish</b> to exit.`});
   }
