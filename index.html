@@ -3007,13 +3007,12 @@ function buildTraining(style){
     rot: Math.atan2(y2-y1, x2-x1)*180/Math.PI, lengthIn: Math.hypot(x2-x1, y2-y1),
     orientation:'flat', miterL:45, miterR:45});
 
-  // flats: rails run full width and cap the stiles (stiles fit between them);
-  // a platform keeps its long side stringers running the full length
-  const railsCap = (style !== 'platform');
-  const stileL  = railsCap ? V_(w/2, Hin/2, Hin - 2*w) : V_(w/2, Hin/2, Hin);
-  const stileR  = railsCap ? V_(Win - w/2, Hin/2, Hin - 2*w) : V_(Win - w/2, Hin/2, Hin);
-  const topRail = railsCap ? H_(Win/2, w/2,       Win) : H_(Win/2, w/2,       Win - 2*w);
-  const botRail = railsCap ? H_(Win/2, Hin - w/2, Win) : H_(Win/2, Hin - w/2, Win - 2*w);
+  // rails run full width and cap the stiles (stiles fit between them) — on
+  // flats and platforms alike
+  const stileL  = V_(w/2,       Hin/2, Hin - 2*w);
+  const stileR  = V_(Win - w/2, Hin/2, Hin - 2*w);
+  const topRail = H_(Win/2, w/2,       Win);
+  const botRail = H_(Win/2, Hin - w/2, Win);
 
   const centerStile = (style==='hollywood' && Win > 24) ? V_(Win/2, Hin/2, Hin - 2*w) : null;
   const rows = Math.max(1, Math.round(Hin/24) - 1);
@@ -3073,7 +3072,7 @@ function buildTraining(style){
     steps.push({title:'✓ Finished flat', pieces:[...upto,...toggles, SHEET('sh-luan')], body:`A complete hard-faced Hollywood flat. Switch to <b>Isometric View</b> to see the depth, or <b>Finish</b> to exit.`});
   } else { // platform
     steps.push({title:'— overview', pieces:[], body:`A <b>platform</b> (${dim} deck) is a load-bearing box of <b>2×4 ${orientLbl}</b> topped with a <b>3/4″ plywood lid</b>. On edge gives the deck its strength and height.`});
-    steps.push({title:'1 · Outer frame', pieces:[stileL,stileR,topRail,botRail], body:`Build the perimeter box first: two long <b>side rails</b> (${fmtIn(Hin)}) with <b>end rails</b> between them — all 2×4 <b>on edge</b>.`});
+    steps.push({title:'1 · Outer frame', pieces:[stileL,stileR,topRail,botRail], body:`Build the perimeter box first: two long <b>stringers</b> (${fmtIn(Hin-2*w)}) with full-width <b>end rails</b> (${fmtIn(Win)}) capping their ends — all 2×4 <b>on edge</b>.`});
     steps.push({title:'2 · Joists', pieces:[stileL,stileR,topRail,botRail,...toggles], body:`Add <b>${toggles.length} internal joist${toggles.length>1?'s':''}</b> on ~2′ centres. Joists carry the load between the rails so the lid won't deflect underfoot.`});
     steps.push({title:'3 · Plywood lid', pieces:[stileL,stileR,topRail,botRail,...toggles, SHEET('sh-ply')], body:`Screw a <b>3/4″ plywood lid</b> over the top. The framing shows through as <b>dashed hidden lines</b>. (In the shop you'd then <b>leg it up</b> to performance height.)`});
     steps.push({title:'✓ Finished platform', pieces:[stileL,stileR,topRail,botRail,...toggles, SHEET('sh-ply')], body:`A complete platform deck. Try <b>Isometric View</b> to see the box, or <b>Finish</b> to exit.`});
