@@ -3001,14 +3001,19 @@ function buildTraining(style){
   const CB = (cx,cy,rot)=>Object.assign({type:'fab-cb', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
   const KEY = (cx,cy,rot)=>Object.assign({type:'fab-key', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
   const SHEET = (t)=>Object.assign({type:t, x:x0+(Win/2)*IN, y:y0+(Hin/2)*IN, rot:0, lengthIn:Win, widthIn:Hin, orientation:'flat'}, base);
-  // diagonal brace between two points (inches); rot follows the line
-  const ANG = (x1,y1,x2,y2)=>Object.assign({type, x:x0+((x1+x2)/2)*IN, y:y0+((y1+y2)/2)*IN,
-    rot: Math.atan2(y2-y1, x2-x1)*180/Math.PI, lengthIn: Math.hypot(x2-x1, y2-y1), orientation:'flat'}, base);
+  // diagonal brace between two points (inches); rot follows the line, both
+  // ends mitered at 45° (parallelogram, like the half strap)
+  const ANG = (x1,y1,x2,y2)=>Object.assign({}, base, {type, x:x0+((x1+x2)/2)*IN, y:y0+((y1+y2)/2)*IN,
+    rot: Math.atan2(y2-y1, x2-x1)*180/Math.PI, lengthIn: Math.hypot(x2-x1, y2-y1),
+    orientation:'flat', miterL:45, miterR:45});
 
-  const stileL = V_(w/2,        Hin/2, Hin);
-  const stileR = V_(Win - w/2,  Hin/2, Hin);
-  const topRail = H_(Win/2, w/2,        Win - 2*w);
-  const botRail = H_(Win/2, Hin - w/2,  Win - 2*w);
+  // flats: rails run full width and cap the stiles (stiles fit between them);
+  // a platform keeps its long side stringers running the full length
+  const railsCap = (style !== 'platform');
+  const stileL  = railsCap ? V_(w/2, Hin/2, Hin - 2*w) : V_(w/2, Hin/2, Hin);
+  const stileR  = railsCap ? V_(Win - w/2, Hin/2, Hin - 2*w) : V_(Win - w/2, Hin/2, Hin);
+  const topRail = railsCap ? H_(Win/2, w/2,       Win) : H_(Win/2, w/2,       Win - 2*w);
+  const botRail = railsCap ? H_(Win/2, Hin - w/2, Win) : H_(Win/2, Hin - w/2, Win - 2*w);
 
   const centerStile = (style==='hollywood' && Win > 24) ? V_(Win/2, Hin/2, Hin - 2*w) : null;
   const rows = Math.max(1, Math.round(Hin/24) - 1);
@@ -3050,16 +3055,16 @@ function buildTraining(style){
     const withBraces = [...withToggle, braceTop, braceBot];
     const withFab = [...withBraces, ...corners, ...keys];
     steps.push({title:'— overview', pieces:[], body:`A <b>Broadway flat</b> (${dim}) is a lightweight frame of <b>1×3 ${orientLbl}</b> — the 2-1/2″ face lies in the plane of the flat — later covered in soft <span class="gloss-term" data-term="muslin">muslin</span>. Joints are reinforced with plywood <span class="gloss-term" data-term="corner-block">corner blocks</span> &amp; <span class="gloss-term" data-term="keystone">keystones</span>. Click <b>Next</b> to start cutting.`});
-    steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Start with the two <b>stiles</b> — the full-height verticals, <b>${fmtIn(Hin)}</b> long, one on each side. They run the entire height; everything else fits between them.`});
-    steps.push({title:'2 · Rails', pieces:frame, body:`Add a <b>rail</b> across the top and the bottom, cut to fit <b>between</b> the stiles (${fmtIn(Win-2*w)}). Rails + stiles make the outer rectangle.`});
+    steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Start with the two <b>stiles</b> — the verticals that fit <b>between</b> the rails, <b>${fmtIn(Hin-2*w)}</b> long, one on each side.`});
+    steps.push({title:'2 · Rails', pieces:frame, body:`Cap the top and bottom with full-width <b>rails</b> — <b>${fmtIn(Win)}</b> — covering the ends of the stiles. Rails + stiles make the 4′×8′ rectangle.`});
     steps.push({title:'3 · Toggle', pieces:withToggle, body:`Drop in one full-width <span class="gloss-term" data-term="toggle">toggle</span> across the middle. It keeps the long stiles from bowing and gives the muslin something to land on.`});
-    steps.push({title:'4 · Cross bracing', pieces:withBraces, body:`Add two <b>diagonal braces</b> — one from the top rail down to the left stile, one from the left stile down to the bottom rail. The diagonals triangulate the rectangle so the flat can't <b>rack</b> (lean out of square).`});
+    steps.push({title:'4 · Cross bracing', pieces:withBraces, body:`Add two <b>diagonal braces</b> — one from the top rail down to the left stile, one from the left stile down to the bottom rail. Each end is cut with a <b>45° miter</b> so it sits flush. The diagonals triangulate the rectangle so the flat can't <b>rack</b> (lean out of square).`});
     steps.push({title:'5 · Blocks & keystones', pieces:withFab, body:`Glue &amp; staple a <span class="gloss-term" data-term="corner-block">corner block</span> over each of the 4 corners and a <span class="gloss-term" data-term="keystone">keystone</span> over the toggle and at both ends of each brace — held <span class="gloss-term" data-term="reveal">3/4″ in</span> from the frame edges. Notice they reveal the framing beneath as <b>dashed hidden lines</b>.`});
     steps.push({title:'✓ Finished frame', pieces:withFab, body:`That's a complete Broadway flat frame. Next it gets <b>covered in muslin</b> and painted. Try <b>Isometric View</b> to see it in 3-D, or <b>Finish</b> to exit.`});
   } else if (style==='hollywood'){
     steps.push({title:'— overview', pieces:[], body:`A <b>Hollywood flat</b> (${dim}) is framed in <b>1×3 ${orientLbl}</b> — only the 3/4″ edge faces out — and skinned with a hard <span class="gloss-term" data-term="luan">luan</span> face instead of muslin. No corner blocks: the glued luan squares the frame.`});
-    steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Cut the two <b>stiles</b> (${fmtIn(Hin)}) and stand them <b>on edge</b>. On edge gives the flat a 2-1/2″ deep, rigid profile while showing only 3/4″ on the face.`});
-    steps.push({title:'2 · Rails', pieces:[stileL,stileR,topRail,botRail], body:`Add the top and bottom <b>rails</b> between the stiles (${fmtIn(Win-2*w)}), also on edge.`});
+    steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Cut the two <b>stiles</b> (${fmtIn(Hin-2*w)}) that fit between the rails, and stand them <b>on edge</b>. On edge gives the flat a 2-1/2″ deep, rigid profile while showing only 3/4″ on the face.`});
+    steps.push({title:'2 · Rails', pieces:[stileL,stileR,topRail,botRail], body:`Cap the top and bottom with full-width <b>rails</b> (${fmtIn(Win)}) over the stile ends, also on edge.`});
     if (centerStile)
       steps.push({title:'3 · Centre stile', pieces:[stileL,stileR,topRail,botRail,centerStile], body:`Because this flat is wider than 2′, run a <b>centre stile</b> up the middle. It stiffens the panel and gives the luan a seam to land on.`});
     const upto = centerStile ? [stileL,stileR,topRail,botRail,centerStile] : [stileL,stileR,topRail,botRail];
