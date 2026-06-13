@@ -1,0 +1,2895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenic Construction Studio — Set Building for Theatre</title>
+<style>
+  :root{
+    --paper:#F5F0E8;
+    --grid-minor:#b9c6d4;
+    --grid-major:#8fa5bd;
+    --ui-dark:#1C1C1E;
+    --ui-dark2:#2A2A2E;
+    --ui-dark3:#39393F;
+    --accent:#5B8DB8;
+    --amber:#D99E45;
+    --tape:#E8C84A;
+    --text-light:#E8E6E1;
+    --text-dim:#9B9893;
+    --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    background:var(--ui-dark);color:var(--text-light);
+    display:flex;flex-direction:column;
+  }
+  /* ── Top bar ─────────────────────────────── */
+  #topbar{
+    height:52px;flex:0 0 52px;display:flex;align-items:center;gap:8px;
+    padding:0 14px;background:var(--ui-dark);border-bottom:1px solid #000;
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset;
+    z-index:30;
+  }
+  #topbar .logo{font-weight:700;font-size:14px;letter-spacing:.4px;margin-right:10px;white-space:nowrap}
+  #topbar .logo span{color:var(--amber)}
+  #topbar .scale-badge{
+    font-family:var(--mono);font-size:11px;color:var(--text-dim);
+    border:1px solid var(--ui-dark3);border-radius:4px;padding:3px 6px 3px 8px;white-space:nowrap;
+    display:flex;align-items:center;gap:6px;cursor:pointer;
+  }
+  #topbar .scale-badge:hover{border-color:var(--accent)}
+  #scaleSel{
+    font-family:var(--mono);font-size:11px;color:var(--text-light);
+    background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:4px;
+    padding:2px 4px;cursor:pointer;outline:none;
+  }
+  #scaleSel:focus{border-color:var(--accent)}
+  .tbtn{
+    background:var(--ui-dark2);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:6px;padding:7px 12px;font-size:12.5px;font-family:inherit;cursor:pointer;
+    display:flex;align-items:center;gap:6px;white-space:nowrap;user-select:none;
+  }
+  .tbtn:hover{background:var(--ui-dark3)}
+  .tbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .tbtn.amberbtn.active{background:var(--amber);border-color:var(--amber);color:#1c1c1e}
+  .tbtn svg{display:block}
+  .spacer{flex:1}
+  label.toggle{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;color:var(--text-dim);white-space:nowrap}
+  label.toggle input{accent-color:var(--accent)}
+  #zoomLabel{font-family:var(--mono);font-size:11px;color:var(--text-dim);min-width:42px;text-align:right}
+  #captureBtn{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+  #captureBtn:hover{background:#e5ad58}
+
+  /* ── Main area ───────────────────────────── */
+  #main{flex:1;display:flex;min-height:0}
+  #canvasArea{
+    flex:1;overflow:hidden;background:#454249;position:relative;
+  }
+  #cv{display:block;cursor:crosshair}
+  #isoBanner{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    background:rgba(28,28,30,.88);color:var(--amber);font-family:var(--mono);
+    font-size:12px;letter-spacing:2px;padding:6px 16px;border-radius:4px;
+    border:1px solid var(--amber);display:none;pointer-events:none;z-index:5;
+  }
+  #annotBanner{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    background:rgba(28,28,30,.88);color:#7fc97f;font-family:var(--mono);
+    font-size:12px;letter-spacing:1px;padding:6px 16px;border-radius:4px;
+    border:1px solid #7fc97f;display:none;pointer-events:none;z-index:5;
+  }
+  #annotInput{
+    position:absolute;display:none;z-index:10;
+    font-family:var(--mono);font-size:13px;padding:3px 6px;
+    border:1px dashed var(--accent);background:rgba(255,255,255,.92);color:#1c1c1e;
+    outline:none;min-width:120px;
+  }
+
+  /* ── Sidebar ─────────────────────────────── */
+  #sidebar{
+    flex:0 0 224px;width:224px;background:var(--ui-dark);border-left:1px solid #000;
+    box-shadow:1px 0 0 rgba(255,255,255,.06) inset;
+    overflow-y:auto;padding:12px 10px 20px;display:flex;flex-direction:column;gap:6px;
+  }
+  .pal-head{
+    font-size:10.5px;font-weight:700;letter-spacing:1.4px;color:var(--text-dim);
+    text-transform:uppercase;margin:8px 2px 4px;
+  }
+  .pal-item{
+    display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:7px;
+    background:var(--ui-dark2);border:1px solid var(--ui-dark3);cursor:grab;user-select:none;
+  }
+  .pal-item:hover{background:var(--ui-dark3);border-color:#4a4a52}
+  .pal-item:active{cursor:grabbing}
+  .pal-item canvas{flex:0 0 46px;border-radius:3px;background:var(--paper)}
+  .pal-item .pi-name{font-size:12px;font-weight:600;line-height:1.25}
+  .pal-item .pi-dims{font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-top:1px}
+  #cutlist{margin-top:10px;border-top:1px solid var(--ui-dark3);padding-top:8px}
+  #cutlistBody{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);line-height:1.7}
+  #cutlistBody .cl-row{display:flex;justify-content:space-between;gap:6px}
+  #cutlistBody .cl-row b{color:var(--text-light);font-weight:500}
+  #cutlistBody .empty{font-style:italic;font-family:inherit}
+
+  /* ── Selection properties panel ──────────── */
+  #propPanel{
+    position:absolute;left:14px;bottom:14px;z-index:20;display:none;
+    background:rgba(28,28,30,.94);border:1px solid var(--ui-dark3);border-radius:10px;
+    padding:12px 14px;min-width:240px;backdrop-filter:blur(6px);
+    box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  #propPanel h4{font-size:12px;font-weight:700;margin-bottom:2px}
+  #propPanel .pp-dims{font-family:var(--mono);font-size:10.5px;color:var(--amber);margin-bottom:10px}
+  .pp-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+  .pp-row label{flex:0 0 auto;color:var(--text-dim);display:flex;align-items:center;gap:5px;cursor:pointer}
+  .pp-row input[type=number]{
+    width:62px;background:var(--ui-dark2);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:4px;padding:4px 6px;font-family:var(--mono);font-size:12px;
+  }
+  .pp-row input[type=checkbox]{accent-color:var(--amber)}
+  .pp-row .unit{color:var(--text-dim);font-size:11px}
+  #ppDelete{
+    width:100%;margin-top:2px;background:#5e2727;border:1px solid #7a3333;color:#f3c7c7;
+    border-radius:5px;padding:6px;cursor:pointer;font-size:12px;font-family:inherit;
+  }
+  #ppDelete:hover{background:#742f2f}
+
+  /* ── Tape measure overlay ─────────────────── */
+  #tapeOverlay{
+    position:fixed;inset:0;z-index:90;display:none;flex-direction:column;
+    justify-content:center;background:rgba(12,12,14,.72);backdrop-filter:blur(2px);
+  }
+  #tapeOverlay.show{display:flex}
+  #tapeHead{
+    display:flex;align-items:center;gap:18px;padding:10px 22px;
+    background:rgba(28,28,30,.95);border-top:1px solid var(--ui-dark3);
+  }
+  #tapeTitle{font-size:13px;font-weight:700}
+  #tapeTitle em{color:var(--tape);font-style:normal}
+  #tapeValue{
+    font-family:var(--mono);font-size:20px;color:var(--tape);min-width:150px;font-weight:600;
+  }
+  #tapeHint{font-size:11px;color:var(--text-dim);font-family:var(--mono)}
+  #tapeOrientWrap{display:flex;gap:14px;align-items:center}
+  #tapeOrientWrap label{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer}
+  #tapeOrientWrap input{accent-color:var(--tape)}
+  #tapeCancel{
+    margin-left:auto;background:transparent;color:var(--text-dim);border:1px solid var(--ui-dark3);
+    border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;
+  }
+  #tapeCancel:hover{color:#fff;background:var(--ui-dark3)}
+  #tapeCv{display:block;background:rgba(28,28,30,.95);cursor:pointer;border-bottom:1px solid var(--ui-dark3)}
+
+  /* ── Modals ──────────────────────────────── */
+  .modal-back{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;
+    display:none;align-items:center;justify-content:center;
+  }
+  .modal-back.show{display:flex}
+  .modal{
+    background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:12px;
+    padding:20px 22px;width:320px;box-shadow:0 16px 48px rgba(0,0,0,.6);
+  }
+  .modal h3{font-size:14px;margin-bottom:4px}
+  .modal .m-sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-bottom:14px}
+  .m-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .m-actions button{
+    border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3);
+  }
+  .m-cancel{background:transparent;color:var(--text-dim)}
+  .m-ok{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+  .m-ok:hover{background:#e5ad58}
+  #exportModal .modal{width:640px;max-width:92vw}
+  #exportPreview{width:100%;border:1px solid var(--ui-dark3);border-radius:6px;background:var(--paper);max-height:60vh;object-fit:contain}
+
+  /* ── Toast / transient hints ──────────────── */
+  #toast{
+    position:fixed;z-index:120;display:none;pointer-events:none;
+    background:rgba(28,28,30,.95);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:7px;padding:8px 12px;font-size:12px;max-width:260px;line-height:1.4;
+    box-shadow:0 6px 20px rgba(0,0,0,.5);transition:opacity .15s;
+  }
+  #toast.warn{border-color:var(--amber);color:var(--amber)}
+
+  /* ── Palette glossary “?” badge + tooltip ─── */
+  .pal-item{position:relative}
+  .pi-help{
+    position:absolute;top:5px;right:6px;width:15px;height:15px;border-radius:50%;
+    background:var(--ui-dark3);color:var(--text-dim);font-size:10px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;cursor:help;user-select:none;
+    border:1px solid #4a4a52;
+  }
+  .pi-help:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  #glossTip{
+    position:fixed;z-index:120;display:none;pointer-events:none;max-width:240px;
+    background:rgba(28,28,30,.97);color:var(--text-light);border:1px solid var(--accent);
+    border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.5;
+    box-shadow:0 8px 24px rgba(0,0,0,.55);
+  }
+  #glossTip b{color:var(--amber)}
+  /* hoverable domain terms (quiz feedback, cut list) */
+  .gloss-term{border-bottom:1px dotted var(--accent);cursor:help}
+
+  /* ── Dimension-mode canvas indicator ──────── */
+  #canvasArea.dim-mode::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:6;
+    box-shadow:inset 0 0 0 3px var(--amber);
+  }
+  #canvasArea.dim-mode #dimModeTag{display:block}
+  #dimModeTag{
+    display:none;position:absolute;top:10px;right:12px;z-index:7;pointer-events:none;
+    background:var(--amber);color:#1c1c1e;font-size:11px;font-weight:700;letter-spacing:.5px;
+    border-radius:5px;padding:4px 9px;box-shadow:0 3px 10px rgba(0,0,0,.4);
+  }
+
+  /* ── Tape numeric entry + affordances ─────── */
+  #tapeNumWrap{display:flex;align-items:center;gap:6px}
+  #tapeNum{
+    width:120px;background:var(--ui-dark);color:var(--tape);border:1px solid var(--ui-dark3);
+    border-radius:5px;padding:5px 8px;font-family:var(--mono);font-size:13px;outline:none;
+  }
+  #tapeNum:focus{border-color:var(--tape)}
+  #tapeNumGo{
+    background:var(--tape);border:1px solid var(--tape);color:#1c1c1e;font-weight:600;
+    border-radius:5px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;
+  }
+  #tapeOrientCaption{font-size:11px;color:var(--text-dim);font-style:italic;max-width:230px;line-height:1.35}
+  #tapeScrollHint{
+    position:absolute;top:18px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:9px;color:#1c1c1e;
+    background:rgba(232,200,74,.95);border-radius:20px;padding:7px 16px;
+    font-size:12.5px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.4);pointer-events:none;
+  }
+  #tapeScrollHint .wheel{
+    width:16px;height:24px;border:2px solid #1c1c1e;border-radius:9px;position:relative;flex:0 0 auto;
+  }
+  #tapeScrollHint .wheel::after{
+    content:"";position:absolute;left:50%;top:4px;transform:translateX(-50%);
+    width:2px;height:5px;background:#1c1c1e;border-radius:1px;
+    animation:tapeScrollPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes tapeScrollPulse{0%,100%{opacity:.25;top:4px}50%{opacity:1;top:9px}}
+  #tapeFirstTip{
+    position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:95;
+    max-width:430px;background:rgba(28,28,30,.97);border:1px solid var(--tape);border-radius:10px;
+    padding:14px 16px;font-size:12.5px;line-height:1.55;box-shadow:0 10px 30px rgba(0,0,0,.55);display:none;
+  }
+  #tapeFirstTip b{color:var(--tape)}
+  #tapeFirstTip button{
+    margin-top:10px;background:var(--tape);border:none;color:#1c1c1e;font-weight:600;
+    border-radius:5px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;
+  }
+
+  /* ── Advanced (miter) collapsible ─────────── */
+  #ppAdvToggle{
+    background:none;border:none;color:var(--text-dim);font-family:inherit;font-size:11.5px;
+    cursor:pointer;padding:2px 0;margin-bottom:6px;display:flex;align-items:center;gap:5px;
+  }
+  #ppAdvToggle:hover{color:var(--text-light)}
+  #ppAdvToggle .caret{transition:transform .15s;display:inline-block}
+  #ppAdvToggle.open .caret{transform:rotate(90deg)}
+  #ppAdvBody{display:none}
+  #ppAdvBody.open{display:block}
+  #ppQuickRot{display:flex;gap:6px;margin-bottom:10px}
+  #ppQuickRot button{
+    flex:1;background:var(--ui-dark2);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:5px;padding:5px 0;font-size:11.5px;cursor:pointer;font-family:var(--mono);
+  }
+  #ppQuickRot button:hover{background:var(--ui-dark3);border-color:var(--accent)}
+
+  /* ── Palette flash (tape cancel feedback) ─── */
+  @keyframes palFlash{0%,100%{box-shadow:0 0 0 0 rgba(91,141,184,0)}25%,75%{box-shadow:0 0 0 3px rgba(91,141,184,.9)}}
+  .pal-item.pal-flash{animation:palFlash .7s ease-in-out}
+
+  /* ── First-run tour ───────────────────────── */
+  #tourBack{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:110;
+    display:none;align-items:center;justify-content:center;
+  }
+  #tourBack.show{display:flex}
+  #tourCard{
+    background:var(--ui-dark2);border:1px solid var(--accent);border-radius:14px;
+    padding:22px 24px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.65);
+  }
+  #tourCard .t-step{font-family:var(--mono);font-size:10.5px;color:var(--accent);letter-spacing:1px;margin-bottom:8px}
+  #tourCard h3{font-size:16px;margin-bottom:8px}
+  #tourCard p{font-size:13px;line-height:1.6;color:var(--text-light)}
+  #tourCard p b{color:var(--amber)}
+  #tourDots{display:flex;gap:6px;margin-top:16px}
+  #tourDots span{width:7px;height:7px;border-radius:50%;background:var(--ui-dark3)}
+  #tourDots span.on{background:var(--accent)}
+  #tourCard .t-actions{display:flex;align-items:center;gap:8px;margin-top:18px}
+  #tourCard .t-actions .spacer{flex:1}
+  #tourCard button{border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
+  #tourSkip{background:transparent;color:var(--text-dim)}
+  #tourBackBtn{background:var(--ui-dark);color:var(--text-light)}
+  #tourNext{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+
+  /* ── Quiz mode ────────────────────────────── */
+  #quizBtn.active{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+  #quizBar{
+    position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:25;display:none;
+    align-items:center;gap:16px;max-width:94%;
+    background:rgba(28,28,30,.95);border:1px solid var(--amber);border-radius:10px;
+    padding:9px 16px;box-shadow:0 8px 28px rgba(0,0,0,.55);
+  }
+  #quizBar.show{display:flex}
+  #quizBar .q-prompt{font-size:13px;line-height:1.3}
+  #quizBar .q-prompt .q-style{color:var(--amber);font-weight:700;letter-spacing:.4px}
+  #quizBar .q-prompt .q-dims{font-family:var(--mono);color:var(--text-light)}
+  #quizBar .q-sub{font-size:10.5px;color:var(--text-dim);font-family:var(--mono)}
+  #quizMeta{display:flex;flex-direction:column;align-items:center;gap:1px;font-family:var(--mono);min-width:78px}
+  #quizTimer{font-size:18px;font-weight:600;color:var(--tape)}
+  #quizCount{font-size:10.5px;color:var(--text-dim)}
+  #quizBar button{border-radius:6px;padding:7px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
+  #quizDone{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:700}
+  #quizDone:hover{background:#e5ad58}
+  #quizExit{background:transparent;color:var(--text-dim)}
+  #quizExit:hover{color:#fff;background:var(--ui-dark3)}
+  #quizFeedback{
+    position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:25;display:none;
+    max-width:520px;background:rgba(94,39,39,.96);border:1px solid #a05; border-color:#b5524a;
+    border-radius:9px;padding:10px 14px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  #quizFeedback.show{display:block}
+  #quizFeedback.ok{background:rgba(31,74,42,.96);border-color:#3a7;}
+  #quizFeedback b{display:block;margin-bottom:4px;font-size:12.5px}
+  #quizFeedback ul{margin:0;padding-left:18px}
+
+  #quizResultsBack{
+    position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:115;
+    display:none;align-items:center;justify-content:center;
+  }
+  #quizResultsBack.show{display:flex}
+  #quizResultsCard{
+    background:var(--ui-dark2);border:1px solid var(--amber);border-radius:14px;
+    padding:24px 26px;width:440px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.7);
+  }
+  #quizResultsCard h3{font-size:17px;margin-bottom:2px}
+  #quizResultsCard .qr-sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-bottom:16px}
+  #quizAvg{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--tape);text-align:center;margin:6px 0}
+  #quizAvgLbl{text-align:center;font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+  #quizTimesTbl{width:100%;font-family:var(--mono);font-size:11.5px;color:var(--text-dim);border-collapse:collapse;margin-bottom:18px}
+  #quizTimesTbl td{padding:2px 0}
+  #quizTimesTbl td:last-child{text-align:right;color:var(--text-light)}
+  #quizResultsCard .qr-actions{display:flex;gap:8px;justify-content:flex-end}
+  #quizResultsCard .qr-actions button{border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
+  #quizShot{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+  #quizResultsClose{background:transparent;color:var(--text-dim)}
+  #quizModeBadge{margin-top:-10px;margin-bottom:14px;text-align:center}
+
+  /* Easy-mode toggle on the quiz bar */
+  #quizBar .q-easy{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap}
+  #quizBar .q-easy input{accent-color:var(--amber)}
+
+  /* Easy-mode required cut list (sidebar) */
+  #quizChecklist{display:none;border-bottom:1px solid var(--ui-dark3);padding-bottom:10px;margin-bottom:4px}
+  #quizChecklist .pal-head{color:var(--amber)}
+  .qc-row{display:flex;align-items:flex-start;gap:7px;font-size:11px;line-height:1.35;padding:2px 2px;color:var(--text-light)}
+  .qc-box{
+    flex:0 0 13px;width:13px;height:13px;margin-top:1px;border:1.4px solid var(--text-dim);border-radius:3px;
+    font-size:10px;line-height:11px;text-align:center;color:#1c1c1e;
+  }
+  .qc-row.done .qc-box{background:#2ea043;border-color:#2ea043}
+  .qc-row.done .qc-lbl{color:var(--text-dim)}
+  .qc-lbl .q-cnt{font-family:var(--mono);color:var(--amber)}
+  .qc-row.done .q-cnt{color:var(--text-dim)}
+
+  /* Quiz target shown over the tape overlay */
+  #tapeQuizTarget{
+    position:absolute;top:14px;left:18px;z-index:96;display:none;max-width:300px;
+    background:rgba(28,28,30,.96);border:1px solid var(--amber);border-radius:9px;
+    padding:10px 13px;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  #tapeQuizTarget .tqt-head{font-size:11px;letter-spacing:1px;color:var(--text-dim)}
+  #tapeQuizTarget .tqt-head b{color:var(--amber);letter-spacing:.3px}
+  #tapeQuizTarget .tqt-dim{font-family:var(--mono);font-size:15px;color:var(--text-light);margin:2px 0 0}
+  #tapeQuizTarget .tqt-list{margin-top:8px;border-top:1px solid var(--ui-dark3);padding-top:7px;
+    font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text-light)}
+  #tapeQuizTarget .tqt-list .done{color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">SCENIC <span>CONSTRUCTION</span> STUDIO</div>
+  <label class="scale-badge" for="scaleSel" title="Drawing scale">SCALE
+    <select id="scaleSel">
+      <option value="1/4">1/4&Prime; = 1&prime;-0&Prime;</option>
+      <option value="1/2">1/2&Prime; = 1&prime;-0&Prime;</option>
+      <option value="3/4">3/4&Prime; = 1&prime;-0&Prime;</option>
+      <option value="1">1&Prime; = 1&prime;-0&Prime;</option>
+    </select>
+  </label>
+  <button class="tbtn active" id="selectBtn" title="Select / move tool (V)">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1l4.5 13 2-5.5L14 6.5 2 1z"/></svg>
+    Select
+  </button>
+  <button class="tbtn" id="annotBtn" title="Annotation mode (A) — click for text, drag for arrow">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 14l1-4 8-8 3 3-8 8-4 1z"/></svg>
+    Annotate
+  </button>
+  <button class="tbtn" id="dimBtn" title="Dimension tool (D) — click two points to measure & label the distance">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5v6m14-6v6M1 8h14M3 6l-2 2 2 2m10-4l2 2-2 2"/></svg>
+    Dimension
+  </button>
+  <label class="toggle" title="Snap pieces to nearest grid intersection while dragging">
+    <input type="checkbox" id="snapChk" checked> Grid snap
+  </label>
+  <label class="toggle" title="Snap pieces to edges/corners of other pieces while dragging (corner blocks &amp; keystones hold 3/4&quot; back from lumber edges)">
+    <input type="checkbox" id="objSnapChk" checked> Object snap
+  </label>
+  <button class="tbtn" id="undoBtn" title="Undo last action (Ctrl+Z)">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h7a3 3 0 1 1 0 6H6"/><path d="M6 5L3 8l3 3"/></svg>
+    Undo
+  </button>
+  <div class="spacer"></div>
+  <span id="zoomLabel">100%</span>
+  <button class="tbtn" id="helpBtn" title="Show the quick tour again">?</button>
+  <button class="tbtn" id="fitBtn" title="Fit page in view (F)">Fit</button>
+  <button class="tbtn amberbtn" id="isoBtn" title="Toggle isometric preview">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1l6 3.5v7L8 15l-6-3.5v-7L8 1zM8 1v7m0 0l6 3.5M8 8L2 11.5"/></svg>
+    <span id="isoBtnLabel">Isometric View</span>
+  </button>
+  <button class="tbtn" id="quizBtn" title="Timed construction quiz">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 4v4l2.5 1.5"/></svg>
+    Quiz
+  </button>
+  <button class="tbtn" id="clearBtn" title="Clear the drawing">Clear</button>
+  <button class="tbtn" id="captureBtn" title="Capture & export PNG">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="2"/><circle cx="8" cy="9" r="3"/><path d="M5 4l1.2-2h3.6L11 4"/></svg>
+    Capture &amp; Export
+  </button>
+</div>
+
+<div id="main">
+  <div id="canvasArea">
+    <canvas id="cv"></canvas>
+    <div id="quizBar">
+      <div class="q-prompt">
+        Build a <span class="q-style" id="quizStyle">—</span> &nbsp;<span class="q-dims" id="quizDims">—</span>
+        <div class="q-sub" id="quizHint">Draw it, then click <b>Done</b> to check.</div>
+      </div>
+      <div id="quizMeta">
+        <div id="quizTimer">0:00</div>
+        <div id="quizCount">0 / 10</div>
+      </div>
+      <label class="q-easy" title="Show a checklist of the parts needed for this build"><input type="checkbox" id="quizEasy"> Easy</label>
+      <button id="quizDone">Done ✓</button>
+      <button id="quizExit">Exit</button>
+    </div>
+    <div id="quizFeedback"></div>
+    <div id="dimModeTag">↔ DIMENSION MODE</div>
+    <div id="isoBanner">ISO VIEW — READ ONLY</div>
+    <div id="annotBanner">ANNOTATE: click = text &middot; drag = arrow &middot; Esc = exit</div>
+    <input id="annotInput" type="text" placeholder="note text… (Enter)">
+    <div id="propPanel">
+      <h4 id="ppName">Piece</h4>
+      <div class="pp-dims" id="ppDims"></div>
+      <div class="pp-row">
+        <label for="ppRot">Rotation</label>
+        <input type="number" id="ppRot" step="1" value="0"><span class="unit">deg</span>
+      </div>
+      <div id="ppQuickRot">
+        <button data-rot="-90" title="Turn the board 90° counter-clockwise">↶ 90°</button>
+        <button data-rot="90" title="Turn the board 90° clockwise">90° ↷</button>
+        <button data-rot="180" title="Flip the board end-for-end">180°</button>
+      </div>
+      <button id="ppAdvToggle" type="button"><span class="caret">▸</span> Advanced — miter cuts</button>
+      <div id="ppAdvBody">
+        <div class="pp-row" id="ppMiterLRow">
+          <label><input type="checkbox" id="ppMiterLChk"> Miter L end</label>
+          <input type="number" id="ppMiterL" min="15" max="165" step="1" value="45" disabled><span class="unit">deg</span>
+        </div>
+        <div class="pp-row" id="ppMiterRRow">
+          <label><input type="checkbox" id="ppMiterRChk"> Miter R end</label>
+          <input type="number" id="ppMiterR" min="15" max="165" step="1" value="45" disabled><span class="unit">deg</span>
+        </div>
+      </div>
+      <button id="ppDelete">Delete piece (⌫)</button>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div id="quizChecklist"></div>
+    <div class="pal-head">Stock Materials</div>
+    <div id="palStock"></div>
+    <div class="pal-head" style="margin-top:14px">Fabricated Parts</div>
+    <div id="palFab"></div>
+    <div id="cutlist">
+      <div class="pal-head">Materials List (Cut List)</div>
+      <div id="cutlistBody"><div class="empty">No pieces placed yet.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tape measure overlay -->
+<div id="tapeOverlay">
+  <div id="tapeQuizTarget"></div>
+  <div id="tapeScrollHint"><span class="wheel"></span> Scroll to pull the tape out</div>
+  <div id="tapeFirstTip">
+    <b>Reading the tape, the real-shop way.</b><br>
+    <b>Scroll</b> = pulling the tape from its case. <b>Click</b> a mark = hooking the end on it.
+    Prefer to just type? Use the <b>length box</b> in the bar below.<br>
+    Don't worry about being exact — you can always delete and re-measure. Nothing is permanent until you export.
+    <br><button id="tapeFirstTipOk">Got it</button>
+  </div>
+  <div id="tapeHead">
+    <div id="tapeTitle">Pull the tape — click the <em>LENGTH</em></div>
+    <div id="tapeOrientWrap">
+      <label><input type="radio" name="tapeOrient" value="flat" checked> Flat (face)</label>
+      <label><input type="radio" name="tapeOrient" value="edge"> On edge</label>
+    </div>
+    <div id="tapeOrientCaption"></div>
+    <div id="tapeNumWrap">
+      <input id="tapeNum" type="text" placeholder="type e.g. 8' 0&quot;" autocomplete="off">
+      <button id="tapeNumGo" type="button">Set ⏎</button>
+    </div>
+    <div id="tapeValue">—</div>
+    <div id="tapeHint">SCROLL to pull tape out &middot; hover for magnifier &middot; CLICK a mark to set &middot; or type a length &middot; Esc cancels</div>
+    <button id="tapeCancel">Cancel (Esc)</button>
+  </div>
+  <canvas id="tapeCv" height="280"></canvas>
+</div>
+
+<!-- Export modal -->
+<div class="modal-back" id="exportModal">
+  <div class="modal">
+    <h3>Export Drawing</h3>
+    <div class="m-sub" id="exFilename">scenic-drawing.png</div>
+    <img id="exportPreview" alt="Drawing preview">
+    <div class="m-actions">
+      <button class="m-cancel" id="exClose">Close</button>
+      <button class="m-ok" id="exDownload">Download PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- Transient hint / glossary tooltip -->
+<div id="toast"></div>
+<div id="glossTip"></div>
+
+<!-- First-run guided tour -->
+<div id="tourBack">
+  <div id="tourCard">
+    <div class="t-step" id="tourStep">STEP 1 / 6</div>
+    <h3 id="tourTitle"></h3>
+    <p id="tourBody"></p>
+    <div id="tourDots"></div>
+    <div class="t-actions">
+      <button id="tourSkip">Skip tour</button>
+      <div class="spacer"></div>
+      <button id="tourBackBtn">Back</button>
+      <button id="tourNext">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quiz results -->
+<div id="quizResultsBack">
+  <div id="quizResultsCard">
+    <h3>Quiz complete 🎉</h3>
+    <div class="qr-sub">10 builds verified</div>
+    <div id="quizModeBadge"></div>
+    <div id="quizAvg">0:00</div>
+    <div id="quizAvgLbl">Average time per build</div>
+    <table id="quizTimesTbl"></table>
+    <div class="qr-actions">
+      <button id="quizResultsClose">Close</button>
+      <button id="quizShot">Download results PNG</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   Scenic Construction Studio  v2
+   Scale: 1/4" = 1'-0" on letter paper (landscape).
+   Minor grid cell = 8 px = 3" real; major line every 4 cells = 1'-0".
+   PPF (pixels per world foot) = 32.  Page = 44' x 34' (11" x 8.5").
+   v2: camera zoom/pan, object snapping, tape-measure dimension
+   picker (1/16" graduations), drag loupe, sheet length x width,
+   corner blocks & keystones hold 3/4" back from lumber edges.
+   ============================================================ */
+/* Drawing scale is user-selectable. The paper stays a fixed pixel size
+   (letter, landscape); the chosen scale decides how many real feet it
+   covers and therefore the pixels-per-foot (PPF). */
+const SCALES = {
+  '1/4': {paperIn:0.25, label:'1/4" = 1\'-0"'},
+  '1/2': {paperIn:0.50, label:'1/2" = 1\'-0"'},
+  '3/4': {paperIn:0.75, label:'3/4" = 1\'-0"'},
+  '1'  : {paperIn:1.00, label:'1" = 1\'-0"'}
+};
+const PX_PER_PAPER_IN = 128;   // render resolution of the paper
+let scaleKey = '1/2';          // default scale
+let PPF  = PX_PER_PAPER_IN * SCALES[scaleKey].paperIn;  // pixels per world foot
+let CELL = PPF / 4;            // minor grid cell = 3" real
+let IN   = PPF / 12;          // px per real inch
+const PAGE_W = 1408;           // fixed paper width  (11"  landscape)
+const PAGE_H = 1088;           // fixed paper height (8.5")
+
+/* Recompute the scale-dependent constants from the current scaleKey. */
+function applyScaleVars(){
+  if (!SCALES[scaleKey]) scaleKey = '1/2';
+  PPF  = PX_PER_PAPER_IN * SCALES[scaleKey].paperIn;
+  CELL = PPF / 4;
+  IN   = PPF / 12;
+  const sel = document.getElementById('scaleSel');
+  if (sel) sel.value = scaleKey;
+}
+/* User-initiated scale change. With rescale, existing geometry keeps its
+   real-world size/position (world px are tied to PPF, so scale them). */
+function setScale(key, opts){
+  opts = opts || {};
+  if (!SCALES[key] || key === scaleKey) return;
+  const before = snapshot();
+  const oldPPF = PPF;
+  scaleKey = key;
+  applyScaleVars();
+  const r = PPF / oldPPF;
+  if (opts.rescale && r !== 1){
+    pieces.forEach(p=>{ p.x*=r; p.y*=r; });
+    annots.forEach(a=>{
+      if (a.type==='text'){ a.x*=r; a.y*=r; }
+      else { a.x1*=r; a.y1*=r; a.x2*=r; a.y2*=r; }
+    });
+    pushUndo(before);
+  }
+  if (viewMode==='iso') computeIsoFit();
+  save(); draw();
+  if (opts.rescale)
+    toast('Drawing rescaled to <b>'+SCALES[key].label+'</b> — your pieces keep their real-world size; only the on-paper scale changed. <b>Ctrl+Z</b> to undo.', {ms:4200});
+  else
+    toast('Scale set to <b>'+SCALES[key].label+'</b>', {ms:1800});
+}
+
+const area = document.getElementById('canvasArea');
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+/* ── Material catalogue ─────────────────────────────────── */
+const MATS = {
+  'lum-1x3' : {name:'1×3 Lumber',  kind:'lumber', face:2.5,  thick:0.75, dims:'2-1/2″ × 3/4″'},
+  'lum-2x4' : {name:'2×4 Lumber',  kind:'lumber', face:3.5,  thick:1.5,  dims:'3-1/2″ × 1-1/2″'},
+  'sh-ply'  : {name:'3/4″ Plywood',kind:'sheet',  face:48,   thick:0.72, dims:'23/32″ — cut L × W'},
+  'sh-luan' : {name:'Luan Sheet',  kind:'sheet',  face:48,   thick:0.25, dims:'1/4″ — cut L × W'},
+  'sh-maso' : {name:'Masonite',    kind:'sheet',  face:48,   thick:0.125,dims:'1/8″ — cut L × W'},
+  'fab-cb'  : {name:'Corner Block',kind:'fab',    dims:'10″ legs, 1/4″ ply'},
+  'fab-key' : {name:'Keystone',    kind:'fab',    dims:'3″ × 8″, 1/4″ ply'}
+};
+const STOCK = ['lum-1x3','lum-2x4','sh-ply','sh-luan','sh-maso'];
+const FAB   = ['fab-cb','fab-key'];
+
+/* ── State ─────────────────────────────────────────────── */
+let pieces = [];
+let annots = [];
+let idSeq  = 1;
+let selected = null;
+let viewMode = 'plan';
+let toolMode = 'select';
+let snapOn = true;       // grid snap
+let objSnapOn = true;    // object snap
+let drag = null;
+let lastMouse = null;    // last mouse pos in SCREEN px (for loupe)
+let snapDots = [];       // world-px points highlighted during a snap
+let snapLabel = null;    // {x,y,text} world-pos label shown while snapped
+let rotateHint = null;   // {x,y,text} world-pos hint shown while rotating
+let guideLines = [];     // alignment guides (centre / 2' marks) shown while dragging
+let dimA = null;         // first picked point of a dimension (world px)
+let dimCursor = null;    // live cursor point while dimensioning (world px)
+let hoverRotHandle = false;
+const undoStack = [];    // serialized snapshots, newest last
+const UNDO_MAX = 25;
+
+/* ── Camera (zoom / pan): screen = world*z + (px,py) ────── */
+const cam = { z:1, px:0, py:0 };
+function s2w(sx, sy){ return [(sx-cam.px)/cam.z, (sy-cam.py)/cam.z]; }
+function w2s(wx, wy){ return [wx*cam.z+cam.px, wy*cam.z+cam.py]; }
+function zoomAt(sx, sy, factor){
+  const nz = Math.max(0.2, Math.min(12, cam.z*factor));
+  cam.px = sx - (sx-cam.px)*(nz/cam.z);
+  cam.py = sy - (sy-cam.py)*(nz/cam.z);
+  cam.z = nz;
+  updateZoomLabel();
+}
+function fitView(){
+  const w = cv.width, h = cv.height;
+  cam.z = Math.min(w/PAGE_W, h/PAGE_H)*0.94;
+  cam.px = (w - PAGE_W*cam.z)/2;
+  cam.py = (h - PAGE_H*cam.z)/2;
+  updateZoomLabel();
+}
+function updateZoomLabel(){
+  document.getElementById('zoomLabel').textContent = Math.round(cam.z*100)+'%';
+}
+function sizeCanvas(){
+  cv.width  = area.clientWidth  || 1408;
+  cv.height = area.clientHeight || 1088;
+}
+
+/* ── One-time flags (localStorage) ──────────── */
+function seen(flag){
+  try{ return localStorage.getItem('scenic-seen-'+flag)==='1'; }catch(_){ return false; }
+}
+function markSeen(flag){
+  try{ localStorage.setItem('scenic-seen-'+flag, '1'); }catch(_){}
+}
+
+/* ── Transient toast / hint near a screen point ─ */
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg, opts={}){
+  toastEl.innerHTML = msg;
+  toastEl.classList.toggle('warn', !!opts.warn);
+  toastEl.style.display = 'block';
+  toastEl.style.opacity = '1';
+  // position: near a screen point if given, else top-center of canvas area
+  const r = area.getBoundingClientRect();
+  let x = opts.sx, y = opts.sy;
+  if (x == null){ x = r.left + r.width/2; y = r.top + 64; }
+  // measure then clamp on-screen
+  const bw = toastEl.offsetWidth, bh = toastEl.offsetHeight;
+  let left = x - bw/2, top = y + (opts.below ? 16 : -bh-14);
+  left = Math.max(8, Math.min(window.innerWidth - bw - 8, left));
+  top  = Math.max(8, Math.min(window.innerHeight - bh - 8, top));
+  toastEl.style.left = left+'px';
+  toastEl.style.top  = top+'px';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    toastEl.style.opacity = '0';
+    setTimeout(()=>{ toastEl.style.display='none'; }, 160);
+  }, opts.ms || 2200);
+}
+
+/* ── Undo stack ─────────────────────────────── */
+function snapshot(){ return JSON.stringify({pieces, annots, idSeq, scaleKey}); }
+function pushUndo(snap){
+  undoStack.push(snap != null ? snap : snapshot());
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+  refreshUndoBtn();
+}
+function refreshUndoBtn(){
+  const b = document.getElementById('undoBtn');
+  if (b) b.disabled = undoStack.length === 0;
+  if (b) b.style.opacity = undoStack.length === 0 ? '.45' : '1';
+}
+function undo(){
+  if (!undoStack.length){ toast('Nothing to undo'); return; }
+  const st = JSON.parse(undoStack.pop());
+  pieces = st.pieces; annots = st.annots; idSeq = st.idSeq;
+  if (st.scaleKey && st.scaleKey !== scaleKey){ scaleKey = st.scaleKey; applyScaleVars(); }
+  selected = null;
+  syncPropPanel(); updateCutList(); save(); draw();
+  refreshUndoBtn();
+  toast('Undo &mdash; ' + undoStack.length + ' step' + (undoStack.length===1?'':'s') + ' left', {ms:1200});
+}
+
+/* ── Parse a typed length ("8", "8'", "4'-6", "48\"", "8 1/2\"") to 1/16ths ─ */
+function parseLengthToSix(str){
+  if (!str) return null;
+  let s = str.trim().toLowerCase().replace(/[“”]/g,'"').replace(/[‘’]/g,"'");
+  s = s.replace(/\bft\b|\bfeet\b|\bfoot\b/g, "'").replace(/\bin\b|\binches\b|\binch\b/g, '"');
+  let feet = 0, inches = 0, matched = false;
+  const ftM = s.match(/(-?\d+(?:\.\d+)?)\s*'/);
+  if (ftM){ feet = parseFloat(ftM[1]); matched = true; }
+  // strip the feet portion so the remainder is the inches part
+  let rest = ftM ? s.slice(ftM.index + ftM[0].length) : s;
+  rest = rest.replace(/^[-\s]+/, '').replace(/"/g, ' ').trim();
+  const fracM = rest.match(/(\d+)\s*\/\s*(\d+)/);
+  let frac = 0;
+  if (fracM){ frac = parseInt(fracM[1],10)/parseInt(fracM[2],10); rest = rest.replace(fracM[0], '').trim(); matched = true; }
+  const whM = rest.match(/^(-?\d+(?:\.\d+)?)/);
+  if (whM){ inches = parseFloat(whM[1]); matched = true; }
+  // bare number with no feet mark and no inch mark → treat as feet (common shop shorthand "8" = 8')
+  if (!ftM && !fracM && whM && !/["]/.test(str)){ feet = inches; inches = 0; }
+  if (!matched) return null;
+  const totalIn = feet*12 + inches + frac;
+  if (!isFinite(totalIn) || totalIn <= 0) return null;
+  return Math.round(totalIn*16);
+}
+
+/* ============================================================
+   GEOMETRY — pieces (local frame in real inches, origin at
+   centroid of bounding box, +x along length)
+   ============================================================ */
+function rad(d){ return d * Math.PI / 180; }
+
+function pieceW(p){          // cross dimension (real inches) drawn on plan
+  const m = MATS[p.type];
+  if (m.kind === 'sheet') return p.widthIn || m.face;
+  return (p.orientation === 'flat') ? m.face : m.thick;
+}
+
+function localPolyIn(p){
+  if (p.type === 'fab-cb'){
+    const L = 10;
+    return [[-L/2, -L/2],[L/2, -L/2],[-L/2, L/2]];
+  }
+  if (p.type === 'fab-key'){
+    return [[-4,-1.5],[4,-1.5],[4,1.5],[-4,1.5]];
+  }
+  const L = p.lengthIn;
+  const W = pieceW(p);
+  let dxL = 0, dxR = 0;
+  if (Math.abs(p.miterL - 90) > 0.01) dxL = W / Math.tan(rad(p.miterL));
+  if (Math.abs(p.miterR - 90) > 0.01) dxR = W / Math.tan(rad(p.miterR));
+  return [
+    [-L/2,        -W/2],
+    [ L/2,        -W/2],
+    [ L/2 - dxR,   W/2],
+    [-L/2 + dxL,   W/2]
+  ];
+}
+
+function pieceHeightIn(p){
+  if (p.type === 'fab-cb' || p.type === 'fab-key') return 0.25;
+  const m = MATS[p.type];
+  if (m.kind === 'sheet') return m.thick;
+  return (p.orientation === 'flat') ? m.thick : m.face;
+}
+
+function worldPoly(p){
+  const c = Math.cos(rad(p.rot)), s = Math.sin(rad(p.rot));
+  return localPolyIn(p).map(([ix,iy]) => {
+    const px = ix * IN, py = iy * IN;
+    return [p.x + px*c - py*s, p.y + px*s + py*c];
+  });
+}
+
+/* ============================================================
+   PROJECTION — plan identity; iso true axonometric:
+   X' = (x−y)cos30, Y' = (x+y)sin30 − z, scaled to fit page.
+   ============================================================ */
+const ISO = { s:1, ox:0, oy:0 };
+function computeIsoFit(){
+  const c30 = Math.cos(Math.PI/6), s30 = Math.sin(Math.PI/6);
+  const xs = [], ys = [];
+  [[0,0],[PAGE_W,0],[0,PAGE_H],[PAGE_W,PAGE_H]].forEach(([x,y])=>{
+    xs.push((x-y)*c30); ys.push((x+y)*s30);
+  });
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  const pad = 60;
+  ISO.s  = Math.min((PAGE_W-2*pad)/(maxX-minX), (PAGE_H-2*pad)/(maxY-minY));
+  ISO.ox = (PAGE_W - (maxX-minX)*ISO.s)/2 - minX*ISO.s;
+  ISO.oy = (PAGE_H - (maxY-minY)*ISO.s)/2 - minY*ISO.s + 30;
+}
+function proj(x, y, z=0){
+  if (viewMode === 'plan') return [x, y];
+  const c30 = Math.cos(Math.PI/6), s30 = Math.sin(Math.PI/6);
+  return [ ((x-y)*c30)*ISO.s + ISO.ox,
+           ((x+y)*s30 - z)*ISO.s + ISO.oy ];
+}
+
+/* ============================================================
+   DIMENSION FORMATTING — sixteenths
+   ============================================================ */
+function gcd(a,b){ return b ? gcd(b, a%b) : a; }
+function fmtSix(six){               // six = total 1/16ths of an inch
+  six = Math.round(six);
+  const ft = Math.floor(six/192);
+  let rem = six - ft*192;
+  const whole = Math.floor(rem/16);
+  let f = rem % 16;
+  let fs = '';
+  if (f){ const g = gcd(f,16); fs = ' ' + (f/g) + '/' + (16/g); }
+  return ft + "'-" + whole + fs + '"';
+}
+function fmtIn(inches){ return fmtSix(inches*16); }
+
+/* ============================================================
+   DRAWING — all painters take a 2D context `g` and draw in
+   WORLD coordinates (the camera transform is applied outside).
+   ============================================================ */
+const COLORS = {
+  lumber: {fill:'#E3D3AE', edge:'#8a7146', hatch:'rgba(138,113,70,.38)'},
+  sheet:  {fill:'#D8CBB6', edge:'#7d6f57', hatch:'rgba(125,111,87,.30)'},
+  fab:    {fill:'#E0AA55', edge:'#9c6b1e', hatch:'rgba(156,107,30,.40)'}
+};
+const MONO = "'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace";
+
+function pathPoly(g, pts){
+  g.beginPath();
+  g.moveTo(pts[0][0], pts[0][1]);
+  for (let i=1;i<pts.length;i++) g.lineTo(pts[i][0], pts[i][1]);
+  g.closePath();
+}
+
+function hatchPoly(g, pts, color, spacing=7){
+  g.save();
+  pathPoly(g, pts); g.clip();
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  const diag=Math.hypot(maxX-minX, maxY-minY);
+  const cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+  g.translate(cx,cy); g.rotate(Math.PI/4);
+  g.strokeStyle=color; g.lineWidth=0.7;
+  g.beginPath();
+  for(let d=-diag/2; d<=diag/2; d+=spacing){
+    g.moveTo(-diag/2, d); g.lineTo(diag/2, d);
+  }
+  g.stroke();
+  g.restore();
+}
+
+function drawGrid(g){
+  g.save();
+  if (viewMode === 'plan'){
+    g.strokeStyle = 'rgba(143,165,189,.32)';
+    g.lineWidth = 0.5;
+    g.beginPath();
+    for(let x=0; x<=PAGE_W; x+=CELL){ g.moveTo(x+.25,0); g.lineTo(x+.25,PAGE_H); }
+    for(let y=0; y<=PAGE_H; y+=CELL){ g.moveTo(0,y+.25); g.lineTo(PAGE_W,y+.25); }
+    g.stroke();
+    g.strokeStyle = 'rgba(143,165,189,.65)';
+    g.lineWidth = 1;
+    g.beginPath();
+    for(let x=0; x<=PAGE_W; x+=PPF){ g.moveTo(x+.5,0); g.lineTo(x+.5,PAGE_H); }
+    for(let y=0; y<=PAGE_H; y+=PPF){ g.moveTo(0,y+.5); g.lineTo(PAGE_W,y+.5); }
+    g.stroke();
+    g.fillStyle = 'rgba(91,118,148,.85)';
+    g.font = '9px '+MONO;
+    g.textAlign='left'; g.textBaseline='top';
+    const labelStep = (PAGE_W/PPF > 20) ? 4 : 2;
+    for(let f=0; f*PPF<=PAGE_W+0.5; f+=labelStep) g.fillText(f+"'", f*PPF+3, 3);
+    for(let f=labelStep; f*PPF<=PAGE_H+0.5; f+=labelStep) g.fillText(f+"'", 3, f*PPF+3);
+    g.strokeStyle = 'rgba(91,118,148,.9)';
+    g.lineWidth = 1.5;
+    g.strokeRect(0.75,0.75,PAGE_W-1.5,PAGE_H-1.5);
+  } else {
+    g.lineWidth = 0.6;
+    const fw = Math.floor(PAGE_W/PPF), fh = Math.floor(PAGE_H/PPF);
+    for(let f=0; f<=fw; f++){
+      g.strokeStyle = (f%4===0) ? 'rgba(143,165,189,.55)' : 'rgba(143,165,189,.22)';
+      const a = proj(f*PPF, 0), b = proj(f*PPF, PAGE_H);
+      g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke();
+    }
+    for(let f=0; f<=fh; f++){
+      g.strokeStyle = (f%4===0) ? 'rgba(143,165,189,.55)' : 'rgba(143,165,189,.22)';
+      const a = proj(0, f*PPF), b = proj(PAGE_W, f*PPF);
+      g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke();
+    }
+    g.strokeStyle = 'rgba(91,118,148,.9)'; g.lineWidth=1.4;
+    const cs = [[0,0],[PAGE_W,0],[PAGE_W,PAGE_H],[0,PAGE_H]].map(([x,y])=>proj(x,y));
+    pathPoly(g, cs); g.stroke();
+  }
+  g.restore();
+}
+
+function shade(hex, f){
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.round(((n>>16)&255)*f), gg=Math.round(((n>>8)&255)*f), b=Math.round((n&255)*f);
+  return `rgb(${r},${gg},${b})`;
+}
+
+function drawPiece(g, p){
+  const m = MATS[p.type];
+  const col = COLORS[m.kind];
+  const wp = worldPoly(p);
+
+  if (viewMode === 'plan'){
+    pathPoly(g, wp);
+    g.fillStyle = col.fill; g.fill();
+    hatchPoly(g, wp, col.hatch, m.kind==='fab'?5:7);
+    pathPoly(g, wp);
+    g.strokeStyle = col.edge; g.lineWidth = 1.2; g.stroke();
+  } else {
+    const h = pieceHeightIn(p) * IN;
+    const bot = wp.map(([x,y]) => proj(x,y,0));
+    const top = wp.map(([x,y]) => proj(x,y,h));
+    for(let i=0;i<wp.length;i++){
+      const j=(i+1)%wp.length;
+      g.beginPath();
+      g.moveTo(bot[i][0],bot[i][1]); g.lineTo(bot[j][0],bot[j][1]);
+      g.lineTo(top[j][0],top[j][1]); g.lineTo(top[i][0],top[i][1]);
+      g.closePath();
+      g.fillStyle = shade(col.fill, 0.72);
+      g.fill();
+      g.strokeStyle = col.edge; g.lineWidth=.8; g.stroke();
+    }
+    pathPoly(g, top);
+    g.fillStyle = col.fill; g.fill();
+    hatchPoly(g, top, col.hatch, 6);
+    pathPoly(g, top);
+    g.strokeStyle = col.edge; g.lineWidth = 1.1; g.stroke();
+  }
+}
+
+function pieceLabel(p){
+  const m = MATS[p.type];
+  if (p.type==='fab-cb') return 'Corner Block 10"';
+  if (p.type==='fab-key') return 'Keystone 3"×8"';
+  if (m.kind==='sheet') return `${m.name} — ${fmtIn(p.lengthIn)} × ${fmtIn(pieceW(p))}`;
+  return `${m.name} — ${fmtIn(p.lengthIn)} (${p.orientation==='flat'?'flat':'on edge'})`;
+}
+
+function drawAnnots(g){
+  g.save();
+  g.strokeStyle = '#b3402a'; g.fillStyle = '#b3402a';
+  annots.forEach(a=>{
+    if (a.type === 'text'){
+      const [x,y] = proj(a.x, a.y);
+      g.font = '13px '+MONO;
+      g.textAlign='left'; g.textBaseline='alphabetic';
+      g.fillText(a.text, x, y);
+    } else if (a.type === 'dim'){
+      const [x1,y1] = proj(a.x1, a.y1);
+      const [x2,y2] = proj(a.x2, a.y2);
+      g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+      const ang = Math.atan2(y2-y1, x2-x1);
+      const ox = Math.cos(ang+Math.PI/2), oy = Math.sin(ang+Math.PI/2);
+      // perpendicular end ticks + small arrowheads
+      [[x1,y1],[x2,y2]].forEach(([px,py])=>{
+        g.beginPath(); g.moveTo(px-ox*5,py-oy*5); g.lineTo(px+ox*5,py+oy*5); g.stroke();
+      });
+      // distance label (offset perpendicular for legibility)
+      const mx=(x1+x2)/2+ox*10, my=(y1+y2)/2+oy*10;
+      g.font = '12px '+MONO; g.textAlign='center'; g.textBaseline='middle';
+      const tw = g.measureText(a.text).width;
+      g.fillStyle = 'rgba(245,240,232,.9)';
+      g.fillRect(mx-tw/2-3, my-8, tw+6, 16);
+      g.fillStyle = '#b3402a';
+      g.fillText(a.text, mx, my);
+    } else {
+      const [x1,y1] = proj(a.x1, a.y1);
+      const [x2,y2] = proj(a.x2, a.y2);
+      g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+      const ang = Math.atan2(y2-y1, x2-x1);
+      g.beginPath();
+      g.moveTo(x2,y2);
+      g.lineTo(x2-10*Math.cos(ang-0.42), y2-10*Math.sin(ang-0.42));
+      g.lineTo(x2-10*Math.cos(ang+0.42), y2-10*Math.sin(ang+0.42));
+      g.closePath(); g.fill();
+    }
+  });
+  g.restore();
+}
+
+function annotBBox(a){
+  if (a.type === 'text'){
+    const w = Math.max(a.text.length*7, 14);
+    return {x:a.x, y:a.y-12, w, h:15};
+  }
+  const x=Math.min(a.x1,a.x2), y=Math.min(a.y1,a.y2);
+  return {x, y, w:Math.abs(a.x2-a.x1), h:Math.abs(a.y2-a.y1)};
+}
+
+function drawLegend(g){
+  const w=176, h=46, x=PAGE_W-w-14, y=PAGE_H-h-14;
+  g.save();
+  g.fillStyle='rgba(245,240,232,.95)';
+  g.strokeStyle='#5b7694'; g.lineWidth=1.2;
+  g.fillRect(x,y,w,h); g.strokeRect(x,y,w,h);
+  g.fillStyle='#33475c';
+  g.font='bold 12px '+MONO;
+  g.textAlign='left'; g.textBaseline='top';
+  g.fillText('SCALE: '+SCALES[scaleKey].label, x+10, y+8);
+  g.font='9px '+MONO;
+  g.fillText(viewMode==='plan' ? 'PLAN VIEW · grid square = 3"' : 'ISOMETRIC PROJECTION (30°)', x+10, y+26);
+  g.restore();
+}
+
+/* paintScene: page + grid + pieces + annotations, world coords */
+function paintScene(g){
+  g.fillStyle = '#F5F0E8';
+  g.fillRect(0,0,PAGE_W,PAGE_H);
+  drawGrid(g);
+  let list = pieces;
+  if (viewMode === 'iso'){
+    list = pieces.slice().sort((a,b)=>(a.x+a.y)-(b.x+b.y));
+  }
+  list.forEach(p=>drawPiece(g,p));
+  drawAnnots(g);
+}
+
+function rotHandlePos(p){
+  const wp = worldPoly(p);
+  let maxR = 0;
+  wp.forEach(([x,y])=>{ maxR = Math.max(maxR, Math.hypot(x-p.x, y-p.y)); });
+  // gap from the piece to the handle shrinks as the paper scale grows
+  const gap = 26 * ((PX_PER_PAPER_IN/2) / PPF) / cam.z;
+  const d = maxR + gap;
+  const ang = rad(p.rot - 90);
+  return [p.x + d*Math.cos(ang), p.y + d*Math.sin(ang)];
+}
+
+function drawSelection(g){
+  if (!selected || viewMode!=='plan') return;
+  const k = 1/cam.z;   // keep handle sizes constant on screen
+  if (selected.kind === 'piece'){
+    const p = pieces.find(q=>q.id===selected.id); if(!p) return;
+    const wp = worldPoly(p);
+    pathPoly(g, wp);
+    g.save();
+    g.strokeStyle = '#2f6fab'; g.lineWidth = 1.4*k; g.setLineDash([5*k,4*k]); g.stroke();
+    g.setLineDash([]);
+    wp.forEach(([x,y])=>{
+      g.fillStyle='#fff'; g.strokeStyle='#2f6fab'; g.lineWidth=1.2*k;
+      g.beginPath(); g.rect(x-3.5*k,y-3.5*k,7*k,7*k); g.fill(); g.stroke();
+    });
+    const rh = rotHandlePos(p);
+    g.beginPath(); g.moveTo(p.x,p.y); g.lineTo(rh[0],rh[1]);
+    g.strokeStyle='#2f6fab'; g.lineWidth=1*k; g.stroke();
+    const hr = 9*k, hot = (drag&&drag.type==='rotate')||hoverRotHandle;
+    g.beginPath(); g.arc(rh[0],rh[1],hr,0,Math.PI*2);
+    g.fillStyle = hot ? '#D99E45' : '#fff'; g.fill();
+    g.strokeStyle = hot ? '#9c6b1e' : '#2f6fab'; g.lineWidth=2*k; g.stroke();
+    // curved rotate glyph inside the handle
+    g.save();
+    g.strokeStyle = hot ? '#1c1c1e' : '#2f6fab'; g.lineWidth=1.4*k; g.lineCap='round';
+    g.beginPath(); g.arc(rh[0],rh[1],4.2*k, -0.5, Math.PI*1.15); g.stroke();
+    const ah = Math.PI*1.15, ax = rh[0]+4.2*k*Math.cos(ah), ay = rh[1]+4.2*k*Math.sin(ah);
+    g.beginPath();
+    g.moveTo(ax,ay);
+    g.lineTo(ax-3*k*Math.cos(ah-0.6), ay-3*k*Math.sin(ah-0.6));
+    g.moveTo(ax,ay);
+    g.lineTo(ax-3*k*Math.cos(ah+0.9), ay-3*k*Math.sin(ah+0.9));
+    g.stroke();
+    g.restore();
+    const lbl = pieceLabel(p);
+    g.font = (11*k)+'px '+MONO;
+    const tw = g.measureText(lbl).width;
+    const ys = wp.map(q=>q[1]);
+    const ly = Math.max(...ys)+8*k;
+    g.fillStyle='rgba(28,28,30,.85)';
+    g.fillRect(p.x-tw/2-6*k, ly, tw+12*k, 18*k);
+    g.fillStyle='#F5F0E8'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillText(lbl, p.x, ly+9*k);
+    g.restore();
+  } else {
+    const a = annots.find(q=>q.id===selected.id); if(!a) return;
+    g.save();
+    g.strokeStyle='#2f6fab'; g.lineWidth=1.2*k; g.setLineDash([4*k,3*k]);
+    const bb = annotBBox(a);
+    g.strokeRect(bb.x-4*k, bb.y-4*k, bb.w+8*k, bb.h+8*k);
+    g.restore();
+  }
+}
+
+function drawSnapDots(g){
+  if (!snapDots.length) return;
+  const k = 1/cam.z;
+  g.save();
+  snapDots.forEach(([x,y])=>{
+    g.beginPath(); g.arc(x,y,4.5*k,0,Math.PI*2);
+    g.fillStyle='rgba(46,160,67,.25)'; g.fill();
+    g.beginPath(); g.arc(x,y,2.5*k,0,Math.PI*2);
+    g.fillStyle='#2ea043'; g.fill();
+  });
+  g.restore();
+}
+
+/* ── Floating world-anchored label (snap / rotate feedback) ─ */
+function drawWorldLabel(g, lab, accent){
+  const [sx,sy] = w2s(lab.x, lab.y);
+  g.save();
+  g.setTransform(1,0,0,1,0,0);
+  g.font = '11px '+MONO;
+  const lines = lab.text.split('\n');
+  let tw = 0; lines.forEach(t=>{ tw = Math.max(tw, g.measureText(t).width); });
+  const padX=8, padY=5, lh=14;
+  const bw = tw+padX*2, bh = lines.length*lh+padY*2;
+  let bx = sx - bw/2, by = sy - bh - 16;
+  bx = Math.max(6, Math.min(cv.width-bw-6, bx));
+  by = Math.max(6, Math.min(cv.height-bh-6, by));
+  g.fillStyle='rgba(28,28,30,.94)';
+  g.strokeStyle=accent; g.lineWidth=1;
+  g.beginPath(); g.rect(bx,by,bw,bh); g.fill(); g.stroke();
+  g.fillStyle=accent; g.textAlign='left'; g.textBaseline='middle';
+  lines.forEach((t,i)=>{ g.fillText(t, bx+padX, by+padY+lh*i+lh/2); });
+  g.restore();
+}
+
+/* ── Loupe: magnified inset while dragging ─── */
+function drawLoupe(g){
+  if (!lastMouse) return;
+  const [mx,my] = lastMouse;
+  const [wx,wy] = s2w(mx,my);
+  const R = 85;
+  let ox = mx+115, oy = my-115;
+  if (ox+R > cv.width)  ox = mx-115;
+  if (oy-R < 0)         oy = my+115;
+  g.save();
+  g.setTransform(1,0,0,1,0,0);
+  g.beginPath(); g.arc(ox,oy,R,0,Math.PI*2); g.clip();
+  g.fillStyle = '#454249';
+  g.fillRect(ox-R,oy-R,R*2,R*2);
+  const z2 = cam.z*2.5;
+  g.setTransform(z2,0,0,z2, ox-wx*z2, oy-wy*z2);
+  paintScene(g);
+  drawSnapDots(g);
+  g.restore();
+  // ring + crosshair
+  g.save();
+  g.setTransform(1,0,0,1,0,0);
+  g.beginPath(); g.arc(ox,oy,R,0,Math.PI*2);
+  g.strokeStyle='#1C1C1E'; g.lineWidth=3.5; g.stroke();
+  g.beginPath(); g.arc(ox,oy,R-2,0,Math.PI*2);
+  g.strokeStyle='#E8C84A'; g.lineWidth=1.6; g.stroke();
+  g.strokeStyle='rgba(179,64,42,.85)'; g.lineWidth=1;
+  g.beginPath();
+  g.moveTo(ox-10,oy); g.lineTo(ox+10,oy);
+  g.moveTo(ox,oy-10); g.lineTo(ox,oy+10);
+  g.stroke();
+  g.font='9px '+MONO; g.fillStyle='#E8C84A'; g.textAlign='center';
+  g.fillText('2.5×', ox, oy+R-9);
+  g.restore();
+}
+
+/* ── Master redraw ────────────────────────── */
+function draw(){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = '#454249';
+  ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(cam.z,0,0,cam.z,cam.px,cam.py);
+  paintScene(ctx);
+  drawSelection(ctx);
+  drawSnapDots(ctx);
+  drawGuides(ctx);
+  drawFabBadges(ctx);
+  if (drag && (drag.type==='move' || drag.type==='annotMove')) drawLoupe(ctx);
+  // live dimension preview (dimension tool, between the two clicks)
+  if (toolMode==='dimension' && dimA){
+    const cur = dimCursor || dimA;
+    ctx.save();
+    ctx.strokeStyle='#b3402a'; ctx.lineWidth=1.4/cam.z; ctx.setLineDash([5/cam.z,3/cam.z]);
+    ctx.beginPath(); ctx.moveTo(dimA[0],dimA[1]); ctx.lineTo(cur[0],cur[1]); ctx.stroke();
+    ctx.restore();
+    const distIn = Math.hypot(cur[0]-dimA[0], cur[1]-dimA[1]) / IN;
+    drawWorldLabel(ctx, {x:(dimA[0]+cur[0])/2, y:(dimA[1]+cur[1])/2, text:fmtIn(distIn)}, '#b3402a');
+  }
+  if (snapLabel)   drawWorldLabel(ctx, snapLabel, '#2ea043');
+  if (rotateHint)  drawWorldLabel(ctx, rotateHint, '#D99E45');
+  ctx.setTransform(1,0,0,1,0,0);
+}
+
+/* ============================================================
+   HIT TESTING (world coords)
+   ============================================================ */
+function pointInPoly(pt, poly){
+  let inside = false;
+  for (let i=0, j=poly.length-1; i<poly.length; j=i++){
+    const [xi,yi]=poly[i], [xj,yj]=poly[j];
+    if (((yi>pt[1])!==(yj>pt[1])) &&
+        (pt[0] < (xj-xi)*(pt[1]-yi)/(yj-yi)+xi)) inside = !inside;
+  }
+  return inside;
+}
+function closestOnSeg(p, a, b){
+  const dx=b[0]-a[0], dy=b[1]-a[1];
+  const len2 = dx*dx+dy*dy;
+  let t = len2 ? ((p[0]-a[0])*dx+(p[1]-a[1])*dy)/len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return [a[0]+t*dx, a[1]+t*dy];
+}
+function distToSeg(px,py, x1,y1,x2,y2){
+  const cp = closestOnSeg([px,py],[x1,y1],[x2,y2]);
+  return Math.hypot(px-cp[0], py-cp[1]);
+}
+function hitPiece(x,y){
+  for (let i=pieces.length-1; i>=0; i--){
+    if (pointInPoly([x,y], worldPoly(pieces[i]))) return pieces[i];
+  }
+  return null;
+}
+function hitAnnot(x,y){
+  const k = 1/cam.z;
+  for (let i=annots.length-1; i>=0; i--){
+    const a = annots[i];
+    if (a.type==='text'){
+      const bb = annotBBox(a);
+      if (x>=bb.x-3*k && x<=bb.x+bb.w+3*k && y>=bb.y-3*k && y<=bb.y+bb.h+3*k) return a;
+    } else {
+      if (distToSeg(x,y,a.x1,a.y1,a.x2,a.y2) < 6*k) return a;
+    }
+  }
+  return null;
+}
+
+/* ============================================================
+   OBJECT SNAPPING
+   - lumber & sheets: vertices/edges snap flush to other
+     lumber/sheet vertices/edges.
+   - fabricated parts (corner blocks, keystones): snap so their
+     vertices sit on lines held 3/4" INSIDE nearby lumber edges
+     (standard Broadway flat construction — gussets are kept a
+     lumber-thickness back from the outside of the frame).
+   Returns {dx,dy,pts} or null.  Threshold is screen-constant.
+   ============================================================ */
+function centroidOf(poly){
+  let sx=0, sy=0;
+  poly.forEach(([x,y])=>{sx+=x; sy+=y;});
+  return [sx/poly.length, sy/poly.length];
+}
+function offsetEdgesInward(poly, distPx){
+  const c = centroidOf(poly);
+  const out = [];
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i], b=poly[(i+1)%poly.length];
+    let nx=-(b[1]-a[1]), ny=b[0]-a[0];
+    const nl=Math.hypot(nx,ny)||1; nx/=nl; ny/=nl;
+    const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+    if (nx*(c[0]-mid[0])+ny*(c[1]-mid[1]) < 0){ nx=-nx; ny=-ny; }
+    out.push([[a[0]+nx*distPx, a[1]+ny*distPx],[b[0]+nx*distPx, b[1]+ny*distPx]]);
+  }
+  return out;
+}
+function objectSnap(p){
+  const isFab = MATS[p.type].kind==='fab';
+  const thresh = 10/cam.z;
+  const poly = worldPoly(p);
+  const cands = [];
+  for (const q of pieces){
+    if (q.id === p.id) continue;
+    const qk = MATS[q.type].kind;
+    const qp = worldPoly(q);
+    if (isFab){
+      if (qk === 'fab') continue;
+      // 3/4" inset lines from each lumber/sheet edge
+      const edges = offsetEdgesInward(qp, 0.75*IN);
+      for (const [a,b] of edges){
+        for (const v of poly){
+          const cp = closestOnSeg(v, a, b);
+          const d = Math.hypot(cp[0]-v[0], cp[1]-v[1]);
+          if (d < thresh) cands.push({d, dx:cp[0]-v[0], dy:cp[1]-v[1], pt:cp});
+        }
+      }
+    } else {
+      if (qk === 'fab') continue;
+      // vertex -> vertex (weighted to win over edge snaps)
+      for (const v of poly){
+        for (const w of qp){
+          const d = Math.hypot(w[0]-v[0], w[1]-v[1]);
+          if (d < thresh) cands.push({d:d*0.7, dx:w[0]-v[0], dy:w[1]-v[1], pt:w});
+        }
+      }
+      // vertex of p -> edge of q
+      for (const v of poly){
+        for (let i=0;i<qp.length;i++){
+          const a=qp[i], b=qp[(i+1)%qp.length];
+          const cp = closestOnSeg(v, a, b);
+          const d = Math.hypot(cp[0]-v[0], cp[1]-v[1]);
+          if (d < thresh) cands.push({d, dx:cp[0]-v[0], dy:cp[1]-v[1], pt:cp});
+        }
+      }
+      // vertex of q -> edge of p (move p so its edge meets the vertex)
+      for (const w of qp){
+        for (let i=0;i<poly.length;i++){
+          const a=poly[i], b=poly[(i+1)%poly.length];
+          const cp = closestOnSeg(w, a, b);
+          const d = Math.hypot(cp[0]-w[0], cp[1]-w[1]);
+          if (d < thresh) cands.push({d, dx:w[0]-cp[0], dy:w[1]-cp[1], pt:w});
+        }
+      }
+    }
+  }
+  if (!cands.length) return null;
+  cands.sort((a,b)=>a.d-b.d);
+  const first = cands[0];
+  let dx=first.dx, dy=first.dy;
+  const pts=[first.pt];
+  const l1=Math.hypot(dx,dy);
+  if (l1 > 0.0001){
+    const u1=[dx/l1, dy/l1];
+    for (const c2 of cands.slice(1)){
+      const l2=Math.hypot(c2.dx,c2.dy);
+      if (l2 < 0.0001) continue;
+      const dot=Math.abs((c2.dx*u1[0]+c2.dy*u1[1])/l2);
+      if (dot < 0.35){            // near-perpendicular second constraint
+        dx+=c2.dx; dy+=c2.dy; pts.push(c2.pt);
+        break;
+      }
+    }
+  }
+  return {dx, dy, pts};
+}
+
+/* ============================================================
+   ALIGNMENT GUIDES — snap a dragged piece's centre to the frame
+   centre-line (midpoint snapping) and to 2'-on-centre marks along
+   the frame (so toggles land on 2' centres).  Works in world px.
+   ============================================================ */
+function frameBBoxExcept(p){
+  const others = pieces.filter(q=>q.id!==p.id && MATS[q.type].kind==='lumber');
+  if (!others.length) return null;
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  others.forEach(q=> worldPoly(q).forEach(([x,y])=>{
+    minX=Math.min(minX,x); minY=Math.min(minY,y); maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
+  }));
+  return {minX,minY,maxX,maxY};
+}
+function snapGuides(p){
+  const fb = frameBBoxExcept(p);
+  if (!fb) return null;
+  const {minX,minY,maxX,maxY} = fb;
+  const midX=(minX+maxX)/2, midY=(minY+maxY)/2;
+  const step = 24*IN;                 // 2'-0" in world px
+  const thresh = 8/cam.z;
+  // candidate target coords for p's centre {v, mid?, off}
+  const xT=[{v:midX, mid:true}], yT=[{v:midY, mid:true}];
+  for (let m=minX+step; m<maxX-1; m+=step) xT.push({v:m, off:m-minX});
+  for (let m=maxX-step; m>minX+1; m-=step) xT.push({v:m, off:maxX-m});
+  for (let m=minY+step; m<maxY-1; m+=step) yT.push({v:m, off:m-minY});
+  for (let m=maxY-step; m>minY+1; m-=step) yT.push({v:m, off:maxY-m});
+  const res={x:null,y:null,lines:[],dots:[],label:null};
+  let bx=thresh, by=thresh, tx=null, ty=null;
+  xT.forEach(t=>{ const d=Math.abs(p.x-t.v); if(d<bx){ bx=d; res.x=t.v; tx=t; } });
+  yT.forEach(t=>{ const d=Math.abs(p.y-t.v); if(d<by){ by=d; res.y=t.v; ty=t; } });
+  if (res.x===null && res.y===null) return null;
+  if (res.x!==null){ res.lines.push({type:'v', x:res.x, y1:minY, y2:maxY}); res.dots.push([res.x, p.y]); }
+  if (res.y!==null){ res.lines.push({type:'h', y:res.y, x1:minX, x2:maxX}); res.dots.push([p.x, res.y]); }
+  const lead = tx||ty;
+  const onMid = (res.x!==null && Math.abs(res.x-midX)<0.5) || (res.y!==null && Math.abs(res.y-midY)<0.5);
+  res.label = (lead.mid || onMid) ? 'Centred' : (fmtIn((lead.off)/IN)+' on centre');
+  return res;
+}
+function drawGuides(g){
+  if (!guideLines.length) return;
+  const k=1/cam.z;
+  g.save();
+  g.strokeStyle='rgba(217,158,69,.95)'; g.lineWidth=1*k; g.setLineDash([6*k,4*k]);
+  guideLines.forEach(l=>{
+    g.beginPath();
+    if (l.type==='v'){ g.moveTo(l.x,l.y1); g.lineTo(l.x,l.y2); }
+    else { g.moveTo(l.x1,l.y); g.lineTo(l.x2,l.y); }
+    g.stroke();
+  });
+  g.restore();
+}
+
+/* A fab piece (corner block / keystone) is "correctly snapped" when it
+   already sits on the 3/4" inset line — i.e. object-snap would barely move
+   it.  Used to keep a persistent reveal badge (not just a one-time flash). */
+function fabSnapped(p){
+  if (MATS[p.type].kind !== 'fab') return false;
+  const os = objectSnap(p);
+  return !!(os && Math.hypot(os.dx, os.dy) < 0.5);
+}
+function drawFabBadges(g){
+  if (viewMode !== 'plan') return;
+  const k = 1/cam.z;
+  pieces.forEach(p=>{
+    if (!fabSnapped(p)) return;
+    const wp = worldPoly(p);
+    let cx=0, cy=0; wp.forEach(([x,y])=>{ cx+=x; cy+=y; }); cx/=wp.length; cy/=wp.length;
+    g.save();
+    g.font = (9*k)+'px '+MONO; g.textAlign='center'; g.textBaseline='middle';
+    const txt = '¾″ in', w = g.measureText(txt).width;
+    g.fillStyle = 'rgba(46,160,67,.92)';
+    g.beginPath(); g.rect(cx-w/2-4*k, cy-7*k, w+8*k, 14*k); g.fill();
+    g.fillStyle = '#fff'; g.fillText(txt, cx, cy);
+    g.restore();
+  });
+}
+
+/* Snap an arbitrary point to the nearest piece feature (corner, edge
+   midpoint, or centre), else the grid — clean endpoints for dimensions. */
+function snapPoint(wx, wy){
+  const th = 10/cam.z;
+  let best=null, bd=th;
+  const consider = (px,py)=>{ const d=Math.hypot(px-wx, py-wy); if(d<bd){ bd=d; best=[px,py]; } };
+  pieces.forEach(p=>{
+    const wp = worldPoly(p);
+    let cx=0, cy=0;
+    for (let i=0;i<wp.length;i++){
+      const [vx,vy] = wp[i];
+      consider(vx, vy);                              // corner
+      const [nx,ny] = wp[(i+1)%wp.length];
+      consider((vx+nx)/2, (vy+ny)/2);                // edge midpoint
+      cx+=vx; cy+=vy;
+    }
+    consider(cx/wp.length, cy/wp.length);            // centre of the piece
+  });
+  if (best) return best;
+  if (snapOn) return [Math.round(wx/CELL)*CELL, Math.round(wy/CELL)*CELL];
+  return [wx,wy];
+}
+
+/* ============================================================
+   PALETTE
+   ============================================================ */
+function paletteThumb(type){
+  const c = document.createElement('canvas');
+  c.width=46; c.height=34;
+  const g = c.getContext('2d');
+  g.fillStyle='#F5F0E8'; g.fillRect(0,0,46,34);
+  g.strokeStyle='rgba(143,165,189,.35)'; g.lineWidth=.5;
+  g.beginPath();
+  for(let x=0;x<=46;x+=8){g.moveTo(x,0);g.lineTo(x,34);}
+  for(let y=0;y<=34;y+=8){g.moveTo(0,y);g.lineTo(46,y);}
+  g.stroke();
+  const m = MATS[type];
+  const col = COLORS[m.kind];
+  const shape = ()=>{
+    g.beginPath();
+    if (type==='fab-cb'){ g.moveTo(10,26); g.lineTo(36,26); g.lineTo(10,8); g.closePath(); }
+    else if (type==='fab-key'){ g.rect(11,12,24,10); }
+    else if (m.kind==='sheet'){ g.rect(7,7,32,20); }
+    else { const h = m.face>3 ? 8 : 6; g.rect(5,17-h/2,36,h); }
+  };
+  g.fillStyle = col.fill; g.strokeStyle = col.edge; g.lineWidth=1;
+  shape(); g.fill();
+  g.save(); shape(); g.clip();
+  g.strokeStyle=col.hatch; g.lineWidth=.6;
+  g.beginPath();
+  for(let d=-46; d<46; d+=4){ g.moveTo(d,34); g.lineTo(d+34,0); }
+  g.stroke(); g.restore();
+  shape(); g.stroke();
+  return c;
+}
+
+/* Plain-language glossary for palette items (the “?” badge) */
+const GLOSS = {
+  'lum-1x3': '<b>1×3</b> is a <b>nominal</b> name, not the real size. The board actually measures <b>2-1/2″ × 3/4″</b> — lumber is named for its rough-sawn size, then planed smaller and smooth. The most common stock for flat framing rails.',
+  'lum-2x4': '<b>2×4</b> is nominal. Actual size <b>3-1/2″ × 1-1/2″</b>. Heavier framing for studwalls, platforms, and load-bearing structure.',
+  'sh-ply' : '<b>3/4″ plywood</b> — sold in 4×8 sheets. You set both a <b>length</b> and a <b>width</b> because you cut it to size. Used for platform tops and hard surfaces.',
+  'sh-luan': '<b>Luan</b> — a thin <b>1/4″</b> sheet used to “skin” a flat: it gives the frame a smooth face to paint.',
+  'sh-maso': '<b>Masonite</b> — smooth <b>1/8″</b> hardboard, often for stage-floor surfacing and templates.',
+  'fab-cb' : '<b>Corner block</b> — a triangular 1/4″ plywood gusset that reinforces the corner joints of a flat. By convention it sits <b>3/4″ in</b> from the outer frame edge (the app snaps it there for you).',
+  'fab-key': '<b>Keystone</b> — a 1/4″ plywood gusset that reinforces a “toggle” (a mid-frame cross rail). Like corner blocks, it’s held <b>3/4″ back</b> from the lumber edges.'
+};
+/* Structural / process vocabulary used in quiz feedback & the cut list */
+const TERMS = {
+  'stile'      : '<b>Stile</b> — a vertical side member of a flat’s frame (the uprights).',
+  'rail'       : '<b>Rail</b> — a horizontal top or bottom member of a flat’s frame.',
+  'toggle'     : '<b>Toggle</b> — an interior horizontal cross-member that stiffens the frame, usually spaced on 2′ centres.',
+  'muslin'     : '<b>Muslin</b> — lightweight cotton fabric glued over a Broadway flat and painted: a “soft” cover.',
+  'reveal'     : '<b>Reveal</b> — the small set-back (here <b>3/4″</b>) that corner blocks &amp; keystones are held in from the frame’s outer edge.',
+  'corner-block':'<b>Corner block</b> — a triangular 1/4″ plywood gusset reinforcing a corner joint, held 3/4″ in from the edge.',
+  'keystone'   : '<b>Keystone</b> — a 1/4″ plywood gusset reinforcing a toggle (mid-rail) joint.',
+  'crossbrace' : '<b>Crossbrace</b> — a diagonal member that keeps a flat square.',
+  'flat-orient': '<b>Flat (orientation)</b> — the board lies face-down, so its wide 2-1/2″ face is in the plane of the flat. Typical for Broadway rails.',
+  'on-edge'    : '<b>On edge</b> — the board stands on its narrow edge, so only its 3/4″ thickness faces out. Used for Hollywood frames and platform joists.'
+};
+/* phrases first, longer before shorter, so multi-word terms win */
+const TERM_MATCHERS = [
+  {key:'corner-block', re:/\bcorner blocks?\b/gi},
+  {key:'on-edge',      re:/\bon edge\b/gi},
+  {key:'crossbrace',   re:/\bcross-?braces?\b/gi},
+  {key:'keystone',     re:/\bkeystones?\b/gi},
+  {key:'stile',        re:/\bstiles?\b/gi},
+  {key:'rail',         re:/\brails?\b/gi},
+  {key:'toggle',       re:/\btoggles?\b/gi},
+  {key:'muslin',       re:/\bmuslin\b/gi},
+  {key:'reveal',       re:/\breveal\b/gi}
+];
+/* wrap known terms in text only (never inside HTML tags) */
+function glossify(html){
+  return String(html).replace(/(<[^>]+>)|([^<]+)/g, (whole, tag, text)=>{
+    if (tag) return tag;
+    let t = text;
+    TERM_MATCHERS.forEach(({key,re})=>{
+      t = t.replace(re, w=>`<span class="gloss-term" data-term="${key}">${w}</span>`);
+    });
+    return t;
+  });
+}
+
+const glossTip = document.getElementById('glossTip');
+function showGlossHTML(html, anchorEl){
+  glossTip.innerHTML = html;
+  glossTip.style.display='block';
+  const r = anchorEl.getBoundingClientRect();
+  const bw = glossTip.offsetWidth;
+  let left = r.left - bw - 10;            // prefer to the left
+  if (left < 8) left = r.right + 10;
+  if (left + bw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - bw - 8);
+  let top = r.top - 4;
+  top = Math.max(8, Math.min(window.innerHeight - glossTip.offsetHeight - 8, top));
+  glossTip.style.left = left+'px';
+  glossTip.style.top  = top+'px';
+}
+function showGloss(type, anchorEl){ showGlossHTML(GLOSS[type] || MATS[type].dims, anchorEl); }
+function hideGloss(){ glossTip.style.display='none'; }
+/* delegated hover for any .gloss-term (quiz feedback, cut list, etc.) */
+document.addEventListener('mouseover', e=>{
+  const t = e.target.closest && e.target.closest('.gloss-term');
+  if (t && TERMS[t.dataset.term]) showGlossHTML(TERMS[t.dataset.term], t);
+});
+document.addEventListener('mouseout', e=>{
+  const t = e.target.closest && e.target.closest('.gloss-term');
+  if (t) hideGloss();
+});
+function palItemEl(type){ return document.querySelector('.pal-item[data-type="'+type+'"]'); }
+
+function buildPalette(){
+  const mk = (type, parent)=>{
+    const m = MATS[type];
+    const el = document.createElement('div');
+    el.className='pal-item';
+    el.draggable = true;
+    el.dataset.type = type;
+    el.appendChild(paletteThumb(type));
+    const txt = document.createElement('div');
+    txt.innerHTML = `<div class="pi-name">${m.name}</div><div class="pi-dims">${m.dims}</div>`;
+    el.appendChild(txt);
+    const help = document.createElement('div');
+    help.className='pi-help'; help.textContent='?';
+    help.addEventListener('mouseenter', ()=>showGloss(type, el));
+    help.addEventListener('mouseleave', hideGloss);
+    help.addEventListener('click', e=>{ e.stopPropagation(); showGloss(type, el); });
+    el.appendChild(help);
+    el.addEventListener('click', e=>{
+      if (e.target.classList && e.target.classList.contains('pi-help')) return;
+      const [wx,wy] = s2w(cv.width/2, cv.height/2);
+      const r = el.getBoundingClientRect();
+      beginPlacement(type, wx, wy, r.left + r.width/2, r.top + r.height/2, true);
+    });
+    el.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', type);
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+    parent.appendChild(el);
+  };
+  STOCK.forEach(t=>mk(t, document.getElementById('palStock')));
+  FAB.forEach(t=>mk(t, document.getElementById('palFab')));
+}
+
+cv.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+cv.addEventListener('drop', e=>{
+  e.preventDefault();
+  const type = e.dataTransfer.getData('text/plain');
+  if (!MATS[type]) return;
+  const r = cv.getBoundingClientRect();
+  const [wx,wy] = s2w(e.clientX - r.left, e.clientY - r.top);
+  beginPlacement(type, wx, wy, e.clientX, e.clientY);
+});
+
+/* ============================================================
+   TAPE MEASURE — dimension picker
+   1/16" graduations, scroll to pull tape, hover magnifier with
+   floating x'-x x/x" readout, click a mark to set the value.
+   ============================================================ */
+const PXPI = 64;                // tape screen px per real inch (1/16" = 4px)
+const tapeOverlay = document.getElementById('tapeOverlay');
+const tapeCv = document.getElementById('tapeCv');
+const tctx = tapeCv.getContext('2d');
+const T = { active:false, type:null, x:0, y:0, stage:'length',
+            values:{}, maxIn:192, offsetIn:-1.5, hoverSix:null, hoverX:null };
+
+function tapeSizeCanvas(){
+  tapeCv.width = window.innerWidth || 1280;
+  tapeCv.height = 280;
+}
+function tapeOpen(type, wx, wy){
+  const m = MATS[type];
+  T.active = true; T.type = type; T.x = wx; T.y = wy;
+  T.stage = 'length';
+  T.values = {};
+  T.maxIn = (m.kind==='sheet') ? 96 : 192;
+  T.offsetIn = -1.5;
+  T.hoverSix = null; T.hoverX = null;
+  document.getElementById('tapeOrientWrap').style.display = (m.kind==='lumber') ? 'flex' : 'none';
+  updateOrientCaption();
+  setTapeTitle();
+  document.getElementById('tapeValue').textContent = '—';
+  const tn = document.getElementById('tapeNum'); tn.value='';
+  tapeOverlay.classList.add('show');
+  renderTapeQuizTarget();   // show the required dimensions while measuring (quiz mode)
+  // first-use tip framing the gesture in physical terms + reassurance
+  document.getElementById('tapeFirstTip').style.display = seen('tape') ? 'none' : 'block';
+  tapeSizeCanvas();
+  tapeDraw();
+  if (seen('tape')) setTimeout(()=>tn.focus(), 0);
+}
+function updateOrientCaption(){
+  const cap = document.getElementById('tapeOrientCaption');
+  const m = MATS[T.type];
+  if (!m || m.kind!=='lumber'){ cap.style.display='none'; return; }
+  cap.style.display='block';
+  const parts = m.dims.split('×').map(s=>s.trim());   // [face, thickness]
+  const checked = document.querySelector('input[name=tapeOrient]:checked');
+  const o = checked ? checked.value : 'flat';
+  cap.innerHTML = (o==='flat')
+    ? `<b style="color:var(--tape)">Flat:</b> board lies face-down — its ${parts[0]} face shows on the plan. Typical for frame rails.`
+    : `<b style="color:var(--tape)">On edge:</b> board stands up — only its ${parts[1]} edge shows on the plan. Used for depth/stiffness.`;
+}
+function setTapeTitle(){
+  const m = MATS[T.type];
+  const what = T.stage==='length' ? 'LENGTH' : 'WIDTH';
+  document.getElementById('tapeTitle').innerHTML =
+    `${m.name} — pull the tape &amp; click the <em>${what}</em>` +
+    (T.stage==='width' ? ` <span style="color:var(--text-dim);font-weight:400">(length ${fmtIn(T.values.lengthIn)})</span>` : '');
+}
+function tapeClose(cancelled){
+  T.active = false;
+  tapeOverlay.classList.remove('show');
+  document.getElementById('tapeFirstTip').style.display='none';
+  if (cancelled){
+    // visibly connect the cancellation to the palette item that was clicked
+    const el = palItemEl(T.type);
+    if (el){ el.classList.remove('pal-flash'); void el.offsetWidth; el.classList.add('pal-flash'); }
+    toast('Measurement canceled — no piece added', {ms:1500});
+  }
+}
+function tapeNearestSix(mx){
+  const inches = T.offsetIn + mx/PXPI;
+  let six = Math.round(inches*16);
+  return Math.max(1, Math.min(T.maxIn*16, six));
+}
+function tapeXAt(inch){ return (inch - T.offsetIn)*PXPI; }
+
+function tapeTicks(g, fromIn, toIn, xOf, scaleY, top, baseLW){
+  const startSix = Math.max(0, Math.ceil(fromIn*16));
+  const endSix = Math.min(T.maxIn*16, Math.floor(toIn*16));
+  for (let six=startSix; six<=endSix; six++){
+    const x = xOf(six/16);
+    let len, lw=baseLW;
+    if (six%16===0){ len=52; lw=baseLW*1.7; }
+    else if (six%8===0) len=34;
+    else if (six%4===0) len=26;
+    else if (six%2===0) len=20;
+    else len=14;
+    g.strokeStyle = '#1c1c1e';
+    g.lineWidth = lw;
+    g.beginPath();
+    g.moveTo(x, top);
+    g.lineTo(x, top + len*scaleY);
+    g.stroke();
+    if (six%16===0){
+      const inch = six/16;
+      if (inch>0 && inch%12===0){
+        g.fillStyle = '#b3402a';
+        g.font = `bold ${Math.round(20*scaleY)}px ${MONO}`;
+        g.textAlign='left'; g.textBaseline='top';
+        g.fillText((inch/12)+"'", x+4, top + 56*scaleY);
+      } else if (inch>0){
+        g.fillStyle = '#1c1c1e';
+        g.font = `bold ${Math.round(16*scaleY)}px ${MONO}`;
+        g.textAlign='left'; g.textBaseline='top';
+        g.fillText(String(inch%12), x+3, top + 56*scaleY);
+      }
+    }
+  }
+}
+
+function tapeDraw(){
+  const w = tapeCv.width, h = tapeCv.height;
+  const g = tctx;
+  g.setTransform(1,0,0,1,0,0);
+  g.clearRect(0,0,w,h);
+  const top = 152, bot = 252;
+
+  // tape body
+  const x0 = Math.max(0, tapeXAt(0));
+  const x1 = Math.min(w, tapeXAt(T.maxIn));
+  if (x1 > x0){
+    let fill = '#E8C84A';
+    if (g.createLinearGradient){
+      const grad = g.createLinearGradient(0,top,0,bot);
+      grad.addColorStop(0,'#F2D45C'); grad.addColorStop(.12,'#E8C84A');
+      grad.addColorStop(1,'#D9B83C');
+      fill = grad;
+    }
+    g.fillStyle = fill;
+    g.fillRect(x0, top, x1-x0, bot-top);
+    g.strokeStyle='#9b8120'; g.lineWidth=2;
+    g.strokeRect(x0+1, top+1, x1-x0-2, bot-top-2);
+  }
+  // end hook at 0
+  if (tapeXAt(0) >= -8){
+    const hx = tapeXAt(0);
+    g.fillStyle='#3a3a3e';
+    g.fillRect(hx-7, top-8, 8, bot-top+16);
+    g.fillStyle='#6a6a70';
+    g.fillRect(hx-7, top-8, 8, 6);
+    g.fillRect(hx-7, bot+2, 8, 6);
+  }
+  // graduations
+  tapeTicks(g, Math.max(0, T.offsetIn), T.offsetIn + w/PXPI, tapeXAt, 1, top, 1);
+
+  // hover: highlight + label + magnifier
+  if (T.hoverSix != null){
+    const hin = T.hoverSix/16;
+    const hx = tapeXAt(hin);
+    g.strokeStyle = '#b3402a'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(hx, top-6); g.lineTo(hx, bot+6); g.stroke();
+    g.fillStyle = '#b3402a';
+    g.beginPath();
+    g.moveTo(hx, top-4); g.lineTo(hx-6, top-14); g.lineTo(hx+6, top-14);
+    g.closePath(); g.fill();
+
+    // magnifier circle above
+    const R = 62;
+    const mcx = Math.max(R+8, Math.min(w-R-8, hx));
+    const mcy = 76;
+    g.save();
+    g.beginPath(); g.arc(mcx, mcy, R, 0, Math.PI*2); g.clip();
+    g.fillStyle = '#E8C84A';
+    g.fillRect(mcx-R, mcy-R, R*2, R*2);
+    const MAG = 3.2;
+    const xOfMag = (inch)=> mcx + (inch - hin)*PXPI*MAG;
+    tapeTicks(g, hin - (R+10)/(PXPI*MAG), hin + (R+10)/(PXPI*MAG), xOfMag, 1.15, mcy-46, 1.4);
+    g.strokeStyle = '#b3402a'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(mcx, mcy-R); g.lineTo(mcx, mcy+R); g.stroke();
+    g.restore();
+    // magnifying-glass ring + handle
+    g.beginPath(); g.arc(mcx, mcy, R, 0, Math.PI*2);
+    g.strokeStyle = '#1C1C1E'; g.lineWidth = 4; g.stroke();
+    g.beginPath(); g.arc(mcx, mcy, R-3, 0, Math.PI*2);
+    g.strokeStyle = '#8fa5bd'; g.lineWidth = 1.5; g.stroke();
+    g.strokeStyle = '#1C1C1E'; g.lineWidth = 7; g.lineCap='round';
+    g.beginPath();
+    g.moveTo(mcx + R*0.74, mcy + R*0.74);
+    g.lineTo(mcx + R*1.18, mcy + R*1.18);
+    g.stroke();
+    g.lineCap='butt';
+
+    // floating dimension label above the marking
+    const lbl = fmtSix(T.hoverSix);
+    g.font = 'bold 15px '+MONO;
+    const tw = g.measureText(lbl).width;
+    const lx = Math.max(6, Math.min(w-tw-22, hx-tw/2-8));
+    g.fillStyle = 'rgba(28,28,30,.95)';
+    g.strokeStyle = '#E8C84A'; g.lineWidth=1;
+    const ly = 6;
+    g.fillRect(lx, ly, tw+16, 24);
+    g.strokeRect(lx+.5, ly+.5, tw+15, 23);
+    g.fillStyle = '#E8C84A';
+    g.textAlign='left'; g.textBaseline='middle';
+    g.fillText(lbl, lx+8, ly+12);
+
+    document.getElementById('tapeValue').textContent = lbl;
+  }
+}
+
+tapeCv.addEventListener('mousemove', e=>{
+  const r = tapeCv.getBoundingClientRect();
+  const mx = e.clientX - r.left;
+  T.hoverSix = tapeNearestSix(mx);
+  T.hoverX = mx;
+  tapeDraw();
+});
+tapeCv.addEventListener('mouseleave', ()=>{
+  T.hoverSix = null;
+  document.getElementById('tapeValue').textContent = '—';
+  tapeDraw();
+});
+tapeCv.addEventListener('click', e=>{
+  if (T.hoverSix == null) return;
+  tapeStageDone(T.hoverSix);
+});
+tapeOverlay.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const vis = tapeCv.width/PXPI;
+  T.offsetIn += (e.deltaY + e.deltaX) * 0.015 * (e.shiftKey?4:1);
+  T.offsetIn = Math.max(-2, Math.min(Math.max(-2, T.maxIn - vis + 2), T.offsetIn));
+  if (T.hoverX != null) T.hoverSix = tapeNearestSix(T.hoverX);
+  tapeDraw();
+}, {passive:false});
+document.getElementById('tapeCancel').addEventListener('click', ()=>tapeClose(true));
+
+// numeric length entry — type a value and confirm with Enter
+const tapeNum = document.getElementById('tapeNum');
+function tapeSubmitTyped(){
+  const six = parseLengthToSix(tapeNum.value);
+  if (six == null){
+    toast('Couldn’t read that — try like <b>8\' 0"</b>, <b>48"</b>, or <b>8 1/2"</b>', {warn:true, ms:2800});
+    tapeNum.focus();
+    return;
+  }
+  const clamped = Math.max(1, Math.min(T.maxIn*16, six));
+  tapeStageDone(clamped);
+  tapeNum.value='';
+}
+tapeNum.addEventListener('keydown', e=>{
+  if (e.key==='Enter'){ e.preventDefault(); tapeSubmitTyped(); }
+  else if (e.key==='Escape'){ e.preventDefault(); tapeClose(true); }
+  e.stopPropagation();
+});
+document.getElementById('tapeNumGo').addEventListener('click', tapeSubmitTyped);
+document.querySelectorAll('input[name=tapeOrient]').forEach(r=>{
+  r.addEventListener('change', updateOrientCaption);
+});
+document.getElementById('tapeFirstTipOk').addEventListener('click', ()=>{
+  markSeen('tape');
+  document.getElementById('tapeFirstTip').style.display='none';
+  tapeNum.focus();
+});
+
+function tapeStageDone(six){
+  const m = MATS[T.type];
+  if (T.stage === 'length'){
+    T.values.lengthIn = six/16;
+    if (m.kind === 'sheet'){
+      T.stage = 'width';
+      T.maxIn = 48;
+      T.offsetIn = -1.5;
+      T.hoverSix = null;
+      setTapeTitle();
+      document.getElementById('tapeValue').textContent = '—';
+      const tn = document.getElementById('tapeNum'); tn.value=''; tn.focus();
+      tapeDraw();
+      return;
+    }
+    finishTape();
+  } else {
+    T.values.widthIn = six/16;
+    finishTape();
+  }
+}
+function finishTape(){
+  const m = MATS[T.type];
+  let orient = 'flat';
+  if (m.kind === 'lumber'){
+    const checked = document.querySelector('input[name=tapeOrient]:checked');
+    orient = checked ? checked.value : 'flat';
+  }
+  addPiece({
+    type:T.type, x:T.x, y:T.y, rot:0,
+    lengthIn:T.values.lengthIn,
+    widthIn:T.values.widthIn,
+    orientation:orient
+  });
+  tapeClose();
+}
+
+/* ============================================================
+   PLACEMENT
+   ============================================================ */
+/* fan successive centre-placed pieces out diagonally so they don't stack */
+function cascadePos(wx, wy){
+  const step = CELL*2;                 // ~6"
+  const k = pieces.length % 8;
+  return [wx + (k-3.5)*step, wy + (k-3.5)*step];
+}
+function beginPlacement(type, wx, wy, sx, sy, cascade){
+  if (viewMode === 'iso'){
+    flashIsoBanner();
+    toast('Switch to <b>Plan view</b> to add or edit pieces', {sx, sy, warn:true, below:true});
+    return;
+  }
+  if (cascade) [wx, wy] = cascadePos(wx, wy);
+  const m = MATS[type];
+  if (m.kind === 'fab'){
+    addPiece({type, x:wx, y:wy, rot:0});
+    return;
+  }
+  tapeOpen(type, wx, wy);
+}
+
+function addPiece(o){
+  pushUndo();
+  const p = {
+    id: idSeq++,
+    type: o.type,
+    x: snapOn ? Math.round(o.x/CELL)*CELL : o.x,
+    y: snapOn ? Math.round(o.y/CELL)*CELL : o.y,
+    rot: o.rot || 0,
+    lengthIn: o.lengthIn || 0,
+    widthIn: o.widthIn || undefined,
+    orientation: o.orientation || 'flat',
+    miterL: 90, miterR: 90
+  };
+  pieces.push(p);
+  selected = {kind:'piece', id:p.id};
+  syncPropPanel(); updateCutList(); save(); draw();
+  return p;
+}
+
+/* ============================================================
+   CANVAS INTERACTION
+   ============================================================ */
+function canvasPos(e){        // WORLD coords
+  const r = cv.getBoundingClientRect();
+  return s2w(e.clientX - r.left, e.clientY - r.top);
+}
+function screenPos(e){
+  const r = cv.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
+
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const [sx,sy] = screenPos(e);
+  zoomAt(sx, sy, Math.exp(-e.deltaY*0.0012));
+  draw();
+}, {passive:false});
+
+cv.addEventListener('mousedown', e=>{
+  if (viewMode === 'iso'){
+    const [sx,sy] = screenPos(e);
+    drag = {type:'pan', sx, sy, px0:cam.px, py0:cam.py, moved:false};
+    return;
+  }
+  const [x,y] = canvasPos(e);
+  const [sx,sy] = screenPos(e);
+  hideAnnotInput();
+
+  if (toolMode === 'dimension'){
+    const sp = snapPoint(x, y);
+    if (!dimA){ dimA = sp; dimCursor = sp; }
+    else {
+      const distIn = Math.hypot(sp[0]-dimA[0], sp[1]-dimA[1]) / IN;
+      if (distIn > 0.05){
+        pushUndo();
+        annots.push({id:idSeq++, type:'dim', x1:dimA[0], y1:dimA[1], x2:sp[0], y2:sp[1], text:fmtIn(distIn)});
+        save();
+      }
+      dimA = null; dimCursor = null;
+    }
+    draw();
+    return;
+  }
+
+  if (toolMode === 'annotate'){
+    drag = {type:'arrowDraw', x1:x, y1:y, x2:x, y2:y, moved:false};
+    return;
+  }
+
+  if (selected && selected.kind==='piece'){
+    const p = pieces.find(q=>q.id===selected.id);
+    if (p){
+      const rh = rotHandlePos(p);
+      if (Math.hypot(x-rh[0], y-rh[1]) < 12/cam.z){
+        drag = {type:'rotate', id:p.id, before:snapshot()};
+        return;
+      }
+    }
+  }
+
+  const hp = hitPiece(x,y);
+  if (hp){
+    selected = {kind:'piece', id:hp.id};
+    drag = {type:'move', id:hp.id, dx:x-hp.x, dy:y-hp.y, before:snapshot()};
+    syncPropPanel(); draw();
+    return;
+  }
+  const ha = hitAnnot(x,y);
+  if (ha){
+    selected = {kind:'annot', id:ha.id};
+    if (ha.type==='text') drag = {type:'annotMove', id:ha.id, dx:x-ha.x, dy:y-ha.y, before:snapshot()};
+    else drag = {type:'annotMove', id:ha.id, dx:x-ha.x1, dy:y-ha.y1, dx2:x-ha.x2, dy2:y-ha.y2, before:snapshot()};
+    syncPropPanel(); draw();
+    return;
+  }
+  // empty space: pan (click without movement deselects)
+  drag = {type:'pan', sx, sy, px0:cam.px, py0:cam.py, moved:false};
+});
+
+window.addEventListener('mousemove', e=>{
+  if (!drag) return;
+  const [sx,sy] = screenPos(e);
+  lastMouse = [sx,sy];
+  const [x,y] = s2w(sx,sy);
+
+  if (drag.type === 'pan'){
+    cam.px = drag.px0 + (sx - drag.sx);
+    cam.py = drag.py0 + (sy - drag.sy);
+    if (Math.hypot(sx-drag.sx, sy-drag.sy) > 3) drag.moved = true;
+    draw();
+    return;
+  }
+  if (drag.type === 'move'){
+    const p = pieces.find(q=>q.id===drag.id); if(!p) return;
+    p.x = x - drag.dx;
+    p.y = y - drag.dy;
+    snapDots = []; guideLines = [];
+    let snapped = false, lockX=false, lockY=false, guideLabel=null;
+    if (objSnapOn){
+      const os = objectSnap(p);
+      if (os){
+        p.x += os.dx; p.y += os.dy;
+        snapDots = os.pts;
+        snapped = true;
+        lockX = Math.abs(os.dx) > 0.5; lockY = Math.abs(os.dy) > 0.5;
+      }
+      // alignment guides (centre / 2' marks) — only on axes flush-snap didn't lock
+      const g = snapGuides(p);
+      if (g){
+        if (g.x!==null && !lockX){ p.x = g.x; snapped = true; }
+        if (g.y!==null && !lockY){ p.y = g.y; snapped = true; }
+        if ((g.x!==null && !lockX) || (g.y!==null && !lockY)){
+          guideLines = g.lines; snapDots = snapDots.concat(g.dots); guideLabel = g.label;
+        }
+      }
+    }
+    if (!snapped && snapOn){
+      p.x = Math.round(p.x/CELL)*CELL;
+      p.y = Math.round(p.y/CELL)*CELL;
+    }
+    if (guideLabel){
+      snapLabel = {x:p.x, y:p.y, text:guideLabel};
+    } else if (snapped){
+      const lp = snapDots[0] || [p.x,p.y];
+      if (MATS[p.type].kind==='fab'){
+        const what = p.type==='fab-cb' ? 'Corner block' : 'Keystone';
+        snapLabel = {x:lp[0], y:lp[1], text:what+' set 3/4″ in from\nframe edge — standard reveal'};
+      } else {
+        snapLabel = {x:lp[0], y:lp[1], text:'Snapped — edges flush'};
+      }
+    } else {
+      snapLabel = null;
+    }
+    draw();
+  } else if (drag.type === 'rotate'){
+    const p = pieces.find(q=>q.id===drag.id); if(!p) return;
+    let deg = Math.atan2(y-p.y, x-p.x)*180/Math.PI + 90;
+    const snappedRot = !e.shiftKey;          // snap to 15° by default; Shift = any angle
+    if (snappedRot) deg = Math.round(deg/15)*15;
+    p.rot = ((Math.round(deg*10)/10)%360+360)%360;
+    document.getElementById('ppRot').value = Math.round(p.rot);
+    const rh = rotHandlePos(p);
+    rotateHint = {x:rh[0], y:rh[1],
+      text:(snappedRot ? Math.round(p.rot)+'° — snapped to 15°' : Math.round(p.rot)+'° (free)') +
+           '\nhold Shift for any angle'};
+    draw();
+  } else if (drag.type === 'annotMove'){
+    const a = annots.find(q=>q.id===drag.id); if(!a) return;
+    if (a.type==='text'){ a.x = x-drag.dx; a.y = y-drag.dy; }
+    else { a.x1=x-drag.dx; a.y1=y-drag.dy; a.x2=x-drag.dx2; a.y2=y-drag.dy2; }
+    draw();
+  } else if (drag.type === 'arrowDraw'){
+    drag.x2 = x; drag.y2 = y;
+    if (Math.hypot(drag.x2-drag.x1, drag.y2-drag.y1) > 6/cam.z) drag.moved = true;
+    draw();
+    if (drag.moved){
+      ctx.setTransform(cam.z,0,0,cam.z,cam.px,cam.py);
+      ctx.save();
+      ctx.strokeStyle='#b3402a'; ctx.lineWidth=1.6/cam.z; ctx.setLineDash([4/cam.z,3/cam.z]);
+      ctx.beginPath(); ctx.moveTo(drag.x1,drag.y1); ctx.lineTo(drag.x2,drag.y2); ctx.stroke();
+      ctx.restore();
+      ctx.setTransform(1,0,0,1,0,0);
+    }
+  }
+});
+
+window.addEventListener('mouseup', e=>{
+  if (!drag) return;
+  const d = drag; drag = null;
+  snapDots = []; snapLabel = null; rotateHint = null; guideLines = [];
+  if (d.type === 'pan'){
+    if (!d.moved && viewMode==='plan' && toolMode==='select'){
+      selected = null; syncPropPanel();
+    }
+    draw();
+    return;
+  }
+  if (d.type === 'arrowDraw'){
+    if (d.moved){
+      pushUndo();
+      annots.push({id:idSeq++, type:'arrow', x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2});
+      save(); draw();
+    } else {
+      draw();
+      showAnnotInput(d.x1, d.y1);
+    }
+    return;
+  }
+  // move / rotate / annotMove: commit undo only if the state actually changed
+  if (d.before != null && d.before !== snapshot()) pushUndo(d.before);
+  save(); draw();
+});
+
+/* ── Live dimension preview between the two clicks ─ */
+cv.addEventListener('mousemove', e=>{
+  if (toolMode==='dimension' && dimA && !drag && viewMode==='plan'){
+    const [x,y] = canvasPos(e);
+    dimCursor = snapPoint(x, y);
+    draw();
+  }
+});
+
+/* ── Hover feedback for the rotation handle (no drag) ─ */
+cv.addEventListener('mousemove', e=>{
+  if (drag || viewMode!=='plan') return;
+  const p = selectedPiece();
+  let over = false;
+  if (p){
+    const [x,y] = canvasPos(e);
+    const rh = rotHandlePos(p);
+    over = Math.hypot(x-rh[0], y-rh[1]) < 12/cam.z;
+  }
+  if (over !== hoverRotHandle){
+    hoverRotHandle = over;
+    cv.title = over ? 'Drag to rotate (snaps to 15°) · hold Shift for any angle' : '';
+    cv.style.cursor = over ? 'grab' : (toolMode==='annotate'?'text':'crosshair');
+    draw();
+  }
+});
+
+/* ── Annotation text input ────────────────── */
+const annotInput = document.getElementById('annotInput');
+let annotInputWorld = null;
+function showAnnotInput(wx,wy){
+  annotInputWorld = [wx,wy];
+  const [sx,sy] = w2s(wx,wy);
+  annotInput.style.left = sx+'px';
+  annotInput.style.top  = (sy-14)+'px';
+  annotInput.value = '';
+  annotInput.style.display = 'block';
+  annotInput.focus();
+}
+function hideAnnotInput(){ annotInput.style.display='none'; annotInputWorld=null; }
+annotInput.addEventListener('keydown', e=>{
+  if (e.key==='Enter'){
+    const t = annotInput.value.trim();
+    if (t && annotInputWorld){
+      pushUndo();
+      annots.push({id:idSeq++, type:'text', x:annotInputWorld[0], y:annotInputWorld[1], text:t});
+      save(); draw();
+    }
+    hideAnnotInput();
+  } else if (e.key==='Escape'){ hideAnnotInput(); }
+  e.stopPropagation();
+});
+
+/* ── Keyboard ─────────────────────────────── */
+window.addEventListener('keydown', e=>{
+  if (T.active){
+    if (e.key==='Escape') tapeClose(true);
+    return;
+  }
+  const tag = (document.activeElement||{}).tagName;
+  if (tag==='INPUT' || tag==='TEXTAREA') return;
+  if ((e.ctrlKey||e.metaKey) && (e.key==='z'||e.key==='Z') && !e.shiftKey){
+    e.preventDefault(); undo(); return;
+  }
+  if (e.key==='Delete' || e.key==='Backspace'){
+    if (selected){
+      e.preventDefault();
+      deleteSelected();
+    }
+  } else if (e.key==='Escape'){
+    if (toolMode==='dimension'){ if (dimA){ dimA=null; dimCursor=null; draw(); } else setTool('select'); }
+    else if (toolMode==='annotate') setTool('select');
+    else { selected=null; syncPropPanel(); draw(); }
+  } else if (e.key==='v' || e.key==='V'){ setTool('select'); }
+  else if (e.key==='a' || e.key==='A'){ setTool('annotate'); }
+  else if (e.key==='d' || e.key==='D'){ setTool('dimension'); }
+  else if (e.key==='f' || e.key==='F'){ fitView(); draw(); }
+});
+
+function deleteSelected(){
+  if (!selected) return;
+  pushUndo();
+  const wasPiece = selected.kind==='piece';
+  if (wasPiece) pieces = pieces.filter(p=>p.id!==selected.id);
+  else annots = annots.filter(a=>a.id!==selected.id);
+  selected = null;
+  syncPropPanel(); updateCutList(); save(); draw();
+  toast((wasPiece?'Piece':'Note') + ' deleted — <b>Ctrl+Z</b> to undo', {ms:2200});
+}
+
+/* ============================================================
+   TOOL / VIEW SWITCHES
+   ============================================================ */
+const selectBtn=document.getElementById('selectBtn');
+const annotBtn=document.getElementById('annotBtn');
+const dimBtn=document.getElementById('dimBtn');
+const annotBanner=document.getElementById('annotBanner');
+function setTool(t){
+  toolMode = t;
+  selectBtn.classList.toggle('active', t==='select');
+  annotBtn.classList.toggle('active', t==='annotate');
+  dimBtn.classList.toggle('active', t==='dimension');
+  if (t==='dimension') annotBanner.textContent = 'DIMENSION: click two points to measure · Esc cancels';
+  else if (t==='annotate') annotBanner.textContent = 'ANNOTATE: click = text · drag = arrow · Esc = exit';
+  annotBanner.style.display = ((t==='annotate'||t==='dimension') && viewMode==='plan') ? 'block' : 'none';
+  cv.style.cursor = (t==='annotate') ? 'text' : (t==='dimension' ? 'cell' : 'crosshair');
+  area.classList.toggle('dim-mode', t==='dimension' && viewMode==='plan');
+  if (t!=='dimension'){ dimA=null; dimCursor=null; }
+  if (t==='annotate'||t==='dimension'){ selected=null; syncPropPanel(); draw(); }
+}
+selectBtn.addEventListener('click', ()=>setTool('select'));
+annotBtn.addEventListener('click', ()=>setTool(toolMode==='annotate'?'select':'annotate'));
+dimBtn.addEventListener('click', ()=>setTool(toolMode==='dimension'?'select':'dimension'));
+
+document.getElementById('scaleSel').addEventListener('change', e=>{ setScale(e.target.value, {rescale:true}); });
+document.getElementById('snapChk').addEventListener('change', e=>{ snapOn = e.target.checked; });
+document.getElementById('objSnapChk').addEventListener('change', e=>{ objSnapOn = e.target.checked; });
+document.getElementById('fitBtn').addEventListener('click', ()=>{ fitView(); draw(); });
+
+const isoBtn = document.getElementById('isoBtn');
+const isoBanner = document.getElementById('isoBanner');
+isoBtn.addEventListener('click', ()=>{
+  viewMode = (viewMode==='plan') ? 'iso' : 'plan';
+  dimA=null; dimCursor=null;                 // drop any pending dimension pick
+  if (viewMode==='iso'){ computeIsoFit(); selected=null; syncPropPanel(); hideAnnotInput(); }
+  isoBtn.classList.toggle('active', viewMode==='iso');
+  document.getElementById('isoBtnLabel').textContent = viewMode==='iso' ? 'Plan View' : 'Isometric View';
+  isoBanner.style.display = viewMode==='iso' ? 'block' : 'none';
+  annotBanner.style.display = ((toolMode==='annotate'||toolMode==='dimension') && viewMode==='plan') ? 'block' : 'none';
+  area.classList.toggle('dim-mode', toolMode==='dimension' && viewMode==='plan');
+  cv.style.cursor = viewMode==='iso' ? 'grab' : (toolMode==='annotate'?'text':(toolMode==='dimension'?'cell':'crosshair'));
+  draw();
+});
+let isoFlashTimer=null;
+function flashIsoBanner(){
+  isoBanner.style.background='rgba(155,60,40,.92)'; isoBanner.style.color='#fff';
+  clearTimeout(isoFlashTimer);
+  isoFlashTimer=setTimeout(()=>{
+    isoBanner.style.background='rgba(28,28,30,.88)'; isoBanner.style.color='var(--amber)';
+  },350);
+}
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if (!pieces.length && !annots.length) return;
+  const np = pieces.length, na = annots.length;
+  const parts = [];
+  if (np) parts.push(np + ' piece' + (np===1?'':'s'));
+  if (na) parts.push(na + ' note'  + (na===1?'':'s'));
+  const what = parts.join(' and ');
+  if (!confirm('This will delete ' + what + '.\n\nYou can undo it with Ctrl+Z right after. Clear the drawing?')) return;
+  pushUndo();
+  pieces=[]; annots=[]; selected=null;
+  syncPropPanel(); updateCutList(); save(); draw();
+  toast('Cleared ' + what + ' — press <b>Ctrl+Z</b> to undo', {ms:3200});
+});
+
+/* ============================================================
+   PROPERTIES PANEL
+   ============================================================ */
+const propPanel = document.getElementById('propPanel');
+function selectedPiece(){
+  return (selected && selected.kind==='piece') ? pieces.find(p=>p.id===selected.id) : null;
+}
+function syncPropPanel(){
+  const p = selectedPiece();
+  if (!p || viewMode==='iso'){ propPanel.style.display='none'; return; }
+  const m = MATS[p.type];
+  propPanel.style.display='block';
+  document.getElementById('ppName').textContent = m.name;
+  let dims;
+  if (m.kind==='fab') dims = m.dims;
+  else if (m.kind==='sheet') dims = `${fmtIn(p.lengthIn)} × ${fmtIn(pieceW(p))} · FACE`;
+  else dims = `${fmtIn(p.lengthIn)} · ${m.dims} · ${p.orientation==='flat'?'FLAT':'ON EDGE'}`;
+  document.getElementById('ppDims').textContent = dims;
+  document.getElementById('ppRot').value = Math.round(p.rot*10)/10;
+  const isBar = m.kind!=='fab';
+  document.getElementById('ppMiterLRow').style.display = isBar?'flex':'none';
+  document.getElementById('ppMiterRRow').style.display = isBar?'flex':'none';
+  document.getElementById('ppMiterLChk').checked = p.miterL!==90;
+  document.getElementById('ppMiterRChk').checked = p.miterR!==90;
+  document.getElementById('ppMiterL').value = p.miterL!==90?p.miterL:45;
+  document.getElementById('ppMiterR').value = p.miterR!==90?p.miterR:45;
+  document.getElementById('ppMiterL').disabled = p.miterL===90;
+  document.getElementById('ppMiterR').disabled = p.miterR===90;
+  // Advanced section: only for lumber/sheet; auto-open if a miter is already set
+  const advT = document.getElementById('ppAdvToggle');
+  const advB = document.getElementById('ppAdvBody');
+  advT.style.display = isBar ? 'flex' : 'none';
+  const hasMiter = isBar && (p.miterL!==90 || p.miterR!==90);
+  advB.classList.toggle('open', hasMiter);
+  advT.classList.toggle('open', hasMiter);
+}
+const ppRotEl = document.getElementById('ppRot');
+let ppRotBefore = null;
+ppRotEl.addEventListener('focus', ()=>{ ppRotBefore = snapshot(); });
+ppRotEl.addEventListener('input', e=>{
+  const p=selectedPiece(); if(!p) return;
+  p.rot = ((parseFloat(e.target.value)||0)%360+360)%360;
+  save(); draw();
+});
+ppRotEl.addEventListener('change', ()=>{
+  if (ppRotBefore && ppRotBefore !== snapshot()) pushUndo(ppRotBefore);
+  ppRotBefore = null;
+});
+
+// Quick-rotate buttons — the digital equivalent of “turn the board”
+document.querySelectorAll('#ppQuickRot button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const p=selectedPiece(); if(!p) return;
+    pushUndo();
+    const d = parseFloat(b.dataset.rot)||0;
+    p.rot = ((p.rot + d)%360+360)%360;
+    document.getElementById('ppRot').value = Math.round(p.rot*10)/10;
+    save(); draw();
+  });
+});
+
+// Advanced (miter) collapsible — hidden until a student needs it
+const ppAdvToggle = document.getElementById('ppAdvToggle');
+const ppAdvBody = document.getElementById('ppAdvBody');
+ppAdvToggle.addEventListener('click', ()=>{
+  const open = ppAdvBody.classList.toggle('open');
+  ppAdvToggle.classList.toggle('open', open);
+});
+
+function miterHandler(end){
+  const chk = document.getElementById('ppMiter'+end+'Chk');
+  const num = document.getElementById('ppMiter'+end);
+  let numBefore = null;
+  const apply = ()=>{
+    const p=selectedPiece(); if(!p) return;
+    let a = chk.checked ? (parseFloat(num.value)||45) : 90;
+    a = Math.max(15, Math.min(165, a));
+    if (chk.checked) num.value = a;
+    num.disabled = !chk.checked;
+    p['miter'+end] = a;
+    save(); draw();
+  };
+  chk.addEventListener('change', ()=>pushUndo());
+  chk.addEventListener('change', apply);
+  num.addEventListener('focus', ()=>{ numBefore = snapshot(); });
+  num.addEventListener('change', ()=>{
+    if (numBefore && numBefore !== snapshot()) pushUndo(numBefore);
+    numBefore = null;
+  });
+  num.addEventListener('input', apply);
+}
+miterHandler('L'); miterHandler('R');
+document.getElementById('ppDelete').addEventListener('click', deleteSelected);
+
+/* ============================================================
+   CUT LIST
+   ============================================================ */
+function updateCutList(){
+  const body = document.getElementById('cutlistBody');
+  if (!pieces.length){
+    body.innerHTML='<div class="empty">No pieces placed yet.</div>';
+    if (typeof renderQuizChecklist === 'function') renderQuizChecklist();
+    return;
+  }
+  const tally = {};
+  pieces.forEach(p=>{
+    const m = MATS[p.type];
+    let key;
+    if (m.kind==='fab') key = m.name;
+    else if (m.kind==='sheet') key = `${m.name} @ ${fmtIn(p.lengthIn)} × ${fmtIn(pieceW(p))}`;
+    else key = `${m.name} @ ${fmtIn(p.lengthIn)} · ${p.orientation==='flat'?'flat':'on edge'}`;
+    tally[key] = (tally[key]||0)+1;
+  });
+  const clGloss = k => k
+    .replace(/on edge/g, '<span class="gloss-term" data-term="on-edge">on edge</span>')
+    .replace(/· flat/g, '· <span class="gloss-term" data-term="flat-orient">flat</span>');
+  body.innerHTML = Object.keys(tally).sort().map(k=>
+    `<div class="cl-row"><b>${clGloss(k)}</b><span>×${tally[k]}</span></div>`).join('');
+  if (typeof renderQuizChecklist === 'function') renderQuizChecklist();
+}
+
+/* ============================================================
+   AUTOSAVE
+   ============================================================ */
+const LS_KEY = 'scenic-construction-v2';
+function save(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({pieces, annots, idSeq, scaleKey}));
+  }catch(_){}
+}
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem(LS_KEY));
+    if (d && Array.isArray(d.pieces)){
+      pieces = d.pieces; annots = d.annots||[]; idSeq = d.idSeq||1;
+      // legacy drawings (saved before scale was selectable) were at 1/4"
+      scaleKey = d.scaleKey || (pieces.length ? '1/4' : '1/2');
+    }
+  }catch(_){}
+}
+
+/* ============================================================
+   CAPTURE & EXPORT — offscreen full-page render at 1.5x
+   (independent of current zoom/pan), with scale legend.
+   ============================================================ */
+const exportModal = document.getElementById('exportModal');
+let exportDataUrl = null, exportName = '';
+document.getElementById('captureBtn').addEventListener('click', ()=>{
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  exportName = `scenic-drawing-${ts}.png`;
+  try{
+    const S = 1.5;
+    const off = document.createElement('canvas');
+    off.width = PAGE_W*S; off.height = PAGE_H*S;
+    const g = off.getContext('2d');
+    g.setTransform(S,0,0,S,0,0);
+    paintScene(g);
+    drawLegend(g);
+    exportDataUrl = off.toDataURL('image/png');
+  }catch(err){
+    try{ exportDataUrl = cv.toDataURL('image/png'); }catch(_){ exportDataUrl = null; }
+  }
+  if (exportDataUrl) document.getElementById('exportPreview').src = exportDataUrl;
+  document.getElementById('exFilename').textContent = exportName;
+  exportModal.classList.add('show');
+});
+document.getElementById('exClose').addEventListener('click', ()=>exportModal.classList.remove('show'));
+document.getElementById('exDownload').addEventListener('click', ()=>{
+  if (!exportDataUrl) return;
+  const a = document.createElement('a');
+  a.href = exportDataUrl; a.download = exportName;
+  document.body.appendChild(a); a.click(); a.remove();
+});
+exportModal.addEventListener('click', e=>{ if(e.target===exportModal) exportModal.classList.remove('show'); });
+
+/* ── Undo button ──────────────────────────── */
+document.getElementById('undoBtn').addEventListener('click', undo);
+
+/* ============================================================
+   FIRST-RUN GUIDED TOUR  (skippable; shown once via localStorage)
+   ============================================================ */
+const TOUR = [
+  {title:'Welcome to the shop', body:'Build set pieces to scale on the paper page. Start by <b>dragging a material</b> from the palette on the right onto the page — or just click it to drop one in the center. Tap the <b>?</b> on any material to learn what it is.'},
+  {title:'Pick your scale', body:'The <b>SCALE</b> menu (top-left) sets how big the drawing is drawn on the page — like choosing 1/4″=1′ vs 1/2″=1′ on a ruler. Changing it <b>resizes the picture, not your lumber</b>: every piece keeps its real-world size, and <b>Ctrl+Z</b> undoes a scale change.'},
+  {title:'Measure like a tape', body:'When you place lumber or a sheet, a tape measure opens. <b>Scroll</b> to pull the tape out of its case, hover for the magnifier, and <b>click a mark</b> to set the length. Prefer numbers? <b>Type the length</b> in the box and press Enter.'},
+  {title:'Flat vs. on edge', body:'For lumber you choose how the board sits. <b>Flat</b> lays the wide face down — the usual way for frame rails. <b>On edge</b> stands the board up. The caption under the choice tells you what shows on the plan.'},
+  {title:'Pieces snap together', body:'With <b>Object snap</b> on, edges lock flush as you drag. <b>Corner blocks</b> and <b>keystones</b> automatically sit <b>3/4″ in</b> from the frame edge — the standard reveal in real flat construction. A green label confirms each snap.'},
+  {title:'Turn the board', body:'Select a piece, then drag the round <b>rotate handle</b> — it <b>snaps to 15°</b>, or hold <b>Shift</b> for any angle. Or use the <b>90° / 180°</b> buttons in the panel. Angled end-cuts live under <b>Advanced</b>.'},
+  {title:'Cut list & undo', body:'Your <b>Materials / Cut List</b> updates automatically as you build — check it against your assignment. Made a mistake? <b>Ctrl+Z</b> undoes the last step, and nothing is permanent until you <b>Export</b>.'}
+];
+let tourIdx = 0;
+const tourBack = document.getElementById('tourBack');
+function renderTour(){
+  const t = TOUR[tourIdx];
+  document.getElementById('tourStep').textContent = 'STEP '+(tourIdx+1)+' / '+TOUR.length;
+  document.getElementById('tourTitle').textContent = t.title;
+  document.getElementById('tourBody').innerHTML = t.body;
+  document.getElementById('tourBackBtn').style.visibility = tourIdx===0 ? 'hidden' : 'visible';
+  document.getElementById('tourNext').textContent = tourIdx===TOUR.length-1 ? 'Start building' : 'Next';
+  document.getElementById('tourDots').innerHTML =
+    TOUR.map((_,i)=>`<span class="${i===tourIdx?'on':''}"></span>`).join('');
+}
+function openTour(){ tourIdx=0; renderTour(); tourBack.classList.add('show'); }
+function closeTour(){ tourBack.classList.remove('show'); markSeen('tour'); }
+document.getElementById('tourNext').addEventListener('click', ()=>{
+  if (tourIdx < TOUR.length-1){ tourIdx++; renderTour(); } else closeTour();
+});
+document.getElementById('tourBackBtn').addEventListener('click', ()=>{ if(tourIdx>0){ tourIdx--; renderTour(); } });
+document.getElementById('tourSkip').addEventListener('click', closeTour);
+document.getElementById('helpBtn').addEventListener('click', openTour);
+tourBack.addEventListener('click', e=>{ if(e.target===tourBack) closeTour(); });
+
+/* ============================================================
+   QUIZ MODE
+   Randomly assigns a construction style + overall size (≤ 4'×8'),
+   times the student until they click Done, verifies the drawing
+   against the rules for that style, and repeats until 10 correct
+   builds — then shows the average time with a screenshot button.
+   ============================================================ */
+const QUIZ_STYLES = {
+  broadway : {name:'Broadway Flat',  lumber:['lum-1x3'],            lumberLbl:'1×3'},
+  hollywood: {name:'Hollywood Flat', lumber:['lum-1x3'],            lumberLbl:'1×3'},
+  platform : {name:'Platform',       lumber:['lum-2x4'],            lumberLbl:'2×4'}
+};
+const QUIZ_TOTAL = 10;
+const quiz = { active:false, n:0, style:null, wFt:0, hFt:0, qStart:0, times:[], timer:null, backup:null,
+               undoBackup:null, easy:false, easyUsed:false, required:null };
+
+/* geometry helpers in REAL INCHES (independent of current scale) */
+function polyInches(p){ return worldPoly(p).map(([x,y])=>[x/IN, y/IN]); }
+function bboxInches(p){
+  const pl = polyInches(p);
+  const xs = pl.map(a=>a[0]), ys = pl.map(a=>a[1]);
+  return {minx:Math.min(...xs), maxx:Math.max(...xs), miny:Math.min(...ys), maxy:Math.max(...ys)};
+}
+function centerInches(p){ const b=bboxInches(p); return [(b.minx+b.maxx)/2, (b.miny+b.maxy)/2]; }
+
+function verifyBuild(style, wFt, hFt){
+  const Wt = wFt*12, Ht = hFt*12, TOL = 3;       // inch tolerance on overall size
+  const issues = [];
+  const S = QUIZ_STYLES[style];
+  const lum    = pieces.filter(p=>MATS[p.type].kind==='lumber');
+  const sheets = pieces.filter(p=>MATS[p.type].kind==='sheet');
+  const cbs    = pieces.filter(p=>p.type==='fab-cb');
+
+  if (!lum.length){ return {ok:false, issues:['No framing lumber placed yet — start with the rails and stiles.']}; }
+
+  // overall frame bounding box (lumber only)
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  lum.forEach(p=>{ const b=bboxInches(p); minX=Math.min(minX,b.minx); minY=Math.min(minY,b.miny); maxX=Math.max(maxX,b.maxx); maxY=Math.max(maxY,b.maxy); });
+  const frameW = maxX-minX, frameH = maxY-minY;
+
+  // dimensions (accept either orientation on the page)
+  const dimOK = (Math.abs(frameW-Wt)<=TOL && Math.abs(frameH-Ht)<=TOL) ||
+                (Math.abs(frameW-Ht)<=TOL && Math.abs(frameH-Wt)<=TOL);
+  if (!dimOK) issues.push(`Overall size is off — needs <b>${fmtIn(Wt)} × ${fmtIn(Ht)}</b>, yours is <b>${fmtIn(frameW)} × ${fmtIn(frameH)}</b>.`);
+
+  // lumber type
+  const badType = lum.filter(p=>!S.lumber.includes(p.type));
+  if (badType.length) issues.push(`Wrong framing lumber — a ${S.name} is framed in <b>${S.lumberLbl}</b>.`);
+
+  // framing orientation differs by style
+  if (style==='platform' && lum.some(p=>p.orientation!=='edge'))
+    issues.push('Platform framing should be <b>2×4 on edge</b> (gives the platform its height).');
+  if (style==='hollywood' && lum.some(p=>p.orientation!=='edge'))
+    issues.push('Hollywood framing is <b>1×3 on edge</b> — only the 3/4″ edge faces out.');
+  if (style==='broadway' && lum.some(p=>p.orientation==='edge'))
+    issues.push('Broadway framing lies <b>flat</b> — the 2-1/2″ face is in the plane of the flat.');
+
+  // classify members & check perimeter
+  const verts=[], horiz=[];
+  lum.forEach(p=>{ const b=bboxInches(p); ((b.maxx-b.minx) >= (b.maxy-b.miny) ? horiz : verts).push({p,b,cx:(b.minx+b.maxx)/2,cy:(b.miny+b.maxy)/2}); });
+  const leftStile  = verts.some(v=> v.cx - minX < 4);
+  const rightStile = verts.some(v=> maxX - v.cx < 4);
+  const topRail    = horiz.some(h=> h.cy - minY < 4);
+  const botRail    = horiz.some(h=> maxY - h.cy < 4);
+  if (!leftStile || !rightStile) issues.push('Frame needs a vertical <b>stile</b> on each side.');
+  if (!topRail || !botRail)      issues.push('Frame needs a <b>rail</b> across the top and the bottom.');
+
+  // interior toggles
+  const toggles = horiz.filter(h=> (h.cy - minY >= 4) && (maxY - h.cy >= 4)).length;
+  const longIn = Math.max(frameW, frameH);
+  const expTog = Math.max(1, Math.round(longIn/24) - 1);   // ~2'-on-centre
+  if (style==='broadway'){
+    if (toggles < 1) issues.push('Broadway flat needs a <b>toggle</b> (a centre rail).');
+  } else {
+    if (toggles < expTog) issues.push(`Needs <b>${expTog} toggle${expTog>1?'s':''}</b> on ~2′ centres — you have ${toggles}.`);
+  }
+
+  // cover sheet helper
+  const coversFrame = arr => arr.some(s=>{ const b=bboxInches(s); return b.minx<=minX+4 && b.miny<=minY+4 && b.maxx>=maxX-4 && b.maxy>=maxY-4; });
+
+  if (style==='broadway'){
+    // corner block at each of the 4 corners
+    const corners=[[minX,minY],[maxX,minY],[minX,maxY],[maxX,maxY]];
+    const covered = corners.filter(c=> cbs.some(cb=>{ const ic=centerInches(cb); return Math.hypot(ic[0]-c[0], ic[1]-c[1]) < 18; })).length;
+    if (cbs.length<4 || covered<4) issues.push('Broadway flats are reinforced with a <b>corner block at all 4 corners</b>.');
+    if (sheets.length) issues.push('A Broadway flat is covered in <b>muslin</b> (soft) — remove the hard sheet.');
+  } else if (style==='hollywood'){
+    const luan = sheets.filter(s=>s.type==='sh-luan');
+    if (!luan.length) issues.push('A Hollywood flat has a hard <b>luan face</b> — add a luan sheet over the frame.');
+    else if (!coversFrame(luan)) issues.push('The <b>luan face</b> should cover the whole frame.');
+    if (cbs.length) issues.push('Hollywood flats don’t use corner blocks — the luan face squares the frame.');
+    // a Hollywood flat over 2' wide needs an upright stile up the centre
+    const widthIn = Math.min(frameW, frameH);
+    if (widthIn > 24 + TOL){
+      let hasCenter;
+      if (frameH >= frameW){ const midX=(minX+maxX)/2; hasCenter = verts.some(v=> Math.abs(v.cx-midX)<4 && (v.b.maxy-v.b.miny) > frameH*0.6); }
+      else { const midY=(minY+maxY)/2; hasCenter = horiz.some(h=> Math.abs(h.cy-midY)<4 && (h.b.maxx-h.b.minx) > frameW*0.6); }
+      if (!hasCenter) issues.push('A Hollywood flat over 2′ wide needs a <b>centre stile</b> up the middle.');
+    }
+  } else if (style==='platform'){
+    const ply = sheets.filter(s=>s.type==='sh-ply');
+    if (!ply.length) issues.push('A platform needs a <b>3/4″ plywood lid</b> — add a plywood sheet covering the top.');
+    else if (!coversFrame(ply)) issues.push('The <b>plywood lid</b> should cover the whole platform.');
+    if (cbs.length) issues.push('Platforms don’t use corner blocks.');
+  }
+
+  return {ok: issues.length===0, issues, frameW, frameH};
+}
+
+/* ── Required cut list (easy mode) ───────────
+   Canonical parts the verifier accepts: rails full width, stiles
+   between them, toggles on ~2' centres, plus the cover / corner
+   blocks for the style. Following it guarantees a passing build. */
+function quizRequiredList(style, wFt, hFt){
+  const W = wFt*12, H = hFt*12;
+  let lumType='lum-1x3', orient='flat';
+  if (style==='hollywood') orient='edge';              // 1×3 on edge → only 3/4" faces out
+  else if (style==='platform'){ lumType='lum-2x4'; orient='edge'; }
+  const faceW = (orient==='edge') ? MATS[lumType].thick : MATS[lumType].face;
+  const rows = (style==='broadway') ? 1 : Math.max(1, Math.round(Math.max(W,H)/24) - 1);
+  const lumLbl = MATS[lumType].name.replace(' Lumber','');
+  const centerStile = (style==='hollywood' && W > 24);   // upright in the middle when > 2' wide
+  const items = [
+    {kind:'lumber', role:'Rail',  type:lumType, orient, qty:2, lengthIn:W, lumLbl},
+    {kind:'lumber', role:'Stile', type:lumType, orient, qty:(centerStile?3:2), lengthIn:H-2*faceW, lumLbl}
+  ];
+  if (centerStile)
+    items.push({kind:'lumber', role:'Toggle', type:lumType, orient, qty:2*rows, lengthIn:(W-3*faceW)/2, lumLbl});
+  else
+    items.push({kind:'lumber', role:'Toggle', type:lumType, orient, qty:rows, lengthIn:W-2*faceW, lumLbl});
+  if (style==='broadway')       items.push({kind:'fab',   role:'Corner block', type:'fab-cb', qty:4});
+  else if (style==='hollywood') items.push({kind:'sheet', role:'Luan face',    type:'sh-luan', qty:1, lengthIn:H, widthIn:W});
+  else                          items.push({kind:'sheet', role:'Plywood lid',  type:'sh-ply',  qty:1, lengthIn:H, widthIn:W});
+  return items;
+}
+function quizItemLabel(it){
+  if (it.kind==='fab')   return it.role;
+  if (it.kind==='sheet') return it.role+' — '+fmtIn(it.widthIn)+' × '+fmtIn(it.lengthIn);
+  return it.role+' — '+fmtIn(it.lengthIn)+' '+it.lumLbl+(it.orient==='edge'?' (on edge)':' (flat)');
+}
+/* how many of each required item are currently built (no double-counting) */
+function quizChecklistState(){
+  const items = quiz.required || [];
+  const used = new Set();
+  return items.map(it=>{
+    let have = 0;
+    if (it.kind==='fab'){
+      have = Math.min(it.qty, pieces.filter(p=>p.type===it.type).length);
+    } else {
+      for (let i=0; i<pieces.length && have<it.qty; i++){
+        if (used.has(i)) continue;
+        const p = pieces[i];
+        if (p.type !== it.type) continue;
+        if (it.kind==='lumber'){
+          if (p.orientation !== it.orient) continue;
+          if (Math.abs((p.lengthIn||0) - it.lengthIn) <= 1){ have++; used.add(i); }
+        } else { // sheet
+          const L=p.lengthIn||0, Wd=pieceW(p);
+          if ((Math.abs(L-it.lengthIn)<=2 && Math.abs(Wd-it.widthIn)<=2) ||
+              (Math.abs(L-it.widthIn)<=2 && Math.abs(Wd-it.lengthIn)<=2)){ have++; used.add(i); }
+        }
+      }
+    }
+    return Object.assign({have}, it);
+  });
+}
+function renderQuizChecklist(){
+  const el = document.getElementById('quizChecklist');
+  if (!quiz.active || !quiz.easy){ el.style.display='none'; return; }
+  const rows = quizChecklistState().map(it=>{
+    const done = it.have >= it.qty;
+    const cnt  = it.qty>1 ? ` <span class="q-cnt">${it.have}/${it.qty}</span>` : '';
+    return `<div class="qc-row ${done?'done':''}"><span class="qc-box">${done?'✓':''}</span>`+
+           `<span class="qc-lbl">${quizItemLabel(it)}${cnt}</span></div>`;
+  }).join('');
+  el.innerHTML = '<div class="pal-head">Easy Mode — Cut List</div>' + rows;
+  el.style.display = 'block';
+}
+function renderTapeQuizTarget(){
+  const el = document.getElementById('tapeQuizTarget');
+  if (!quiz.active){ el.style.display='none'; return; }
+  const S = QUIZ_STYLES[quiz.style];
+  let html = `<div class="tqt-head">QUIZ · <b>${S.name}</b></div>`+
+             `<div class="tqt-dim">Overall ${fmtIn(quiz.wFt*12)} × ${fmtIn(quiz.hFt*12)}</div>`;
+  if (quiz.easy){
+    html += '<div class="tqt-list">' + quizChecklistState().map(it=>{
+      const done = it.have>=it.qty;
+      return `<div class="${done?'done':''}">${done?'✓':'☐'} ${quizItemLabel(it)}${it.qty>1?' · '+it.have+'/'+it.qty:''}</div>`;
+    }).join('') + '</div>';
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+/* ── Quiz flow ──────────────────────────────── */
+const quizBar = document.getElementById('quizBar');
+const quizFeedback = document.getElementById('quizFeedback');
+function fmtClock(ms){
+  const s = Math.floor(ms/1000);
+  return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+}
+function quizPickQuestion(){
+  const keys = Object.keys(QUIZ_STYLES);
+  quiz.style = keys[Math.floor(Math.random()*keys.length)];
+  const widths  = [2, 2.5, 3, 3.5, 4];
+  const heights = [4, 5, 6, 7, 8];
+  quiz.wFt = widths[Math.floor(Math.random()*widths.length)];
+  quiz.hFt = heights[Math.floor(Math.random()*heights.length)];
+}
+function quizRenderPrompt(){
+  document.getElementById('quizStyle').textContent = QUIZ_STYLES[quiz.style].name;
+  document.getElementById('quizDims').textContent  = fmtIn(quiz.wFt*12) + ' W × ' + fmtIn(quiz.hFt*12) + ' H';
+  document.getElementById('quizCount').textContent = quiz.n + ' / ' + QUIZ_TOTAL;
+}
+function quizNewQuestion(){
+  pieces=[]; annots=[]; selected=null; undoStack.length=0; refreshUndoBtn();
+  quizPickQuestion();
+  quiz.required = quizRequiredList(quiz.style, quiz.wFt, quiz.hFt);
+  syncPropPanel(); updateCutList(); save(); draw();
+  quizRenderPrompt();
+  renderQuizChecklist();
+  quizFeedback.classList.remove('show');
+  quiz.qStart = performance.now();
+}
+function quizTick(){
+  document.getElementById('quizTimer').textContent = fmtClock(performance.now() - quiz.qStart);
+}
+function quizStart(){
+  if (quiz.active) return;
+  if (pieces.length || annots.length){
+    if (!confirm('Starting the quiz will temporarily hide your current drawing — it’s restored when you exit the quiz. Continue?')) return;
+  }
+  quiz.backup = snapshot();              // preserve current drawing
+  quiz.undoBackup = undoStack.slice();   // preserve pre-quiz undo history
+  quiz.active = true; quiz.n = 0; quiz.times = [];
+  quiz.easy = document.getElementById('quizEasy').checked;
+  quiz.easyUsed = quiz.easy;
+  dimA=null; dimCursor=null;
+  if (toolMode==='dimension') setTool('select');
+  if (viewMode==='iso') document.getElementById('isoBtn').click();
+  document.getElementById('quizBtn').classList.add('active');
+  quizBar.classList.add('show');
+  quizNewQuestion();
+  quiz.timer = setInterval(quizTick, 200);
+}
+function quizCheck(){
+  if (!quiz.active) return;
+  const res = verifyBuild(quiz.style, quiz.wFt, quiz.hFt);
+  if (res.ok){
+    quiz.times.push(performance.now() - quiz.qStart);
+    quiz.n++;
+    if (quiz.n >= QUIZ_TOTAL){ quizFinish(); return; }
+    quizFeedback.className = 'show ok';
+    quizFeedback.innerHTML = '<b>✓ Correct! Build ' + quiz.n + ' of ' + QUIZ_TOTAL + ' done.</b> Next one coming up…';
+    setTimeout(()=>{ if(quiz.active) quizNewQuestion(); }, 1100);
+  } else {
+    quizFeedback.className = 'show';
+    quizFeedback.innerHTML = '<b>Not quite — fix these and click Done again:</b><ul>' +
+      res.issues.map(i=>'<li>'+glossify(i)+'</li>').join('') + '</ul>';
+  }
+}
+function quizFinish(){
+  clearInterval(quiz.timer); quiz.timer=null;
+  quizBar.classList.remove('show');
+  quizFeedback.classList.remove('show');
+  const avg = quiz.times.reduce((a,b)=>a+b,0)/quiz.times.length;
+  document.getElementById('quizAvg').textContent = fmtClock(avg);
+  const badge = document.getElementById('quizModeBadge');
+  badge.innerHTML = quiz.easyUsed
+    ? '<span style="color:var(--amber)">Easy mode</span> — cut list shown'
+    : '<span style="color:#7fc97f">Standard mode</span>';
+  document.getElementById('quizTimesTbl').innerHTML =
+    quiz.times.map((t,i)=>`<tr><td>Build ${i+1}</td><td>${fmtClock(t)}</td></tr>`).join('');
+  document.getElementById('quizResultsBack').classList.add('show');
+}
+function quizExit(restore){
+  if (quiz.timer){ clearInterval(quiz.timer); quiz.timer=null; }
+  quiz.active = false;
+  quizBar.classList.remove('show');
+  quizFeedback.classList.remove('show');
+  document.getElementById('quizBtn').classList.remove('active');
+  if (restore && quiz.backup){
+    const st = JSON.parse(quiz.backup);
+    pieces=st.pieces; annots=st.annots; idSeq=st.idSeq;
+    if (st.scaleKey){ scaleKey=st.scaleKey; applyScaleVars(); }
+  }
+  quiz.backup = null;
+  selected=null; dimA=null; dimCursor=null;
+  // restore the pre-quiz undo history (rather than silently dropping it)
+  undoStack.length=0;
+  if (restore && quiz.undoBackup) quiz.undoBackup.forEach(s=>undoStack.push(s));
+  quiz.undoBackup = null;
+  refreshUndoBtn();
+  syncPropPanel(); updateCutList(); save(); fitView(); draw();
+}
+document.getElementById('quizBtn').addEventListener('click', ()=>{
+  if (quiz.active) quizExit(true); else quizStart();
+});
+document.getElementById('quizEasy').addEventListener('change', e=>{
+  quiz.easy = e.target.checked;
+  if (quiz.easy) quiz.easyUsed = true;
+  renderQuizChecklist();
+  if (T.active) renderTapeQuizTarget();
+});
+document.getElementById('quizDone').addEventListener('click', quizCheck);
+document.getElementById('quizExit').addEventListener('click', ()=>{
+  if (confirm('Exit the quiz? Your quiz progress will be lost and your previous drawing restored.')) quizExit(true);
+});
+document.getElementById('quizResultsClose').addEventListener('click', ()=>{
+  document.getElementById('quizResultsBack').classList.remove('show');
+  quizExit(true);
+});
+/* Screenshot of the results card (drawn to an offscreen canvas) */
+document.getElementById('quizShot').addEventListener('click', ()=>{
+  const W=440, H=120 + quiz.times.length*22 + 70;
+  const c=document.createElement('canvas'); c.width=W*2; c.height=H*2;
+  const g=c.getContext('2d'); g.scale(2,2);
+  g.fillStyle='#1C1C1E'; g.fillRect(0,0,W,H);
+  g.fillStyle='#E8E6E1'; g.font='bold 18px '+MONO; g.textAlign='left';
+  g.fillText('Scenic Construction — Quiz Results', 22, 34);
+  g.fillStyle='#9B9893'; g.font='11px '+MONO;
+  g.fillText(QUIZ_TOTAL+' builds verified · '+(quiz.easyUsed?'Easy mode':'Standard mode'), 22, 52);
+  g.fillText(new Date().toLocaleString(), 22, 67);
+  const avg = quiz.times.reduce((a,b)=>a+b,0)/quiz.times.length;
+  g.fillStyle='#E8C84A'; g.font='bold 30px '+MONO; g.textAlign='center';
+  g.fillText('avg '+fmtClock(avg), W/2, 96);
+  g.textAlign='left'; g.font='12px '+MONO;
+  quiz.times.forEach((t,i)=>{
+    const y=130+i*22;
+    g.fillStyle='#9B9893'; g.fillText('Build '+(i+1), 30, y);
+    g.fillStyle='#E8E6E1'; g.textAlign='right'; g.fillText(fmtClock(t), W-30, y); g.textAlign='left';
+  });
+  const a=document.createElement('a');
+  a.href=c.toDataURL('image/png');
+  a.download='quiz-results-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+window.addEventListener('resize', ()=>{
+  sizeCanvas();
+  draw();
+  if (T.active){ tapeSizeCanvas(); tapeDraw(); }
+});
+buildPalette();
+load();
+applyScaleVars();
+updateCutList();
+refreshUndoBtn();
+sizeCanvas();
+fitView();
+draw();
+if (!seen('tour')) openTour();
+</script>
+</body>
+</html>
