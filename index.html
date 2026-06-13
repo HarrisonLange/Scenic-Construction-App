@@ -3000,6 +3000,7 @@ function buildTraining(style){
   const V_ = (cx,cy,L)=>Object.assign({type, x:x0+cx*IN, y:y0+cy*IN, rot:90, lengthIn:L, orientation:orient}, base);
   const CB = (cx,cy,rot)=>Object.assign({type:'fab-cb', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
   const KEY = (cx,cy,rot)=>Object.assign({type:'fab-key', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
+  const STRAP = (cx,cy,rot)=>Object.assign({type:'fab-strap', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
   const SHEET = (t)=>Object.assign({type:t, x:x0+(Win/2)*IN, y:y0+(Hin/2)*IN, rot:0, lengthIn:Win, widthIn:Hin, orientation:'flat'}, base);
   // diagonal brace between two points (inches); rot follows the line, both
   // ends mitered at 45° (parallelogram, like the half strap)
@@ -3036,29 +3037,31 @@ function buildTraining(style){
   if (style==='broadway'){
     // single full-width toggle across the middle
     const toggle = H_(Win/2, Hin/2, Win - 2*w);
-    // two diagonal braces on the left: top rail → left stile, and left stile →
-    // bottom rail (matching the placed reference), each held by keystones
-    const topA=[18, w],  topB=[w, 26];        // upper brace (top rail → left stile)
-    const botA=[w, 70],  botB=[19, Hin - w];  // lower brace (left stile → bottom rail)
+    // two diagonal braces on the left, each at a true 45° (equal run & rise) with
+    // both ends touching a rail and the left stile: top-left and bottom-left corners
+    const S = 30;                              // 45° leg length along each member
+    const topA=[w + S, w],        topB=[w, w + S];          // upper brace: top rail → left stile
+    const botA=[w, Hin - w - S],  botB=[w + S, Hin - w];    // lower brace: left stile → bottom rail
     const braceTop = ANG(topA[0],topA[1], topB[0],topB[1]);
     const braceBot = ANG(botA[0],botA[1], botB[0],botB[1]);
     const dT = braceTop.rot, dB = braceBot.rot;
-    // keystones over the toggle/stile joints and at both ends of each brace
-    const keys = [
-      KEY(w + 3, Hin/2, 0), KEY(Win - w - 3, Hin/2, 0),        // toggle ends (bridge the stile joint)
-      KEY(topA[0], topA[1], dT), KEY(topB[0], topB[1], dT),    // upper brace ends
-      KEY(botA[0], botA[1], dB), KEY(botB[0], botB[1], dB)     // lower brace ends
+    // keystones over the toggle/stile joints
+    const keys = [ KEY(w + 3, Hin/2, 0), KEY(Win - w - 3, Hin/2, 0) ];
+    // half straps plating each brace end onto the rail / stile it meets
+    const straps = [
+      STRAP(topA[0], topA[1], dT), STRAP(topB[0], topB[1], dT),    // upper brace ends
+      STRAP(botA[0], botA[1], dB), STRAP(botB[0], botB[1], dB)     // lower brace ends
     ];
     const frame = [stileL, stileR, topRail, botRail];
     const withToggle = [...frame, toggle];
     const withBraces = [...withToggle, braceTop, braceBot];
-    const withFab = [...withBraces, ...corners, ...keys];
+    const withFab = [...withBraces, ...corners, ...keys, ...straps];
     steps.push({title:'— overview', pieces:[], body:`A <b>Broadway flat</b> (${dim}) is a lightweight frame of <b>1×3 ${orientLbl}</b> — the 2-1/2″ face lies in the plane of the flat — later covered in soft <span class="gloss-term" data-term="muslin">muslin</span>. Joints are reinforced with plywood <span class="gloss-term" data-term="corner-block">corner blocks</span> &amp; <span class="gloss-term" data-term="keystone">keystones</span>. Click <b>Next</b> to start cutting.`});
     steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Start with the two <b>stiles</b> — the verticals that fit <b>between</b> the rails, <b>${fmtIn(Hin-2*w)}</b> long, one on each side.`});
     steps.push({title:'2 · Rails', pieces:frame, body:`Cap the top and bottom with full-width <b>rails</b> — <b>${fmtIn(Win)}</b> — covering the ends of the stiles. Rails + stiles make the 4′×8′ rectangle.`});
     steps.push({title:'3 · Toggle', pieces:withToggle, body:`Drop in one full-width <span class="gloss-term" data-term="toggle">toggle</span> across the middle. It keeps the long stiles from bowing and gives the muslin something to land on.`});
     steps.push({title:'4 · Cross bracing', pieces:withBraces, body:`Add two <b>diagonal braces</b> — one from the top rail down to the left stile, one from the left stile down to the bottom rail. Each end is cut with a <b>45° miter</b> so it sits flush. The diagonals triangulate the rectangle so the flat can't <b>rack</b> (lean out of square).`});
-    steps.push({title:'5 · Blocks & keystones', pieces:withFab, body:`Glue &amp; staple a <span class="gloss-term" data-term="corner-block">corner block</span> over each of the 4 corners and a <span class="gloss-term" data-term="keystone">keystone</span> over the toggle and at both ends of each brace — held <span class="gloss-term" data-term="reveal">3/4″ in</span> from the frame edges. Notice they reveal the framing beneath as <b>dashed hidden lines</b>.`});
+    steps.push({title:'5 · Blocks, keystones & straps', pieces:withFab, body:`Glue &amp; staple a <span class="gloss-term" data-term="corner-block">corner block</span> at each of the 4 corners, a <span class="gloss-term" data-term="keystone">keystone</span> over each toggle joint, and a <b>half strap</b> over each end of the diagonal braces — held <span class="gloss-term" data-term="reveal">3/4″ in</span> from the frame edges. Notice they reveal the framing beneath as <b>dashed hidden lines</b>.`});
     steps.push({title:'✓ Finished frame', pieces:withFab, body:`That's a complete Broadway flat frame. Next it gets <b>covered in muslin</b> and painted. Try <b>Isometric View</b> to see it in 3-D, or <b>Finish</b> to exit.`});
   } else if (style==='hollywood'){
     steps.push({title:'— overview', pieces:[], body:`A <b>Hollywood flat</b> (${dim}) is framed in <b>1×3 ${orientLbl}</b> — only the 3/4″ edge faces out — and skinned with a hard <span class="gloss-term" data-term="luan">luan</span> face instead of muslin. No corner blocks: the glued luan squares the frame.`});
