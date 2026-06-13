@@ -377,6 +377,33 @@
   .qc-lbl .q-cnt{font-family:var(--mono);color:var(--amber)}
   .qc-row.done .q-cnt{color:var(--text-dim)}
 
+  /* ── Training (guided walkthrough) mode ───── */
+  #trainBtn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  #trainBar{
+    position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:25;display:none;
+    align-items:center;gap:14px;max-width:94%;
+    background:rgba(28,28,30,.96);border:1px solid var(--accent);border-radius:10px;
+    padding:9px 16px;box-shadow:0 8px 28px rgba(0,0,0,.55);
+  }
+  #trainBar.show{display:flex}
+  #trainBar .t-prompt{font-size:13px;line-height:1.35;max-width:560px}
+  #trainBar .t-titlerow #trainStyle{color:var(--accent);font-weight:700;letter-spacing:.3px}
+  #trainBar .t-titlerow #trainStepTitle{color:var(--text-light);font-weight:600}
+  #trainBar .t-body{font-size:11.5px;color:var(--text-dim);margin-top:3px;line-height:1.5}
+  #trainBar .t-body b{color:var(--text-light)}
+  #trainChooser{display:flex;gap:8px;margin-top:9px}
+  #trainChooser button{background:var(--ui-dark3);border-color:var(--ui-dark3);color:var(--text-light);font-weight:600}
+  #trainChooser button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+  #trainStepCount{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);min-width:74px;text-align:center}
+  #trainBar button{border-radius:6px;padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
+  #trainNext{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  #trainNext:hover{background:#6f9ec6}
+  #trainBack{background:transparent;color:var(--text-dim)}
+  #trainBack:hover:not(:disabled){color:#fff;background:var(--ui-dark3)}
+  #trainBack:disabled{opacity:.35;cursor:default}
+  #trainExit{background:transparent;color:var(--text-dim)}
+  #trainExit:hover{color:#fff;background:var(--ui-dark3)}
+
   /* Quiz target shown over the tape overlay */
   #tapeQuizTarget{
     position:absolute;top:14px;left:18px;z-index:96;display:none;max-width:300px;
@@ -433,6 +460,10 @@
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1l6 3.5v7L8 15l-6-3.5v-7L8 1zM8 1v7m0 0l6 3.5M8 8L2 11.5"/></svg>
     <span id="isoBtnLabel">Isometric View</span>
   </button>
+  <button class="tbtn" id="trainBtn" title="Guided step-by-step build walkthrough">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2l6.5 3L8 8 1.5 5 8 2z"/><path d="M4 6.5V10c0 1.1 1.8 2 4 2s4-.9 4-2V6.5"/></svg>
+    Train
+  </button>
   <button class="tbtn" id="quizBtn" title="Timed construction quiz">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 4v4l2.5 1.5"/></svg>
     Quiz
@@ -461,6 +492,21 @@
       <button id="quizExit">Exit</button>
     </div>
     <div id="quizFeedback"></div>
+    <div id="trainBar">
+      <div class="t-prompt">
+        <div class="t-titlerow"><span id="trainStyle">Training</span> <span id="trainStepTitle"></span></div>
+        <div class="t-body" id="trainBody"></div>
+        <div id="trainChooser">
+          <button data-style="broadway">Broadway Flat</button>
+          <button data-style="hollywood">Hollywood Flat</button>
+          <button data-style="platform">Platform</button>
+        </div>
+      </div>
+      <div id="trainStepCount"></div>
+      <button id="trainBack" disabled>‹ Back</button>
+      <button id="trainNext">Next ›</button>
+      <button id="trainExit">Exit</button>
+    </div>
     <div id="dimModeTag">↔ DIMENSION MODE</div>
     <div id="isoBanner">ISO VIEW — READ ONLY</div>
     <div id="annotBanner">ANNOTATE: click = text &middot; drag = arrow &middot; Esc = exit</div>
@@ -604,7 +650,7 @@ const SCALES = {
   '1'  : {paperIn:1.00, label:'1" = 1\'-0"'}
 };
 const PX_PER_PAPER_IN = 128;   // render resolution of the paper
-let scaleKey = '1/2';          // default scale
+let scaleKey = '1';            // default scale (1" = 1'-0")
 let PPF  = PX_PER_PAPER_IN * SCALES[scaleKey].paperIn;  // pixels per world foot
 let CELL = PPF / 4;            // minor grid cell = 3" real
 let IN   = PPF / 12;          // px per real inch
@@ -613,7 +659,7 @@ const PAGE_H = 1088;           // fixed paper height (8.5")
 
 /* Recompute the scale-dependent constants from the current scaleKey. */
 function applyScaleVars(){
-  if (!SCALES[scaleKey]) scaleKey = '1/2';
+  if (!SCALES[scaleKey]) scaleKey = '1';
   PPF  = PX_PER_PAPER_IN * SCALES[scaleKey].paperIn;
   CELL = PPF / 4;
   IN   = PPF / 12;
@@ -1571,6 +1617,7 @@ const TERMS = {
   'rail'       : '<b>Rail</b> — a horizontal top or bottom member of a flat’s frame.',
   'toggle'     : '<b>Toggle</b> — an interior horizontal cross-member that stiffens the frame, usually spaced on 2′ centres.',
   'muslin'     : '<b>Muslin</b> — lightweight cotton fabric glued over a Broadway flat and painted: a “soft” cover.',
+  'luan'       : '<b>Luan</b> — a thin <b>1/4″</b> plywood sheet glued over a Hollywood flat to give it a hard, smooth face to paint.',
   'reveal'     : '<b>Reveal</b> — the small set-back (here <b>3/4″</b>) that corner blocks &amp; keystones are held in from the frame’s outer edge.',
   'corner-block':'<b>Corner block</b> — a triangular 1/4″ plywood gusset reinforcing a corner joint, held 3/4″ in from the edge.',
   'keystone'   : '<b>Keystone</b> — a 1/4″ plywood gusset reinforcing a toggle (mid-rail) joint.',
@@ -2490,7 +2537,7 @@ function load(){
     if (d && Array.isArray(d.pieces)){
       pieces = d.pieces; annots = d.annots||[]; idSeq = d.idSeq||1;
       // legacy drawings (saved before scale was selectable) were at 1/4"
-      scaleKey = d.scaleKey || (pieces.length ? '1/4' : '1/2');
+      scaleKey = d.scaleKey || (pieces.length ? '1/4' : '1');
     }
   }catch(_){}
 }
@@ -2803,6 +2850,7 @@ function quizTick(){
 }
 function quizStart(){
   if (quiz.active) return;
+  if (typeof training !== 'undefined' && training.active){ toast('Exit Training first, then start the Quiz.', {warn:true}); return; }
   if (pieces.length || annots.length){
     if (!confirm('Starting the quiz will temporarily hide your current drawing — it’s restored when you exit the quiz. Continue?')) return;
   }
@@ -2911,6 +2959,177 @@ document.getElementById('quizShot').addEventListener('click', ()=>{
   a.download='quiz-results-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png';
   document.body.appendChild(a); a.click(); a.remove();
 });
+
+/* ============================================================
+   TRAINING MODE
+   A guided walkthrough that builds each style one part at a time,
+   narrating why each member goes where. The student clicks Next to
+   add the next group of parts and watches the flat come together.
+   ============================================================ */
+const TRAIN_SIZES = { broadway:[4,8], hollywood:[4,8], platform:[4,8] };
+const TRAIN_NAMES = { broadway:'Broadway Flat', hollywood:'Hollywood Flat', platform:'Platform' };
+
+/* Build the ordered step list (with placed-piece templates) for a style.
+   Geometry is computed in real inches, then converted to world px with the
+   current IN; stiles run full height, rails & toggles fit between them. */
+function buildTraining(style){
+  const [Wft,Hft] = TRAIN_SIZES[style];
+  const Win = Wft*12, Hin = Hft*12;
+  const x0 = PAGE_W/2 - (Win*IN)/2;
+  const y0 = PAGE_H/2 - (Hin*IN)/2;
+  let type='lum-1x3', orient='flat';
+  if (style==='hollywood') orient='edge';
+  else if (style==='platform'){ type='lum-2x4'; orient='edge'; }
+  const w = (orient==='edge') ? MATS[type].thick : MATS[type].face;  // cross dim drawn on plan
+  const lumLbl = MATS[type].name.replace(' Lumber','');
+  const orientLbl = (orient==='edge') ? 'on edge' : 'laid flat';
+
+  const base = {miterL:90, miterR:90};
+  const H_ = (cx,cy,L)=>Object.assign({type, x:x0+cx*IN, y:y0+cy*IN, rot:0,  lengthIn:L, orientation:orient}, base);
+  const V_ = (cx,cy,L)=>Object.assign({type, x:x0+cx*IN, y:y0+cy*IN, rot:90, lengthIn:L, orientation:orient}, base);
+  const CB = (cx,cy,rot)=>Object.assign({type:'fab-cb', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
+  const SHEET = (t)=>Object.assign({type:t, x:x0+(Win/2)*IN, y:y0+(Hin/2)*IN, rot:0, lengthIn:Win, widthIn:Hin, orientation:'flat'}, base);
+
+  const stileL = V_(w/2,        Hin/2, Hin);
+  const stileR = V_(Win - w/2,  Hin/2, Hin);
+  const topRail = H_(Win/2, w/2,        Win - 2*w);
+  const botRail = H_(Win/2, Hin - w/2,  Win - 2*w);
+
+  const centerStile = (style!=='platform' && Win > 24) ? V_(Win/2, Hin/2, Hin - 2*w) : null;
+  const rows = Math.max(1, Math.round(Hin/24) - 1);
+  const toggles = [];
+  for (let i=1;i<=rows;i++){
+    const cy = Hin*i/(rows+1);
+    if (centerStile){
+      const seg = (Win - 3*w)/2;
+      toggles.push(H_(w + seg/2, cy, seg));
+      toggles.push(H_(Win - w - seg/2, cy, seg));
+    } else {
+      toggles.push(H_(Win/2, cy, Win - 2*w));
+    }
+  }
+  const corners = [CB(7,7,0), CB(Win-7,7,90), CB(Win-7,Hin-7,180), CB(7,Hin-7,270)];
+
+  const dim = `${fmtIn(Win)} W × ${fmtIn(Hin)} H`;
+  const steps = [];
+  const styleName = TRAIN_NAMES[style];
+
+  if (style==='broadway'){
+    steps.push({title:'— overview', pieces:[], body:`A <b>Broadway flat</b> (${dim}) is a lightweight frame of <b>1×3 ${orientLbl}</b> — the 2-1/2″ face lies in the plane of the flat — later covered in soft <span class="gloss-term" data-term="muslin">muslin</span>. Joints are reinforced with plywood <span class="gloss-term" data-term="corner-block">corner blocks</span>. Click <b>Next</b> to start cutting.`});
+    steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Start with the two <b>stiles</b> — the full-height verticals, <b>${fmtIn(Hin)}</b> long, one on each side. They run the entire height; everything else fits between them.`});
+    steps.push({title:'2 · Rails', pieces:[stileL,stileR,topRail,botRail], body:`Add a <b>rail</b> across the top and the bottom, cut to fit <b>between</b> the stiles (${fmtIn(Win-2*w)}). Rails + stiles make the outer rectangle.`});
+    steps.push({title:'3 · Toggles', pieces:[stileL,stileR,topRail,botRail,...toggles], body:`Drop in <b>${toggles.length} toggle${toggles.length>1?'s':''}</b> on ~2′ centres. <span class="gloss-term" data-term="toggle">Toggles</span> keep the long stiles from bowing and give the cover something to land on.`});
+    steps.push({title:'4 · Corner blocks', pieces:[stileL,stileR,topRail,botRail,...toggles,...corners], body:`Glue & staple a <b>corner block</b> over each of the 4 corner joints. On a real flat you'd add <span class="gloss-term" data-term="keystone">keystones</span> at the toggles too — they lock the butt joints square.`});
+    steps.push({title:'✓ Finished frame', pieces:[stileL,stileR,topRail,botRail,...toggles,...corners], body:`That's a complete Broadway flat frame. Next it gets <b>covered in muslin</b> and painted. Try <b>Isometric View</b> to see it in 3-D, or <b>Finish</b> to exit.`});
+  } else if (style==='hollywood'){
+    steps.push({title:'— overview', pieces:[], body:`A <b>Hollywood flat</b> (${dim}) is framed in <b>1×3 ${orientLbl}</b> — only the 3/4″ edge faces out — and skinned with a hard <span class="gloss-term" data-term="luan">luan</span> face instead of muslin. No corner blocks: the glued luan squares the frame.`});
+    steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Cut the two <b>stiles</b> (${fmtIn(Hin)}) and stand them <b>on edge</b>. On edge gives the flat a 2-1/2″ deep, rigid profile while showing only 3/4″ on the face.`});
+    steps.push({title:'2 · Rails', pieces:[stileL,stileR,topRail,botRail], body:`Add the top and bottom <b>rails</b> between the stiles (${fmtIn(Win-2*w)}), also on edge.`});
+    if (centerStile)
+      steps.push({title:'3 · Centre stile', pieces:[stileL,stileR,topRail,botRail,centerStile], body:`Because this flat is wider than 2′, run a <b>centre stile</b> up the middle. It stiffens the panel and gives the luan a seam to land on.`});
+    const upto = centerStile ? [stileL,stileR,topRail,botRail,centerStile] : [stileL,stileR,topRail,botRail];
+    steps.push({title:(centerStile?'4':'3')+' · Toggles', pieces:[...upto,...toggles], body:`Fit <b>${toggles.length} toggle${toggles.length>1?'s':''}</b> on ~2′ centres between the stiles.`});
+    steps.push({title:(centerStile?'5':'4')+' · Luan face', pieces:[...upto,...toggles, SHEET('sh-luan')], body:`Lay a <b>1/4″ luan</b> sheet over the whole frame and glue/staple it down. Notice the framing now shows through as <b>dashed hidden lines</b> — that's the frame under the skin.`});
+    steps.push({title:'✓ Finished flat', pieces:[...upto,...toggles, SHEET('sh-luan')], body:`A complete hard-faced Hollywood flat. Switch to <b>Isometric View</b> to see the depth, or <b>Finish</b> to exit.`});
+  } else { // platform
+    steps.push({title:'— overview', pieces:[], body:`A <b>platform</b> (${dim} deck) is a load-bearing box of <b>2×4 ${orientLbl}</b> topped with a <b>3/4″ plywood lid</b>. On edge gives the deck its strength and height.`});
+    steps.push({title:'1 · Outer frame', pieces:[stileL,stileR,topRail,botRail], body:`Build the perimeter box first: two long <b>side rails</b> (${fmtIn(Hin)}) with <b>end rails</b> between them — all 2×4 <b>on edge</b>.`});
+    steps.push({title:'2 · Joists', pieces:[stileL,stileR,topRail,botRail,...toggles], body:`Add <b>${toggles.length} internal joist${toggles.length>1?'s':''}</b> on ~2′ centres. Joists carry the load between the rails so the lid won't deflect underfoot.`});
+    steps.push({title:'3 · Plywood lid', pieces:[stileL,stileR,topRail,botRail,...toggles, SHEET('sh-ply')], body:`Screw a <b>3/4″ plywood lid</b> over the top. The framing shows through as <b>dashed hidden lines</b>. (In the shop you'd then <b>leg it up</b> to performance height.)`});
+    steps.push({title:'✓ Finished platform', pieces:[stileL,stileR,topRail,botRail,...toggles, SHEET('sh-ply')], body:`A complete platform deck. Try <b>Isometric View</b> to see the box, or <b>Finish</b> to exit.`});
+  }
+  return {name:styleName, Wft, Hft, steps};
+}
+
+const training = { active:false, style:null, step:0, def:null, backup:null, undoBackup:null };
+const trainBar = document.getElementById('trainBar');
+
+function trainApplyStep(){
+  // each step stores the full cumulative set of parts visible at that point
+  let id = 1;
+  pieces = (training.def.steps[training.step].pieces || []).map(t => Object.assign({}, t, {id:id++}));
+  idSeq = id;
+  selected = null;
+  syncPropPanel(); updateCutList(); save(); draw();
+  trainRender();
+}
+function trainRender(){
+  const def = training.def, st = def.steps[training.step];
+  document.getElementById('trainStyle').textContent = def.name;
+  document.getElementById('trainStepTitle').textContent = st.title;
+  document.getElementById('trainBody').innerHTML = st.body;
+  document.getElementById('trainStepCount').textContent = 'Step ' + (training.step+1) + ' / ' + def.steps.length;
+  document.getElementById('trainBack').disabled = (training.step === 0);
+  document.getElementById('trainNext').textContent = (training.step >= def.steps.length-1) ? 'Finish ✓' : 'Next ›';
+}
+function trainShowChooser(){
+  training.style = null; training.def = null; training.step = 0;
+  document.getElementById('trainStyle').textContent = 'Training';
+  document.getElementById('trainStepTitle').textContent = '';
+  document.getElementById('trainBody').textContent = 'Choose what to build — I’ll walk you through it part by part.';
+  document.getElementById('trainStepCount').textContent = '';
+  document.getElementById('trainChooser').style.display = 'flex';
+  document.getElementById('trainBack').style.display = 'none';
+  document.getElementById('trainNext').style.display = 'none';
+}
+function trainBegin(style){
+  training.style = style;
+  training.def = buildTraining(style);
+  training.step = 0;
+  document.getElementById('trainChooser').style.display = 'none';
+  document.getElementById('trainBack').style.display = '';
+  document.getElementById('trainNext').style.display = '';
+  fitView();
+  trainApplyStep();
+}
+function trainStart(){
+  if (training.active) return;
+  if (quiz.active){ toast('Exit the quiz first, then start Training.', {warn:true}); return; }
+  if (pieces.length || annots.length){
+    if (!confirm('Training mode will set your current drawing aside — it’s restored when you exit. Continue?')) return;
+  }
+  training.backup = snapshot();
+  training.undoBackup = undoStack.slice();
+  training.active = true;
+  if (toolMode==='dimension') setTool('select');
+  if (viewMode==='iso') document.getElementById('isoBtn').click();
+  document.getElementById('trainBtn').classList.add('active');
+  pieces = []; annots = []; selected = null;
+  updateCutList(); draw();
+  trainShowChooser();
+  trainBar.classList.add('show');
+}
+function trainNext(){
+  if (!training.active) return;
+  if (!training.def) return;                       // still on the chooser
+  if (training.step >= training.def.steps.length-1){ trainExit(true); return; }
+  training.step++; trainApplyStep();
+}
+function trainBack(){
+  if (!training.active || !training.def || training.step===0) return;
+  training.step--; trainApplyStep();
+}
+function trainExit(restore){
+  training.active = false;
+  trainBar.classList.remove('show');
+  document.getElementById('trainBtn').classList.remove('active');
+  if (restore && training.backup){
+    const st = JSON.parse(training.backup);
+    pieces = st.pieces; annots = st.annots; idSeq = st.idSeq;
+    if (st.scaleKey){ scaleKey = st.scaleKey; applyScaleVars(); }
+  }
+  training.backup = null;
+  undoStack.length = 0;
+  if (restore && training.undoBackup) training.undoBackup.forEach(s=>undoStack.push(s));
+  training.undoBackup = null; refreshUndoBtn();
+  selected = null; dimA = null; dimCursor = null;
+  syncPropPanel(); updateCutList(); save(); fitView(); draw();
+}
+document.getElementById('trainBtn').addEventListener('click', ()=>{ if (training.active) trainExit(true); else trainStart(); });
+document.getElementById('trainChooser').addEventListener('click', e=>{ const b=e.target.closest('button[data-style]'); if (b) trainBegin(b.dataset.style); });
+document.getElementById('trainNext').addEventListener('click', trainNext);
+document.getElementById('trainBack').addEventListener('click', trainBack);
+document.getElementById('trainExit').addEventListener('click', ()=>{ if (confirm('Exit training? Your previous drawing is restored.')) trainExit(true); });
 
 /* ============================================================
    INIT
