@@ -1121,9 +1121,10 @@ function drawLegend(g){
   g.restore();
 }
 
-/* Wherever a sheet good is laid over the framing, reveal the frame
-   beneath it as dashed "hidden" lines (drafting convention), clipped to
-   the sheet so the exposed lumber outside it stays solid. Plan view only. */
+/* Wherever a sheet good or a fabricated part (corner block / keystone) is
+   laid over the framing, reveal the frame beneath it as dashed "hidden"
+   lines (drafting convention), clipped to the covering piece so the exposed
+   lumber outside it stays solid. Plan view only. */
 function polyBBox(pts){
   const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
   return {minx:Math.min(...xs), maxx:Math.max(...xs), miny:Math.min(...ys), maxy:Math.max(...ys)};
@@ -1133,7 +1134,8 @@ function drawHiddenFraming(g, list){
   const k = 1/cam.z;
   for (let si=0; si<list.length; si++){
     const sp = list[si];
-    if (MATS[sp.type].kind !== 'sheet') continue;
+    const kind = MATS[sp.type].kind;
+    if (kind !== 'sheet' && kind !== 'fab') continue;   // covers that hide framing
     const spoly = worldPoly(sp), sbb = polyBBox(spoly);
     g.save();
     pathPoly(g, spoly); g.clip();              // only reveal within the sheet
@@ -2988,14 +2990,18 @@ function buildTraining(style){
   const H_ = (cx,cy,L)=>Object.assign({type, x:x0+cx*IN, y:y0+cy*IN, rot:0,  lengthIn:L, orientation:orient}, base);
   const V_ = (cx,cy,L)=>Object.assign({type, x:x0+cx*IN, y:y0+cy*IN, rot:90, lengthIn:L, orientation:orient}, base);
   const CB = (cx,cy,rot)=>Object.assign({type:'fab-cb', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
+  const KEY = (cx,cy,rot)=>Object.assign({type:'fab-key', x:x0+cx*IN, y:y0+cy*IN, rot, lengthIn:0, orientation:'flat'}, base);
   const SHEET = (t)=>Object.assign({type:t, x:x0+(Win/2)*IN, y:y0+(Hin/2)*IN, rot:0, lengthIn:Win, widthIn:Hin, orientation:'flat'}, base);
+  // diagonal brace between two points (inches); rot follows the line
+  const ANG = (x1,y1,x2,y2)=>Object.assign({type, x:x0+((x1+x2)/2)*IN, y:y0+((y1+y2)/2)*IN,
+    rot: Math.atan2(y2-y1, x2-x1)*180/Math.PI, lengthIn: Math.hypot(x2-x1, y2-y1), orientation:'flat'}, base);
 
   const stileL = V_(w/2,        Hin/2, Hin);
   const stileR = V_(Win - w/2,  Hin/2, Hin);
   const topRail = H_(Win/2, w/2,        Win - 2*w);
   const botRail = H_(Win/2, Hin - w/2,  Win - 2*w);
 
-  const centerStile = (style!=='platform' && Win > 24) ? V_(Win/2, Hin/2, Hin - 2*w) : null;
+  const centerStile = (style==='hollywood' && Win > 24) ? V_(Win/2, Hin/2, Hin - 2*w) : null;
   const rows = Math.max(1, Math.round(Hin/24) - 1);
   const toggles = [];
   for (let i=1;i<=rows;i++){
@@ -3015,12 +3021,31 @@ function buildTraining(style){
   const styleName = TRAIN_NAMES[style];
 
   if (style==='broadway'){
-    steps.push({title:'— overview', pieces:[], body:`A <b>Broadway flat</b> (${dim}) is a lightweight frame of <b>1×3 ${orientLbl}</b> — the 2-1/2″ face lies in the plane of the flat — later covered in soft <span class="gloss-term" data-term="muslin">muslin</span>. Joints are reinforced with plywood <span class="gloss-term" data-term="corner-block">corner blocks</span>. Click <b>Next</b> to start cutting.`});
+    // single full-width toggle across the middle
+    const toggle = H_(Win/2, Hin/2, Win - 2*w);
+    // a diagonal brace, split by the centre toggle into two segments that run
+    // from the top-left corner down to the bottom-right corner ("\")
+    const topA=[w+2, w+2],          topB=[Win/2 - 3, Hin/2 - w/2 - 1];
+    const botA=[Win/2 + 3, Hin/2 + w/2 + 1], botB=[Win - w - 2, Hin - w - 2];
+    const braceTop = ANG(topA[0],topA[1], topB[0],topB[1]);
+    const braceBot = ANG(botA[0],botA[1], botB[0],botB[1]);
+    const dT = braceTop.rot, dB = braceBot.rot;
+    // keystones over the toggle/stile joints and the brace ends at the toggle
+    const keys = [
+      KEY(w + 3, Hin/2, 0), KEY(Win - w - 3, Hin/2, 0),        // toggle ends (bridge the stile joint)
+      KEY(topB[0], topB[1], dT), KEY(botA[0], botA[1], dB)      // brace-to-toggle joints
+    ];
+    const frame = [stileL, stileR, topRail, botRail];
+    const withToggle = [...frame, toggle];
+    const withBraces = [...withToggle, braceTop, braceBot];
+    const withFab = [...withBraces, ...corners, ...keys];
+    steps.push({title:'— overview', pieces:[], body:`A <b>Broadway flat</b> (${dim}) is a lightweight frame of <b>1×3 ${orientLbl}</b> — the 2-1/2″ face lies in the plane of the flat — later covered in soft <span class="gloss-term" data-term="muslin">muslin</span>. Joints are reinforced with plywood <span class="gloss-term" data-term="corner-block">corner blocks</span> &amp; <span class="gloss-term" data-term="keystone">keystones</span>. Click <b>Next</b> to start cutting.`});
     steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Start with the two <b>stiles</b> — the full-height verticals, <b>${fmtIn(Hin)}</b> long, one on each side. They run the entire height; everything else fits between them.`});
-    steps.push({title:'2 · Rails', pieces:[stileL,stileR,topRail,botRail], body:`Add a <b>rail</b> across the top and the bottom, cut to fit <b>between</b> the stiles (${fmtIn(Win-2*w)}). Rails + stiles make the outer rectangle.`});
-    steps.push({title:'3 · Toggles', pieces:[stileL,stileR,topRail,botRail,...toggles], body:`Drop in <b>${toggles.length} toggle${toggles.length>1?'s':''}</b> on ~2′ centres. <span class="gloss-term" data-term="toggle">Toggles</span> keep the long stiles from bowing and give the cover something to land on.`});
-    steps.push({title:'4 · Corner blocks', pieces:[stileL,stileR,topRail,botRail,...toggles,...corners], body:`Glue & staple a <b>corner block</b> over each of the 4 corner joints. On a real flat you'd add <span class="gloss-term" data-term="keystone">keystones</span> at the toggles too — they lock the butt joints square.`});
-    steps.push({title:'✓ Finished frame', pieces:[stileL,stileR,topRail,botRail,...toggles,...corners], body:`That's a complete Broadway flat frame. Next it gets <b>covered in muslin</b> and painted. Try <b>Isometric View</b> to see it in 3-D, or <b>Finish</b> to exit.`});
+    steps.push({title:'2 · Rails', pieces:frame, body:`Add a <b>rail</b> across the top and the bottom, cut to fit <b>between</b> the stiles (${fmtIn(Win-2*w)}). Rails + stiles make the outer rectangle.`});
+    steps.push({title:'3 · Toggle', pieces:withToggle, body:`Drop in one full-width <span class="gloss-term" data-term="toggle">toggle</span> across the middle. It keeps the long stiles from bowing and gives the muslin something to land on.`});
+    steps.push({title:'4 · Diagonal brace', pieces:withBraces, body:`Run a <b>diagonal brace</b> from the top-left corner down to the bottom-right — split where it meets the toggle. The diagonal triangulates the rectangle so the flat can't <b>rack</b> (lean out of square).`});
+    steps.push({title:'5 · Blocks & keystones', pieces:withFab, body:`Glue &amp; staple a <span class="gloss-term" data-term="corner-block">corner block</span> over each of the 4 corners and a <span class="gloss-term" data-term="keystone">keystone</span> over the toggle and brace joints — held <span class="gloss-term" data-term="reveal">3/4″ in</span> from the frame edges. Notice they reveal the framing beneath as <b>dashed hidden lines</b>.`});
+    steps.push({title:'✓ Finished frame', pieces:withFab, body:`That's a complete Broadway flat frame. Next it gets <b>covered in muslin</b> and painted. Try <b>Isometric View</b> to see it in 3-D, or <b>Finish</b> to exit.`});
   } else if (style==='hollywood'){
     steps.push({title:'— overview', pieces:[], body:`A <b>Hollywood flat</b> (${dim}) is framed in <b>1×3 ${orientLbl}</b> — only the 3/4″ edge faces out — and skinned with a hard <span class="gloss-term" data-term="luan">luan</span> face instead of muslin. No corner blocks: the glued luan squares the frame.`});
     steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Cut the two <b>stiles</b> (${fmtIn(Hin)}) and stand them <b>on edge</b>. On edge gives the flat a 2-1/2″ deep, rigid profile while showing only 3/4″ on the face.`});
