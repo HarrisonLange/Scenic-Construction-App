@@ -704,10 +704,11 @@ const MATS = {
   'sh-luan' : {name:'Luan Sheet',  kind:'sheet',  face:48,   thick:0.25, dims:'1/4″ — cut L × W'},
   'sh-maso' : {name:'Masonite',    kind:'sheet',  face:48,   thick:0.125,dims:'1/8″ — cut L × W'},
   'fab-cb'  : {name:'Corner Block',kind:'fab',    dims:'10″ legs, 1/4″ ply'},
-  'fab-key' : {name:'Keystone',    kind:'fab',    dims:'3″ × 8″, 1/4″ ply'}
+  'fab-key' : {name:'Keystone',    kind:'fab',    dims:'3″ × 8″, 1/4″ ply'},
+  'fab-strap':{name:'Half Strap',  kind:'fab',    dims:'2-1/2″ × 8″, 1/4″ ply, 45° ends'}
 };
 const STOCK = ['lum-1x3','lum-2x4','sh-ply','sh-luan','sh-maso'];
-const FAB   = ['fab-cb','fab-key'];
+const FAB   = ['fab-cb','fab-key','fab-strap'];
 
 /* ── State ─────────────────────────────────────────────── */
 let pieces = [];
@@ -857,6 +858,11 @@ function localPolyIn(p){
   if (p.type === 'fab-key'){
     return [[-4,-1.5],[4,-1.5],[4,1.5],[-4,1.5]];
   }
+  if (p.type === 'fab-strap'){
+    // 8" long × 2-1/2" wide, both ends cut at 45° (parallelogram)
+    const L=8, W=2.5, m=W;        // 45° miter inset = width
+    return [[-L/2,-W/2],[L/2,-W/2],[L/2-m,W/2],[-L/2+m,W/2]];
+  }
   const L = p.lengthIn;
   const W = pieceW(p);
   let dxL = 0, dxR = 0;
@@ -871,7 +877,7 @@ function localPolyIn(p){
 }
 
 function pieceHeightIn(p){
-  if (p.type === 'fab-cb' || p.type === 'fab-key') return 0.25;
+  if (p.type === 'fab-cb' || p.type === 'fab-key' || p.type === 'fab-strap') return 0.25;
   const m = MATS[p.type];
   if (m.kind === 'sheet') return m.thick;
   return (p.orientation === 'flat') ? m.thick : m.face;
@@ -1049,6 +1055,7 @@ function pieceLabel(p){
   const m = MATS[p.type];
   if (p.type==='fab-cb') return 'Corner Block 10"';
   if (p.type==='fab-key') return 'Keystone 3"×8"';
+  if (p.type==='fab-strap') return 'Half Strap 2½"×8"';
   if (m.kind==='sheet') return `${m.name} — ${fmtIn(p.lengthIn)} × ${fmtIn(pieceW(p))}`;
   return `${m.name} — ${fmtIn(p.lengthIn)} (${p.orientation==='flat'?'flat':'on edge'})`;
 }
@@ -1589,6 +1596,7 @@ function paletteThumb(type){
     g.beginPath();
     if (type==='fab-cb'){ g.moveTo(10,26); g.lineTo(36,26); g.lineTo(10,8); g.closePath(); }
     else if (type==='fab-key'){ g.rect(11,12,24,10); }
+    else if (type==='fab-strap'){ g.moveTo(8,21); g.lineTo(32,21); g.lineTo(38,13); g.lineTo(14,13); g.closePath(); }
     else if (m.kind==='sheet'){ g.rect(7,7,32,20); }
     else { const h = m.face>3 ? 8 : 6; g.rect(5,17-h/2,36,h); }
   };
@@ -1611,7 +1619,8 @@ const GLOSS = {
   'sh-luan': '<b>Luan</b> — a thin <b>1/4″</b> sheet used to “skin” a flat: it gives the frame a smooth face to paint.',
   'sh-maso': '<b>Masonite</b> — smooth <b>1/8″</b> hardboard, often for stage-floor surfacing and templates.',
   'fab-cb' : '<b>Corner block</b> — a triangular 1/4″ plywood gusset that reinforces the corner joints of a flat. By convention it sits <b>3/4″ in</b> from the outer frame edge (the app snaps it there for you).',
-  'fab-key': '<b>Keystone</b> — a 1/4″ plywood gusset that reinforces a “toggle” (a mid-frame cross rail). Like corner blocks, it’s held <b>3/4″ back</b> from the lumber edges.'
+  'fab-key': '<b>Keystone</b> — a 1/4″ plywood gusset that reinforces a “toggle” (a mid-frame cross rail). Like corner blocks, it’s held <b>3/4″ back</b> from the lumber edges.',
+  'fab-strap':'<b>Half strap</b> — a <b>2-1/2″ × 8″</b> strip of 1/4″ plywood with <b>both ends mitered at 45°</b>. Used to plate over a diagonal-brace joint where a square gusset won’t fit.'
 };
 /* Structural / process vocabulary used in quiz feedback & the cut list */
 const TERMS = {
@@ -2179,7 +2188,7 @@ window.addEventListener('mousemove', e=>{
     } else if (snapped){
       const lp = snapDots[0] || [p.x,p.y];
       if (MATS[p.type].kind==='fab'){
-        const what = p.type==='fab-cb' ? 'Corner block' : 'Keystone';
+        const what = MATS[p.type].name;
         snapLabel = {x:lp[0], y:lp[1], text:what+' set 3/4″ in from\nframe edge — standard reveal'};
       } else {
         snapLabel = {x:lp[0], y:lp[1], text:'Snapped — edges flush'};
@@ -3023,17 +3032,18 @@ function buildTraining(style){
   if (style==='broadway'){
     // single full-width toggle across the middle
     const toggle = H_(Win/2, Hin/2, Win - 2*w);
-    // a diagonal brace, split by the centre toggle into two segments that run
-    // from the top-left corner down to the bottom-right corner ("\")
-    const topA=[w+2, w+2],          topB=[Win/2 - 3, Hin/2 - w/2 - 1];
-    const botA=[Win/2 + 3, Hin/2 + w/2 + 1], botB=[Win - w - 2, Hin - w - 2];
+    // two diagonal braces on the left: top rail → left stile, and left stile →
+    // bottom rail (matching the placed reference), each held by keystones
+    const topA=[18, w],  topB=[w, 26];        // upper brace (top rail → left stile)
+    const botA=[w, 70],  botB=[19, Hin - w];  // lower brace (left stile → bottom rail)
     const braceTop = ANG(topA[0],topA[1], topB[0],topB[1]);
     const braceBot = ANG(botA[0],botA[1], botB[0],botB[1]);
     const dT = braceTop.rot, dB = braceBot.rot;
-    // keystones over the toggle/stile joints and the brace ends at the toggle
+    // keystones over the toggle/stile joints and at both ends of each brace
     const keys = [
       KEY(w + 3, Hin/2, 0), KEY(Win - w - 3, Hin/2, 0),        // toggle ends (bridge the stile joint)
-      KEY(topB[0], topB[1], dT), KEY(botA[0], botA[1], dB)      // brace-to-toggle joints
+      KEY(topA[0], topA[1], dT), KEY(topB[0], topB[1], dT),    // upper brace ends
+      KEY(botA[0], botA[1], dB), KEY(botB[0], botB[1], dB)     // lower brace ends
     ];
     const frame = [stileL, stileR, topRail, botRail];
     const withToggle = [...frame, toggle];
@@ -3043,8 +3053,8 @@ function buildTraining(style){
     steps.push({title:'1 · Stiles', pieces:[stileL, stileR], body:`Start with the two <b>stiles</b> — the full-height verticals, <b>${fmtIn(Hin)}</b> long, one on each side. They run the entire height; everything else fits between them.`});
     steps.push({title:'2 · Rails', pieces:frame, body:`Add a <b>rail</b> across the top and the bottom, cut to fit <b>between</b> the stiles (${fmtIn(Win-2*w)}). Rails + stiles make the outer rectangle.`});
     steps.push({title:'3 · Toggle', pieces:withToggle, body:`Drop in one full-width <span class="gloss-term" data-term="toggle">toggle</span> across the middle. It keeps the long stiles from bowing and gives the muslin something to land on.`});
-    steps.push({title:'4 · Diagonal brace', pieces:withBraces, body:`Run a <b>diagonal brace</b> from the top-left corner down to the bottom-right — split where it meets the toggle. The diagonal triangulates the rectangle so the flat can't <b>rack</b> (lean out of square).`});
-    steps.push({title:'5 · Blocks & keystones', pieces:withFab, body:`Glue &amp; staple a <span class="gloss-term" data-term="corner-block">corner block</span> over each of the 4 corners and a <span class="gloss-term" data-term="keystone">keystone</span> over the toggle and brace joints — held <span class="gloss-term" data-term="reveal">3/4″ in</span> from the frame edges. Notice they reveal the framing beneath as <b>dashed hidden lines</b>.`});
+    steps.push({title:'4 · Cross bracing', pieces:withBraces, body:`Add two <b>diagonal braces</b> — one from the top rail down to the left stile, one from the left stile down to the bottom rail. The diagonals triangulate the rectangle so the flat can't <b>rack</b> (lean out of square).`});
+    steps.push({title:'5 · Blocks & keystones', pieces:withFab, body:`Glue &amp; staple a <span class="gloss-term" data-term="corner-block">corner block</span> over each of the 4 corners and a <span class="gloss-term" data-term="keystone">keystone</span> over the toggle and at both ends of each brace — held <span class="gloss-term" data-term="reveal">3/4″ in</span> from the frame edges. Notice they reveal the framing beneath as <b>dashed hidden lines</b>.`});
     steps.push({title:'✓ Finished frame', pieces:withFab, body:`That's a complete Broadway flat frame. Next it gets <b>covered in muslin</b> and painted. Try <b>Isometric View</b> to see it in 3-D, or <b>Finish</b> to exit.`});
   } else if (style==='hollywood'){
     steps.push({title:'— overview', pieces:[], body:`A <b>Hollywood flat</b> (${dim}) is framed in <b>1×3 ${orientLbl}</b> — only the 3/4″ edge faces out — and skinned with a hard <span class="gloss-term" data-term="luan">luan</span> face instead of muslin. No corner blocks: the glued luan squares the frame.`});
