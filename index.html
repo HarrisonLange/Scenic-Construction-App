@@ -1075,6 +1075,36 @@ function drawLegend(g){
   g.restore();
 }
 
+/* Wherever a sheet good is laid over the framing, reveal the frame
+   beneath it as dashed "hidden" lines (drafting convention), clipped to
+   the sheet so the exposed lumber outside it stays solid. Plan view only. */
+function polyBBox(pts){
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  return {minx:Math.min(...xs), maxx:Math.max(...xs), miny:Math.min(...ys), maxy:Math.max(...ys)};
+}
+function bbOverlap(a,b){ return a.minx<b.maxx && a.maxx>b.minx && a.miny<b.maxy && a.maxy>b.miny; }
+function drawHiddenFraming(g, list){
+  const k = 1/cam.z;
+  for (let si=0; si<list.length; si++){
+    const sp = list[si];
+    if (MATS[sp.type].kind !== 'sheet') continue;
+    const spoly = worldPoly(sp), sbb = polyBBox(spoly);
+    g.save();
+    pathPoly(g, spoly); g.clip();              // only reveal within the sheet
+    g.setLineDash([6*k, 4*k]);
+    g.lineWidth = 1*k;
+    g.strokeStyle = 'rgba(74,61,38,.75)';
+    for (let li=0; li<si; li++){                // lumber drawn beneath this sheet
+      const lp = list[li];
+      if (MATS[lp.type].kind !== 'lumber') continue;
+      const lpoly = worldPoly(lp);
+      if (!bbOverlap(sbb, polyBBox(lpoly))) continue;
+      pathPoly(g, lpoly); g.stroke();
+    }
+    g.restore();
+  }
+}
+
 /* paintScene: page + grid + pieces + annotations, world coords */
 function paintScene(g){
   g.fillStyle = '#F5F0E8';
@@ -1085,6 +1115,7 @@ function paintScene(g){
     list = pieces.slice().sort((a,b)=>(a.x+a.y)-(b.x+b.y));
   }
   list.forEach(p=>drawPiece(g,p));
+  if (viewMode === 'plan') drawHiddenFraming(g, list);
   drawAnnots(g);
 }
 
@@ -2612,8 +2643,16 @@ function verifyBuild(style, wFt, hFt){
     if (toggles < expTog) issues.push(`Needs <b>${expTog} toggle${expTog>1?'s':''}</b> on ~2′ centres — you have ${toggles}.`);
   }
 
-  // cover sheet helper
-  const coversFrame = arr => arr.some(s=>{ const b=bboxInches(s); return b.minx<=minX+4 && b.miny<=minY+4 && b.maxx>=maxX-4 && b.maxy>=maxY-4; });
+  // cover sheet helper — a face counts if it overlaps most of the frame,
+  // so a correctly-sized sheet that's a few inches off-centre still reads
+  // as covering (strict edge containment used to reject a placed luan).
+  const frameAreaIn = Math.max(1, (maxX-minX)*(maxY-minY));
+  const coversFrame = arr => arr.some(s=>{
+    const b = bboxInches(s);
+    const ox = Math.max(0, Math.min(b.maxx,maxX) - Math.max(b.minx,minX));
+    const oy = Math.max(0, Math.min(b.maxy,maxY) - Math.max(b.miny,minY));
+    return ox*oy >= 0.82 * frameAreaIn;
+  });
 
   if (style==='broadway'){
     // corner block at each of the 4 corners
