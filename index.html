@@ -1023,7 +1023,7 @@ function shade(hex, f){
   return `rgb(${r},${gg},${b})`;
 }
 
-function drawPiece(g, p){
+function drawPiece(g, p, zBaseIn=0){
   const m = MATS[p.type];
   const col = COLORS[m.kind];
   const wp = worldPoly(p);
@@ -1035,8 +1035,9 @@ function drawPiece(g, p){
     pathPoly(g, wp);
     g.strokeStyle = col.edge; g.lineWidth = 1.2; g.stroke();
   } else {
-    const h = pieceHeightIn(p) * IN;
-    const bot = wp.map(([x,y]) => proj(x,y,0));
+    const z0 = zBaseIn * IN;
+    const h = z0 + pieceHeightIn(p) * IN;
+    const bot = wp.map(([x,y]) => proj(x,y,z0));
     const top = wp.map(([x,y]) => proj(x,y,h));
     for(let i=0;i<wp.length;i++){
       const j=(i+1)%wp.length;
@@ -1165,17 +1166,52 @@ function drawHiddenFraming(g, list){
   }
 }
 
+/* In iso, draw the framing that sits under each cover (sheet / fab) as dashed
+   hidden lines on the cover's top face — same idea as the plan-view reveal,
+   projected onto the cover plane so it reads consistently in 3-D. */
+function drawHiddenFramingIso(g, covers, lumber, zTopIn){
+  const k = 1/cam.z, z = zTopIn*IN;
+  g.save();
+  g.setLineDash([6*k, 4*k]);
+  g.lineWidth = 1*k;
+  g.strokeStyle = 'rgba(74,61,38,.75)';
+  covers.forEach(sp=>{
+    const sbb = polyBBox(worldPoly(sp));
+    const clip = worldPoly(sp).map(([x,y])=>proj(x,y,z));   // cover top face
+    g.save();
+    pathPoly(g, clip); g.clip();
+    lumber.forEach(lp=>{
+      if (!bbOverlap(sbb, polyBBox(worldPoly(lp)))) return;
+      pathPoly(g, worldPoly(lp).map(([x,y])=>proj(x,y,z))); g.stroke();
+    });
+    g.restore();
+  });
+  g.restore();
+}
+
 /* paintScene: page + grid + pieces + annotations, world coords */
 function paintScene(g){
   g.fillStyle = '#F5F0E8';
   g.fillRect(0,0,PAGE_W,PAGE_H);
   drawGrid(g);
-  let list = pieces;
-  if (viewMode === 'iso'){
-    list = pieces.slice().sort((a,b)=>(a.x+a.y)-(b.x+b.y));
+  if (viewMode === 'plan'){
+    pieces.forEach(p=>drawPiece(g,p));
+    drawHiddenFraming(g, pieces);
+  } else {
+    // iso: the lumber frame stands on the page; covers (luan / ply / corner
+    // blocks) always sit ON TOP of it, at the frame's depth.
+    const byDepth = (a,b)=>(a.x+a.y)-(b.x+b.y);
+    const lumber = pieces.filter(p=>MATS[p.type].kind==='lumber');
+    const covers = pieces.filter(p=>{ const k=MATS[p.type].kind; return k==='sheet'||k==='fab'; });
+    const frameDepth = lumber.reduce((m,p)=>Math.max(m, pieceHeightIn(p)), 0);
+    lumber.slice().sort(byDepth).forEach(p=>drawPiece(g,p,0));
+    covers.slice().sort(byDepth).forEach(p=>drawPiece(g,p,frameDepth));
+    // reveal the framing through the covers, on their top faces
+    if (covers.length && lumber.length){
+      const coverTop = frameDepth + (covers.reduce((m,p)=>Math.max(m,pieceHeightIn(p)),0));
+      drawHiddenFramingIso(g, covers, lumber, coverTop);
+    }
   }
-  list.forEach(p=>drawPiece(g,p));
-  if (viewMode === 'plan') drawHiddenFraming(g, list);
   drawAnnots(g);
 }
 
