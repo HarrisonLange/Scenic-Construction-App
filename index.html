@@ -2788,9 +2788,9 @@ function verifyBuild(style, wFt, hFt){
     const hAt = expCy => horiz.some(h=> Math.abs(h.cy - (minY+expCy)) < 7 && (h.b.maxx-h.b.minx) > 20 && (h.b.maxx-h.b.minx) < frameW-6);
     if (!hAt(spec.header.cy)) issues.push(`Add a <b>header</b> across the top of the ${openLbl} opening.`);
     if (style==='window' && !hAt(spec.sill.cy)) issues.push('Add a <b>sill</b> across the bottom of the window opening.');
-    // connector rungs: short horizontals in the side bays
+    // side-bay toggles: short horizontals in the side bays
     const rungs = horiz.filter(h=> (h.b.maxx-h.b.minx) < frameW*0.4 && (h.cy-minY>=4) && (maxY-h.cy>=4)).length;
-    if (rungs < 4) issues.push('Tie each stile to its jamb with <b>connector rungs</b> in the side bays.');
+    if (rungs < 4) issues.push('Tie each stile to its jamb with <b>toggles</b> in the side bays.');
   }
 
   return {ok: issues.length===0, issues, frameW, frameH};
@@ -3091,8 +3091,8 @@ function openingFlatSpec(style, Wft, Hft){
     opening={xL,xR,top:headBottom,bottom:Hin-w};
     const bayTop=w, bayBot=Hin-w, rungLen=xL - 2*w;
     for (let k=1;k<=3;k++){ const cy=bayTop+(bayBot-bayTop)*k/4;
-      add('Connector rung','h', xL/2, cy, rungLen);              // left bay
-      add('Connector rung','h', (xR+Win)/2, cy, rungLen); }      // right bay
+      add('Toggle','h', xL/2, cy, rungLen);              // left bay
+      add('Toggle','h', (xR+Win)/2, cy, rungLen); }      // right bay
   } else { // window
     const OWd=36, xL=(Win-OWd)/2, xR=xL+OWd;           // opening 3'-0" wide, centred
     const sillTop=Hin-32, headBottom=sillTop-48;        // 4'-0" tall, sill 2'-8" up
@@ -3107,8 +3107,8 @@ function openingFlatSpec(style, Wft, Hft){
     opening={xL,xR,top:headBottom,bottom:sillTop};
     const bayTop=w, bayBot=Hin-w, rungLen=xL - 2*w;
     for (let k=1;k<=3;k++){ const cy=bayTop+(bayBot-bayTop)*k/4;
-      add('Connector rung','h', xL/2, cy, rungLen);
-      add('Connector rung','h', (xR+Win)/2, cy, rungLen); }
+      add('Toggle','h', xL/2, cy, rungLen);
+      add('Toggle','h', (xR+Win)/2, cy, rungLen); }
   }
   return {Win, Hin, w, members:M, header, sill, opening};
 }
@@ -3228,7 +3228,7 @@ function buildTraining(style){
     const header = byRole('Header');
     const sill   = byRole('Sill');
     const cripples = [...byRole('Over-door cripple'), ...byRole('Over-window cripple'), ...byRole('Under-window cripple')];
-    const rungs  = byRole('Connector rung');
+    const rungs  = byRole('Toggle');
     const luan   = SHEET('sh-luan');
     const sFR = [...stiles, ...rails];
     const sJ  = [...sFR, ...jambs];
@@ -3238,7 +3238,7 @@ function buildTraining(style){
     const sLu = [...sRn, luan];
     const openLbl = style==='door' ? '2′-8″ × 6′-10″ door' : '3′-0″ × 4′-0″ window';
     const jambLbl = style==='door' ? 'door jambs' : 'window jambs';
-    steps.push({title:'— overview', pieces:[], body:`A <b>${styleName}</b> (${dim}) is a Hollywood flat with a <b>${openLbl} opening</b> framed into it — <b>1×3 on edge</b>, skinned in <span class="gloss-term" data-term="luan">luan</span>, like any Hollywood flat. The opening needs <b>jambs</b>, a <b>header</b>${style==='window'?' and a <b>sill</b>':''}, and short <b>cripples</b> &amp; <b>rungs</b> to tie it all together.`});
+    steps.push({title:'— overview', pieces:[], body:`A <b>${styleName}</b> (${dim}) is a Hollywood flat with a <b>${openLbl} opening</b> framed into it — <b>1×3 on edge</b>, skinned in <span class="gloss-term" data-term="luan">luan</span>, like any Hollywood flat. The opening needs <b>jambs</b>, a <b>header</b>${style==='window'?' and a <b>sill</b>':''}, and short <b>cripples</b> &amp; <span class="gloss-term" data-term="toggle">toggles</span> to tie it all together.`});
     steps.push({title:'1 · Stiles', pieces:stiles, body:`Two full-height <b>stiles</b> (${fmtIn(spec.Hin-2*spec.w)}) on edge, one per side.`});
     steps.push({title:'2 · Rails', pieces:sFR, body:`Cap the ends with full-width <b>rails</b> (${fmtIn(spec.Win)}). That's the outer rectangle.`});
     steps.push({title:'3 · '+(style==='door'?'Door jambs':'Window jambs'), pieces:sJ, body:`Run two more full-height verticals — the <b>${jambLbl}</b> — to frame the sides of the ${style==='door'?'2′-8″':'3′-0″'}-wide opening, centred on the flat.`});
@@ -3247,7 +3247,7 @@ function buildTraining(style){
     else
       steps.push({title:'4 · Sill & header', pieces:sH, body:`Bridge the jambs with a <b>sill</b> (bottom, <b>2′-8″</b> up) and a <b>header</b> (top) — together they cap the <b>4′-0″</b>-tall window opening.`});
     steps.push({title:'5 · Cripples', pieces:sC, body:`Fill the short stud${cripples.length>1?'s':''} — <b>cripples</b> — ${style==='door'?'above the header':'above the header and below the sill'} so the luan has backing and the panel stays stiff over the opening.`});
-    steps.push({title:'6 · Connector rungs', pieces:sRn, body:`Tie each outer stile to its jamb with <b>${rungs.length} connector rungs</b> (${fmtIn(rungs[0].lengthIn)} each, 3 per side) so the side bays can't flex.`});
+    steps.push({title:'6 · Toggles', pieces:sRn, body:`Tie each outer stile to its jamb with <b>${rungs.length} <span class="gloss-term" data-term="toggle">toggles</span></b> (${fmtIn(rungs[0].lengthIn)} each, 3 per side) so the side bays can't flex.`});
     steps.push({title:'7 · Luan face', pieces:sLu, body:`Skin the solid framing with <b>luan</b> and cut out the opening. The frame shows through as <b>dashed hidden lines</b>. Try <b>Isometric View</b> to see the depth, or <b>Finish</b> to exit.`});
     steps.push({title:'✓ Finished '+(style==='door'?'door':'window')+' flat', pieces:sLu, body:`A complete ${styleName.toLowerCase()}, ready to hang ${style==='door'?'a door unit':'a window'} and dress.`});
   } else { // platform
