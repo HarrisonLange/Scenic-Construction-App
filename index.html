@@ -3,20 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scenic Construction Studio — Set Building for Theatre</title>
+<title>SDSCPA — Scenic Construction Studio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
 <style>
   :root{
+    /* Drawing surface (blueprint) — kept light for legibility */
     --paper:#F5F0E8;
     --grid-minor:#b9c6d4;
     --grid-major:#8fa5bd;
-    --ui-dark:#1C1C1E;
-    --ui-dark2:#2A2A2E;
-    --ui-dark3:#39393F;
-    --accent:#5B8DB8;
-    --amber:#D99E45;
-    --tape:#E8C84A;
-    --text-light:#E8E6E1;
-    --text-dim:#9B9893;
+    /* UI chrome — matched to SDSCPAinventory.com dark theme
+       (bg #0a0a0a · card #1a1a1a · border #333 · text #f0f0f0 · muted #888) */
+    --ui-dark:#0a0a0a;
+    --ui-dark2:#1a1a1a;
+    --ui-dark3:#333333;
+    --accent:#3b82f6;     /* inventory primary blue */
+    --violet:#8b5cf6;     /* inventory secondary (blue→violet gradients) */
+    --amber:#fbbf24;      /* inventory warn / highlight */
+    --tape:#facc15;       /* tape-measure yellow, on-palette */
+    --ok:#22c55e;         /* inventory success green */
+    --bad:#ef4444;        /* inventory error red */
+    --text-light:#f0f0f0;
+    --text-dim:#888888;
     --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -31,10 +38,17 @@
     height:52px;flex:0 0 52px;display:flex;align-items:center;gap:8px;
     padding:0 14px;background:var(--ui-dark);border-bottom:1px solid #000;
     box-shadow:0 1px 0 rgba(255,255,255,.06) inset;
-    z-index:30;
+    z-index:30;position:relative;
   }
-  #topbar .logo{font-weight:700;font-size:14px;letter-spacing:.4px;margin-right:10px;white-space:nowrap}
-  #topbar .logo span{color:var(--amber)}
+  /* SDSCPA rainbow brand strip echoing the logo gradient */
+  #topbar::after{
+    content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+    background:linear-gradient(90deg,#7AC143,#F7941E,#ED1C45,#EC008C,#92278F,#2E3192,#00AEEF);
+    opacity:.9;pointer-events:none;
+  }
+  #topbar .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:16px;line-height:1}
+  #topbar .brand-logo{height:22px;width:auto;display:block}
+  #topbar .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   #topbar .scale-badge{
     font-family:var(--mono);font-size:11px;color:var(--text-dim);
     border:1px solid var(--ui-dark3);border-radius:4px;padding:3px 6px 3px 8px;white-space:nowrap;
@@ -61,12 +75,12 @@
   label.toggle input{accent-color:var(--accent)}
   #zoomLabel{font-family:var(--mono);font-size:11px;color:var(--text-dim);min-width:42px;text-align:right}
   #captureBtn{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
-  #captureBtn:hover{background:#e5ad58}
+  #captureBtn:hover{background:#fcd34d}
 
   /* ── Main area ───────────────────────────── */
   #main{flex:1;display:flex;min-height:0}
   #canvasArea{
-    flex:1;overflow:hidden;background:#454249;position:relative;
+    flex:1;overflow:hidden;background:#0d0d10;position:relative;
   }
   #cv{display:block;cursor:crosshair}
   #isoBanner{
@@ -77,9 +91,9 @@
   }
   #annotBanner{
     position:absolute;top:10px;left:50%;transform:translateX(-50%);
-    background:rgba(28,28,30,.88);color:#7fc97f;font-family:var(--mono);
+    background:rgba(28,28,30,.88);color:#4ade80;font-family:var(--mono);
     font-size:12px;letter-spacing:1px;padding:6px 16px;border-radius:4px;
-    border:1px solid #7fc97f;display:none;pointer-events:none;z-index:5;
+    border:1px solid #4ade80;display:none;pointer-events:none;z-index:5;
   }
   #annotInput{
     position:absolute;display:none;z-index:10;
@@ -131,10 +145,10 @@
   .pp-row input[type=checkbox]{accent-color:var(--amber)}
   .pp-row .unit{color:var(--text-dim);font-size:11px}
   #ppDelete{
-    width:100%;margin-top:2px;background:#5e2727;border:1px solid #7a3333;color:#f3c7c7;
+    width:100%;margin-top:2px;background:#2a1314;border:1px solid #7f1d1d;color:#fca5a5;
     border-radius:5px;padding:6px;cursor:pointer;font-size:12px;font-family:inherit;
   }
-  #ppDelete:hover{background:#742f2f}
+  #ppDelete:hover{background:#3a1a1b;border-color:var(--bad)}
 
   /* ── Tape measure overlay ─────────────────── */
   #tapeOverlay{
@@ -180,7 +194,7 @@
   }
   .m-cancel{background:transparent;color:var(--text-dim)}
   .m-ok{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
-  .m-ok:hover{background:#e5ad58}
+  .m-ok:hover{background:#fcd34d}
   #exportModal .modal{width:640px;max-width:92vw}
   #exportPreview{width:100%;border:1px solid var(--ui-dark3);border-radius:6px;background:var(--paper);max-height:60vh;object-fit:contain}
 
@@ -280,7 +294,7 @@
   #ppQuickRot button:hover{background:var(--ui-dark3);border-color:var(--accent)}
 
   /* ── Palette flash (tape cancel feedback) ─── */
-  @keyframes palFlash{0%,100%{box-shadow:0 0 0 0 rgba(91,141,184,0)}25%,75%{box-shadow:0 0 0 3px rgba(91,141,184,.9)}}
+  @keyframes palFlash{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}25%,75%{box-shadow:0 0 0 3px rgba(59,130,246,.9)}}
   .pal-item.pal-flash{animation:palFlash .7s ease-in-out}
 
   /* ── First-run tour ───────────────────────── */
@@ -325,16 +339,16 @@
   #quizCount{font-size:10.5px;color:var(--text-dim)}
   #quizBar button{border-radius:6px;padding:7px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
   #quizDone{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:700}
-  #quizDone:hover{background:#e5ad58}
+  #quizDone:hover{background:#fcd34d}
   #quizExit{background:transparent;color:var(--text-dim)}
   #quizExit:hover{color:#fff;background:var(--ui-dark3)}
   #quizFeedback{
     position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:25;display:none;
-    max-width:520px;background:rgba(94,39,39,.96);border:1px solid #a05; border-color:#b5524a;
+    max-width:520px;background:rgba(40,16,18,.96);border:1px solid var(--bad);
     border-radius:9px;padding:10px 14px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   #quizFeedback.show{display:block}
-  #quizFeedback.ok{background:rgba(31,74,42,.96);border-color:#3a7;}
+  #quizFeedback.ok{background:rgba(16,40,24,.96);border-color:var(--ok);}
   #quizFeedback b{display:block;margin-bottom:4px;font-size:12.5px}
   #quizFeedback ul{margin:0;padding-left:18px}
 
@@ -372,7 +386,7 @@
     flex:0 0 13px;width:13px;height:13px;margin-top:1px;border:1.4px solid var(--text-dim);border-radius:3px;
     font-size:10px;line-height:11px;text-align:center;color:#1c1c1e;
   }
-  .qc-row.done .qc-box{background:#2ea043;border-color:#2ea043}
+  .qc-row.done .qc-box{background:#22c55e;border-color:#22c55e}
   .qc-row.done .qc-lbl{color:var(--text-dim)}
   .qc-lbl .q-cnt{font-family:var(--mono);color:var(--amber)}
   .qc-row.done .q-cnt{color:var(--text-dim)}
@@ -397,7 +411,7 @@
   #trainStepCount{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);min-width:74px;text-align:center}
   #trainBar button{border-radius:6px;padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
   #trainNext{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-  #trainNext:hover{background:#6f9ec6}
+  #trainNext:hover{background:#60a5fa}
   #trainBack{background:transparent;color:var(--text-dim)}
   #trainBack:hover:not(:disabled){color:#fff;background:var(--ui-dark3)}
   #trainBack:disabled{opacity:.35;cursor:default}
@@ -421,7 +435,24 @@
 <body>
 
 <div id="topbar">
-  <div class="logo">SCENIC <span>CONSTRUCTION</span> STUDIO</div>
+  <div class="brand" title="SDSCPA — Scenic Construction Studio">
+    <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
+      <defs>
+        <linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0"    stop-color="#7AC143"/>
+          <stop offset=".17"  stop-color="#F7941E"/>
+          <stop offset=".34"  stop-color="#ED1C45"/>
+          <stop offset=".50"  stop-color="#EC008C"/>
+          <stop offset=".66"  stop-color="#92278F"/>
+          <stop offset=".83"  stop-color="#2E3192"/>
+          <stop offset="1"    stop-color="#00AEEF"/>
+        </linearGradient>
+      </defs>
+      <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif"
+            font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
+    </svg>
+    <div class="brand-tag">Scenic Construction Studio</div>
+  </div>
   <label class="scale-badge" for="scaleSel" title="Drawing scale">SCALE
     <select id="scaleSel">
       <option value="1/4">1/4&Prime; = 1&prime;-0&Prime;</option>
@@ -1237,22 +1268,22 @@ function drawSelection(g){
     const wp = worldPoly(p);
     pathPoly(g, wp);
     g.save();
-    g.strokeStyle = '#2f6fab'; g.lineWidth = 1.4*k; g.setLineDash([5*k,4*k]); g.stroke();
+    g.strokeStyle = '#3b82f6'; g.lineWidth = 1.4*k; g.setLineDash([5*k,4*k]); g.stroke();
     g.setLineDash([]);
     wp.forEach(([x,y])=>{
-      g.fillStyle='#fff'; g.strokeStyle='#2f6fab'; g.lineWidth=1.2*k;
+      g.fillStyle='#fff'; g.strokeStyle='#3b82f6'; g.lineWidth=1.2*k;
       g.beginPath(); g.rect(x-3.5*k,y-3.5*k,7*k,7*k); g.fill(); g.stroke();
     });
     const rh = rotHandlePos(p);
     g.beginPath(); g.moveTo(p.x,p.y); g.lineTo(rh[0],rh[1]);
-    g.strokeStyle='#2f6fab'; g.lineWidth=1*k; g.stroke();
+    g.strokeStyle='#3b82f6'; g.lineWidth=1*k; g.stroke();
     const hr = 9*k, hot = (drag&&drag.type==='rotate')||hoverRotHandle;
     g.beginPath(); g.arc(rh[0],rh[1],hr,0,Math.PI*2);
-    g.fillStyle = hot ? '#D99E45' : '#fff'; g.fill();
-    g.strokeStyle = hot ? '#9c6b1e' : '#2f6fab'; g.lineWidth=2*k; g.stroke();
+    g.fillStyle = hot ? '#fbbf24' : '#fff'; g.fill();
+    g.strokeStyle = hot ? '#9c6b1e' : '#3b82f6'; g.lineWidth=2*k; g.stroke();
     // curved rotate glyph inside the handle
     g.save();
-    g.strokeStyle = hot ? '#1c1c1e' : '#2f6fab'; g.lineWidth=1.4*k; g.lineCap='round';
+    g.strokeStyle = hot ? '#1c1c1e' : '#3b82f6'; g.lineWidth=1.4*k; g.lineCap='round';
     g.beginPath(); g.arc(rh[0],rh[1],4.2*k, -0.5, Math.PI*1.15); g.stroke();
     const ah = Math.PI*1.15, ax = rh[0]+4.2*k*Math.cos(ah), ay = rh[1]+4.2*k*Math.sin(ah);
     g.beginPath();
@@ -1275,7 +1306,7 @@ function drawSelection(g){
   } else {
     const a = annots.find(q=>q.id===selected.id); if(!a) return;
     g.save();
-    g.strokeStyle='#2f6fab'; g.lineWidth=1.2*k; g.setLineDash([4*k,3*k]);
+    g.strokeStyle='#3b82f6'; g.lineWidth=1.2*k; g.setLineDash([4*k,3*k]);
     const bb = annotBBox(a);
     g.strokeRect(bb.x-4*k, bb.y-4*k, bb.w+8*k, bb.h+8*k);
     g.restore();
@@ -1288,9 +1319,9 @@ function drawSnapDots(g){
   g.save();
   snapDots.forEach(([x,y])=>{
     g.beginPath(); g.arc(x,y,4.5*k,0,Math.PI*2);
-    g.fillStyle='rgba(46,160,67,.25)'; g.fill();
+    g.fillStyle='rgba(34,197,94,.25)'; g.fill();
     g.beginPath(); g.arc(x,y,2.5*k,0,Math.PI*2);
-    g.fillStyle='#2ea043'; g.fill();
+    g.fillStyle='#22c55e'; g.fill();
   });
   g.restore();
 }
@@ -1328,7 +1359,7 @@ function drawLoupe(g){
   g.save();
   g.setTransform(1,0,0,1,0,0);
   g.beginPath(); g.arc(ox,oy,R,0,Math.PI*2); g.clip();
-  g.fillStyle = '#454249';
+  g.fillStyle = '#0d0d10';
   g.fillRect(ox-R,oy-R,R*2,R*2);
   const z2 = cam.z*2.5;
   g.setTransform(z2,0,0,z2, ox-wx*z2, oy-wy*z2);
@@ -1341,13 +1372,13 @@ function drawLoupe(g){
   g.beginPath(); g.arc(ox,oy,R,0,Math.PI*2);
   g.strokeStyle='#1C1C1E'; g.lineWidth=3.5; g.stroke();
   g.beginPath(); g.arc(ox,oy,R-2,0,Math.PI*2);
-  g.strokeStyle='#E8C84A'; g.lineWidth=1.6; g.stroke();
+  g.strokeStyle='#facc15'; g.lineWidth=1.6; g.stroke();
   g.strokeStyle='rgba(179,64,42,.85)'; g.lineWidth=1;
   g.beginPath();
   g.moveTo(ox-10,oy); g.lineTo(ox+10,oy);
   g.moveTo(ox,oy-10); g.lineTo(ox,oy+10);
   g.stroke();
-  g.font='9px '+MONO; g.fillStyle='#E8C84A'; g.textAlign='center';
+  g.font='9px '+MONO; g.fillStyle='#facc15'; g.textAlign='center';
   g.fillText('2.5×', ox, oy+R-9);
   g.restore();
 }
@@ -1355,7 +1386,7 @@ function drawLoupe(g){
 /* ── Master redraw ────────────────────────── */
 function draw(){
   ctx.setTransform(1,0,0,1,0,0);
-  ctx.fillStyle = '#454249';
+  ctx.fillStyle = '#0d0d10';
   ctx.fillRect(0,0,cv.width,cv.height);
   ctx.setTransform(cam.z,0,0,cam.z,cam.px,cam.py);
   paintScene(ctx);
@@ -1374,8 +1405,8 @@ function draw(){
     const distIn = Math.hypot(cur[0]-dimA[0], cur[1]-dimA[1]) / IN;
     drawWorldLabel(ctx, {x:(dimA[0]+cur[0])/2, y:(dimA[1]+cur[1])/2, text:fmtIn(distIn)}, '#b3402a');
   }
-  if (snapLabel)   drawWorldLabel(ctx, snapLabel, '#2ea043');
-  if (rotateHint)  drawWorldLabel(ctx, rotateHint, '#D99E45');
+  if (snapLabel)   drawWorldLabel(ctx, snapLabel, '#22c55e');
+  if (rotateHint)  drawWorldLabel(ctx, rotateHint, '#fbbf24');
   ctx.setTransform(1,0,0,1,0,0);
 }
 
@@ -1591,7 +1622,7 @@ function drawFabBadges(g){
     g.save();
     g.font = (9*k)+'px '+MONO; g.textAlign='center'; g.textBaseline='middle';
     const txt = '¾″ in', w = g.measureText(txt).width;
-    g.fillStyle = 'rgba(46,160,67,.92)';
+    g.fillStyle = 'rgba(34,197,94,.92)';
     g.beginPath(); g.rect(cx-w/2-4*k, cy-7*k, w+8*k, 14*k); g.fill();
     g.fillStyle = '#fff'; g.fillText(txt, cx, cy);
     g.restore();
@@ -1899,10 +1930,10 @@ function tapeDraw(){
   const x0 = Math.max(0, tapeXAt(0));
   const x1 = Math.min(w, tapeXAt(T.maxIn));
   if (x1 > x0){
-    let fill = '#E8C84A';
+    let fill = '#facc15';
     if (g.createLinearGradient){
       const grad = g.createLinearGradient(0,top,0,bot);
-      grad.addColorStop(0,'#F2D45C'); grad.addColorStop(.12,'#E8C84A');
+      grad.addColorStop(0,'#F2D45C'); grad.addColorStop(.12,'#facc15');
       grad.addColorStop(1,'#D9B83C');
       fill = grad;
     }
@@ -1940,7 +1971,7 @@ function tapeDraw(){
     const mcy = 76;
     g.save();
     g.beginPath(); g.arc(mcx, mcy, R, 0, Math.PI*2); g.clip();
-    g.fillStyle = '#E8C84A';
+    g.fillStyle = '#facc15';
     g.fillRect(mcx-R, mcy-R, R*2, R*2);
     const MAG = 3.2;
     const xOfMag = (inch)=> mcx + (inch - hin)*PXPI*MAG;
@@ -1966,11 +1997,11 @@ function tapeDraw(){
     const tw = g.measureText(lbl).width;
     const lx = Math.max(6, Math.min(w-tw-22, hx-tw/2-8));
     g.fillStyle = 'rgba(28,28,30,.95)';
-    g.strokeStyle = '#E8C84A'; g.lineWidth=1;
+    g.strokeStyle = '#facc15'; g.lineWidth=1;
     const ly = 6;
     g.fillRect(lx, ly, tw+16, 24);
     g.strokeRect(lx+.5, ly+.5, tw+15, 23);
-    g.fillStyle = '#E8C84A';
+    g.fillStyle = '#facc15';
     g.textAlign='left'; g.textBaseline='middle';
     g.fillText(lbl, lx+8, ly+12);
 
@@ -3018,7 +3049,7 @@ function quizFinish(){
   const badge = document.getElementById('quizModeBadge');
   badge.innerHTML = quiz.easyUsed
     ? '<span style="color:var(--amber)">Easy mode</span> — cut list shown'
-    : '<span style="color:#7fc97f">Standard mode</span>';
+    : '<span style="color:#4ade80">Standard mode</span>';
   document.getElementById('quizTimesTbl').innerHTML =
     quiz.times.map((t,i)=>`<tr><td>Build ${i+1}</td><td>${fmtClock(t)}</td></tr>`).join('');
   document.getElementById('quizResultsBack').classList.add('show');
@@ -3072,7 +3103,7 @@ document.getElementById('quizShot').addEventListener('click', ()=>{
   g.fillText(QUIZ_TOTAL+' builds verified · '+(quiz.easyUsed?'Easy mode':'Standard mode'), 22, 52);
   g.fillText(new Date().toLocaleString(), 22, 67);
   const avg = quiz.times.reduce((a,b)=>a+b,0)/quiz.times.length;
-  g.fillStyle='#E8C84A'; g.font='bold 30px '+MONO; g.textAlign='center';
+  g.fillStyle='#facc15'; g.font='bold 30px '+MONO; g.textAlign='center';
   g.fillText('avg '+fmtClock(avg), W/2, 96);
   g.textAlign='left'; g.font='12px '+MONO;
   quiz.times.forEach((t,i)=>{
