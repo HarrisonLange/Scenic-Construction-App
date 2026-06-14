@@ -3061,8 +3061,8 @@ const TRAIN_NAMES = { broadway:'Broadway Flat', hollywood:'Hollywood Flat', plat
 
 /* ── Canonical opening-flat geometry (door / window) ─────────────────────
    Single source of truth shared by Training, the Easy-mode cut list, and the
-   verifier so they can't drift. Hollywood-style: 1×3 on edge (≈ the shop's
-   23/32" ply ripped to depth), skinned with luan. Members are returned in
+   verifier so they can't drift. Hollywood-style: 1×3 on edge, skinned with
+   luan. Members are returned in
    frame-local inches (origin = top-left of the frame, +x right, +y down).
    Door:   2'-8" × 6'-10" opening on the bottom rail, over-door cripple.
    Window: 3'-0" × 4'-0" opening, sill 2'-8" up, cripples above & below.   */
@@ -3238,7 +3238,7 @@ function buildTraining(style){
     const sLu = [...sRn, luan];
     const openLbl = style==='door' ? '2′-8″ × 6′-10″ door' : '3′-0″ × 4′-0″ window';
     const jambLbl = style==='door' ? 'door jambs' : 'window jambs';
-    steps.push({title:'— overview', pieces:[], body:`A <b>${styleName}</b> (${dim}) is a Hollywood flat with a <b>${openLbl} opening</b> framed into it. In the shop it's built from <b>23/32″ ply ripped to depth</b> and stood <b>on edge</b> (drawn here as 1×3 on edge), then skinned in <span class="gloss-term" data-term="luan">luan</span>. The opening needs <b>jambs</b>, a <b>header</b>${style==='window'?' and a <b>sill</b>':''}, and short <b>cripples</b> &amp; <b>rungs</b> to tie it all together.`});
+    steps.push({title:'— overview', pieces:[], body:`A <b>${styleName}</b> (${dim}) is a Hollywood flat with a <b>${openLbl} opening</b> framed into it — <b>1×3 on edge</b>, skinned in <span class="gloss-term" data-term="luan">luan</span>, like any Hollywood flat. The opening needs <b>jambs</b>, a <b>header</b>${style==='window'?' and a <b>sill</b>':''}, and short <b>cripples</b> &amp; <b>rungs</b> to tie it all together.`});
     steps.push({title:'1 · Stiles', pieces:stiles, body:`Two full-height <b>stiles</b> (${fmtIn(spec.Hin-2*spec.w)}) on edge, one per side.`});
     steps.push({title:'2 · Rails', pieces:sFR, body:`Cap the ends with full-width <b>rails</b> (${fmtIn(spec.Win)}). That's the outer rectangle.`});
     steps.push({title:'3 · '+(style==='door'?'Door jambs':'Window jambs'), pieces:sJ, body:`Run two more full-height verticals — the <b>${jambLbl}</b> — to frame the sides of the ${style==='door'?'2′-8″':'3′-0″'}-wide opening, centred on the flat.`});
