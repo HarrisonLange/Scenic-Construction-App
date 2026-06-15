@@ -1,0 +1,4069 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live Sound System Simulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --panel-2: #eef2f5;
+      --ink: #18212b;
+      --muted: #637083;
+      --line: #c7d0db;
+      --accent: #176f9f;
+      --accent-2: #247c5a;
+      --warn: #c68400;
+      --bad: #b33131;
+      --good: #247c5a;
+      --focus: #0b5cab;
+      --shadow: 0 8px 24px rgba(25, 33, 44, 0.14);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: 64px minmax(0, 1fr);
+    }
+
+    button,
+    select,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--ink);
+      min-height: 44px;
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    button:hover,
+    select:hover,
+    input:hover {
+      border-color: #94a3b8;
+    }
+
+    button:focus-visible,
+    select:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    button.active,
+    .tool-btn.active {
+      background: #dff1f7;
+      border-color: var(--accent);
+      color: #0f4e70;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.danger {
+      border-color: #dbb2b2;
+      color: var(--bad);
+    }
+
+    select,
+    input,
+    textarea {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      min-height: 44px;
+      padding: 6px 8px;
+    }
+
+    textarea {
+      min-height: 72px;
+      resize: vertical;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      background: #101820;
+      color: #fff;
+      border-bottom: 1px solid #263545;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 260px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      background: #e7f4ed;
+      color: #176342;
+      font-weight: 800;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 2px;
+      color: #a9b8c7;
+      font-size: 12px;
+    }
+
+    .top-controls,
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .top-controls {
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .top-actions #clearTopButton {
+      background: #fff1f1;
+      border-color: #d99a9a;
+      color: var(--bad);
+      font-weight: 700;
+    }
+
+    .top-actions #buildModeButton,
+    .top-actions #cableModeButton {
+      font-weight: 700;
+    }
+
+    .topbar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #d9e2ec;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .topbar select,
+    .topbar input {
+      background: #1f2c39;
+      border-color: #3a4b5d;
+      color: #fff;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 268px minmax(0, 1fr) 326px;
+      min-height: 0;
+    }
+
+    .sidebar,
+    .toolbox {
+      min-height: 0;
+      overflow: auto;
+      background: var(--panel);
+      border-color: var(--line);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+    }
+
+    .toolbox {
+      border-left: 1px solid var(--line);
+    }
+
+    .panel-section {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-section h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: #344256;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .mode-grid,
+    .tool-grid,
+    .equipment-grid,
+    .cable-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mode-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .tool-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .equipment-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .cable-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tool-btn,
+    .equipment-btn,
+    .cable-btn {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      width: 100%;
+      min-height: 42px;
+      text-align: left;
+      padding: 7px 8px;
+    }
+
+    .icon {
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 22px;
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      background: var(--panel-2);
+      color: #263545;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .equipment-btn span:last-child,
+    .cable-btn span:last-child,
+    .tool-btn span:last-child {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      line-height: 1.15;
+    }
+
+    .workspace {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #dfe6ed;
+    }
+
+    #floorCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .hud {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: calc(100% - 24px);
+      pointer-events: none;
+    }
+
+    .hud-item {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 9px;
+      box-shadow: 0 4px 14px rgba(24, 33, 43, 0.12);
+      font-size: 12px;
+      color: #344256;
+    }
+
+    .start-guide {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      transform: translate(-50%, -50%);
+      width: min(520px, calc(100% - 32px));
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 2px solid #9fc7d8;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      pointer-events: none;
+    }
+
+    .start-guide h2 {
+      margin: 0 0 10px;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .start-guide ol {
+      margin: 0;
+      padding-left: 24px;
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    .basic-checklist {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      display: grid;
+      gap: 6px;
+      min-width: 210px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 4px 14px rgba(24, 33, 43, 0.12);
+      font-size: 13px;
+    }
+
+    .basic-checklist h2 {
+      margin: 0;
+      font-size: 13px;
+      color: #344256;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .check-dot {
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .check-dot.good {
+      color: #fff;
+      border-color: var(--good);
+      background: var(--good);
+    }
+
+    .check-dot.bad {
+      color: #fff;
+      border-color: var(--bad);
+      background: var(--bad);
+    }
+
+    .check-dot.warn {
+      color: #4f3500;
+      border-color: var(--warn);
+      background: #ffe6a3;
+    }
+
+    .status-bar {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      max-width: min(560px, calc(100% - 24px));
+      background: rgba(16, 24, 32, 0.92);
+      color: #f8fafc;
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+    }
+
+    .status-bar.good {
+      background: rgba(25, 105, 74, 0.94);
+    }
+
+    .status-bar.warn {
+      background: rgba(146, 91, 0, 0.94);
+    }
+
+    .status-bar.bad {
+      background: rgba(145, 41, 41, 0.94);
+    }
+
+    .inspector {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .field strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .row > * {
+      min-width: 0;
+    }
+
+    .stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric-list,
+    .scenario-list,
+    .fault-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .metric-list li,
+    .scenario-list li,
+    .fault-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fafbfc;
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: #344256;
+      background: #f8fafc;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .pill.good {
+      border-color: #9bcbb6;
+      color: var(--good);
+      background: #effaf4;
+    }
+
+    .pill.warn {
+      border-color: #dfc182;
+      color: #805500;
+      background: #fff8e8;
+    }
+
+    .pill.bad {
+      border-color: #dea7a7;
+      color: var(--bad);
+      background: #fff1f1;
+    }
+
+    .port-popup,
+    .modal {
+      position: absolute;
+      z-index: 20;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .port-popup {
+      min-width: 260px;
+      max-width: 320px;
+      padding: 10px;
+    }
+
+    .port-popup h3,
+    .modal h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .port-grid {
+      display: grid;
+      gap: 7px;
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .port-btn {
+      justify-content: space-between;
+      min-height: 48px;
+      background: #f8fafc;
+    }
+
+    .port-btn[disabled] {
+      opacity: 0.52;
+      cursor: not-allowed;
+    }
+
+    .port-meta {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(10, 16, 23, 0.45);
+    }
+
+    .modal-backdrop.open {
+      display: grid;
+    }
+
+    .modal {
+      position: relative;
+      width: min(880px, 100%);
+      max-height: min(760px, calc(100vh - 40px));
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .mixer-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(128px, 1fr));
+      gap: 10px;
+    }
+
+    .channel-strip {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+
+    .channel-strip h4 {
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .channel-strip input[type="range"] {
+      width: 100%;
+    }
+
+    .teacher-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1060px) {
+      .app {
+        grid-template-columns: 220px minmax(0, 1fr) 278px;
+      }
+
+      .equipment-grid,
+      .cable-grid,
+      .tool-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 820px) {
+      body {
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .brand {
+        min-width: 0;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(360px, 1fr) auto;
+      }
+
+      .sidebar,
+      .toolbox {
+        max-height: 230px;
+        border: 0;
+      }
+
+      .sidebar {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .toolbox {
+        border-top: 1px solid var(--line);
+      }
+
+      .mixer-grid,
+      .teacher-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="Application title">
+      <div class="brand-mark">LS</div>
+      <div>
+        <h1>Live Sound System Simulator</h1>
+        <small>Theatre education sound design lab</small>
+      </div>
+    </div>
+    <div class="top-controls">
+      <label id="skillControl">Skill
+        <select id="skillSelect">
+          <option value="basic">Basic Mode</option>
+          <option value="advanced">Advanced Mode</option>
+        </select>
+      </label>
+      <label id="operationControl">Operation
+        <select id="operationSelect">
+          <option value="practice">Practice Mode</option>
+          <option value="quiz">Quiz Mode</option>
+          <option value="troubleshooting">Troubleshooting Mode</option>
+          <option value="teacher">Teacher Mode</option>
+        </select>
+      </label>
+      <label id="scaleControl">Scale
+        <select id="scaleSelect">
+          <option value="0.25">1/4&quot; = 1'</option>
+          <option value="0.5" selected>1/2&quot; = 1'</option>
+          <option value="1">1&quot; = 1'</option>
+          <option value="2">2&quot; = 1'</option>
+        </select>
+      </label>
+      <button id="snapToggle" type="button" class="active" title="Toggle snap to grid">Snap</button>
+      <button id="advancedLibraryToggle" type="button" title="Show equipment-specific models">Advanced Library</button>
+      <span id="timerDisplay" class="pill">00:00</span>
+    </div>
+    <div class="top-actions">
+      <button id="buildModeButton" type="button">Build</button>
+      <button id="cableModeButton" type="button">Cable</button>
+      <button id="testButton" type="button" class="primary">Test System</button>
+      <button id="doneButton" type="button">Done</button>
+      <button id="clearTopButton" type="button">Clear All</button>
+    </div>
+  </header>
+
+  <main class="app">
+    <aside class="sidebar" aria-label="Drawing and project controls">
+      <section class="panel-section" id="toolsSection">
+        <h2>Workspace Tools</h2>
+        <div class="tool-grid" id="toolButtons"></div>
+      </section>
+      <section class="panel-section" id="zonesSection">
+        <h2>Draw Zones</h2>
+        <div class="tool-grid" id="zoneButtons"></div>
+      </section>
+      <section class="panel-section" id="projectSection">
+        <h2>Project</h2>
+        <div class="stack">
+          <div class="row">
+            <button id="screenshotButton" type="button">Screenshot</button>
+            <button id="saveButton" type="button">Save JSON</button>
+          </div>
+          <div class="row">
+            <button id="loadButton" type="button">Load JSON</button>
+            <button id="clearButton" type="button" class="danger">Clear All</button>
+          </div>
+          <input id="projectFileInput" class="file-input" type="file" accept="application/json,.json">
+        </div>
+      </section>
+      <section class="panel-section" id="scenarioSection">
+        <h2>Scenario</h2>
+        <div class="stack">
+          <select id="scenarioSelect" aria-label="Scenario selection"></select>
+          <div class="row">
+            <button id="startScenarioButton" type="button">Start Scenario</button>
+            <button id="newFaultButton" type="button">New Fault</button>
+          </div>
+          <ul id="scenarioProgress" class="scenario-list"></ul>
+        </div>
+      </section>
+      <section class="panel-section" id="teacherSection">
+        <h2>Teacher Builder</h2>
+        <div class="stack">
+          <div class="teacher-grid">
+            <label class="field">Title
+              <input id="teacherTitle" type="text" value="Custom scenario">
+            </label>
+            <label class="field">Difficulty
+              <select id="teacherDifficulty">
+                <option>Beginner</option>
+                <option>Intermediate</option>
+                <option>Advanced</option>
+                <option>Expert</option>
+              </select>
+            </label>
+          </div>
+          <label class="field">Allowed inventory
+            <input id="teacherInventory" type="text" value="mixer,powered-speaker,wired-microphone,wall-outlet,iec,xlr">
+          </label>
+          <label class="field">Instructions
+            <textarea id="teacherInstructions">Design a clear speech reinforcement system.</textarea>
+          </label>
+          <div class="row">
+            <button id="saveScenarioButton" type="button">Save Scenario</button>
+            <button id="loadScenarioButton" type="button">Load Scenario</button>
+          </div>
+          <input id="scenarioFileInput" class="file-input" type="file" accept="application/json,.json">
+        </div>
+      </section>
+    </aside>
+
+    <section class="workspace" aria-label="Graph paper floor plan">
+      <canvas id="floorCanvas" width="1280" height="800" tabindex="0" aria-label="Sound system floor plan. Use Build to place equipment, Cable to connect devices, and Test System to check your work."></canvas>
+      <div id="portPopup" class="port-popup" hidden></div>
+      <div id="startGuide" class="start-guide">
+        <h2>Start Here</h2>
+        <ol>
+          <li>Place equipment.</li>
+          <li>Connect cables.</li>
+          <li>Test system.</li>
+        </ol>
+      </div>
+      <div id="basicChecklist" class="basic-checklist" hidden>
+        <h2>Test Checklist</h2>
+        <div class="check-row"><span>Power</span><span id="powerCheck" class="check-dot">-</span></div>
+        <div class="check-row"><span>Audio path</span><span id="audioCheck" class="check-dot">-</span></div>
+        <div class="check-row"><span>Speaker coverage</span><span id="coverageCheck" class="check-dot">-</span></div>
+        <div class="check-row"><span>Cable safety</span><span id="cableCheck" class="check-dot">-</span></div>
+      </div>
+      <div class="hud">
+        <div id="scaleHud" class="hud-item">1/2&quot; = 1' | 16 px / ft</div>
+        <div id="pointerHud" class="hud-item">Pointer: 0 ft, 0 ft</div>
+        <div id="measurementHud" class="hud-item">Measurement: inactive</div>
+      </div>
+      <div id="statusBar" class="status-bar" aria-live="polite">Select a drawing, equipment, or cable tool to begin.</div>
+    </section>
+
+    <aside class="toolbox" aria-label="Equipment and simulation panels">
+      <section class="panel-section" id="equipmentSection">
+        <h2>Equipment</h2>
+        <div class="equipment-grid" id="equipmentButtons"></div>
+      </section>
+      <section class="panel-section" id="cablesSection">
+        <h2>Cable Types</h2>
+        <div class="cable-grid" id="cableButtons"></div>
+      </section>
+      <section class="panel-section" id="selectionSection">
+        <h2>Selection</h2>
+        <div id="inspector" class="inspector"></div>
+      </section>
+      <section class="panel-section" id="metricsSection">
+        <h2>System Metrics</h2>
+        <ul id="metricsList" class="metric-list"></ul>
+      </section>
+      <section class="panel-section" id="faultsSection">
+        <h2>Faults</h2>
+        <ul id="faultList" class="fault-list"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Mixer</h3>
+        <button id="closeModalButton" type="button">Close</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    /** @typedef {"basic" | "advanced"} SkillLevel */
+    /** @typedef {"practice" | "quiz" | "troubleshooting" | "teacher"} OperationMode */
+    /** @typedef {"select" | "pan" | "measure" | "label" | "zone" | "equipment" | "cable"} ToolMode */
+    /** @typedef {"xlr" | "speakon" | "iec" | "edison" | "extension"} CableType */
+    /** @typedef {"audio-in" | "audio-out" | "speaker-in" | "speaker-out" | "power-in" | "power-out"} PortDirection */
+
+    const SCALE_PIXELS_PER_FOOT = {
+      "0.25": 8,
+      "0.5": 16,
+      "1": 32,
+      "2": 64
+    };
+
+    const BASIC_DEVICE_TYPES = ["wired-microphone", "performer", "mixer", "powered-speaker", "wall-outlet"];
+    const BASIC_CABLE_TYPES = ["xlr", "iec"];
+
+    const ZONE_DEFINITIONS = {
+      stage: { label: "Stage", color: "rgba(63, 125, 181, 0.24)", stroke: "#2f6f9f" },
+      audience: { label: "Audience", color: "rgba(53, 159, 107, 0.22)", stroke: "#247c5a" },
+      backstage: { label: "Backstage", color: "rgba(151, 107, 189, 0.2)", stroke: "#74559a" },
+      foh: { label: "FOH", color: "rgba(198, 132, 0, 0.22)", stroke: "#a46c00" },
+      custom: { label: "Custom", color: "rgba(91, 106, 125, 0.18)", stroke: "#566477" },
+      hidden: { label: "Hidden validation", color: "rgba(179, 49, 49, 0.12)", stroke: "#b33131" }
+    };
+
+    const CABLE_DEFINITIONS = {
+      xlr: {
+        id: "xlr",
+        label: "XLR",
+        basicLabel: "XLR audio cable",
+        color: "#2764a8",
+        pattern: "audio",
+        signal: "mic",
+        allowedPortTypes: ["xlr"]
+      },
+      speakon: {
+        id: "speakon",
+        label: "Speakon",
+        basicLabel: "Speaker cable",
+        color: "#7a3fb4",
+        pattern: "speaker",
+        signal: "speaker",
+        allowedPortTypes: ["speakon"]
+      },
+      iec: {
+        id: "iec",
+        label: "IEC",
+        basicLabel: "Power cable",
+        color: "#202832",
+        pattern: "power",
+        signal: "power",
+        allowedPortTypes: ["iec", "edison"]
+      },
+      edison: {
+        id: "edison",
+        label: "Edison power",
+        basicLabel: "Wall plug cable",
+        color: "#b05f00",
+        pattern: "power",
+        signal: "power",
+        allowedPortTypes: ["edison"]
+      },
+      extension: {
+        id: "extension",
+        label: "Extension cable",
+        basicLabel: "Extension power cable",
+        color: "#c68400",
+        pattern: "extension",
+        signal: "power",
+        allowedPortTypes: ["edison"]
+      }
+    };
+
+    const DEVICE_DEFINITIONS = {
+      "powered-speaker": {
+        id: "powered-speaker",
+        label: "Powered speaker",
+        icon: "SP",
+        group: "basic",
+        size: { w: 3, h: 3 },
+        currentDraw: 3.2,
+        speaker: { powered: true, coverageH: 90, coverageV: 60, throwFt: 55, spl: 96 },
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in", label: "XLR line input", type: "xlr", direction: "audio-in", signal: "line" }
+        ]
+      },
+      "passive-speaker": {
+        id: "passive-speaker",
+        label: "Passive speaker",
+        icon: "PS",
+        group: "basic",
+        size: { w: 3, h: 3 },
+        currentDraw: 0,
+        speaker: { powered: false, coverageH: 90, coverageV: 50, throwFt: 45, spl: 94 },
+        ports: [
+          { id: "speakon-in", label: "Speakon input", type: "speakon", direction: "speaker-in", signal: "speaker" }
+        ]
+      },
+      amplifier: {
+        id: "amplifier",
+        label: "Amplifier",
+        icon: "AMP",
+        group: "basic",
+        size: { w: 4, h: 2.4 },
+        currentDraw: 6,
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in-l", label: "XLR input L", type: "xlr", direction: "audio-in", signal: "line" },
+          { id: "xlr-in-r", label: "XLR input R", type: "xlr", direction: "audio-in", signal: "line" },
+          { id: "speakon-out-l", label: "Speakon output L", type: "speakon", direction: "speaker-out", signal: "speaker" },
+          { id: "speakon-out-r", label: "Speakon output R", type: "speakon", direction: "speaker-out", signal: "speaker" }
+        ]
+      },
+      mixer: {
+        id: "mixer",
+        label: "Mixer",
+        icon: "MIX",
+        group: "basic",
+        size: { w: 4.5, h: 3 },
+        currentDraw: 0.8,
+        mixer: { channels: 8, outputs: 4 },
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in-1", label: "XLR input 1", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-2", label: "XLR input 2", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-3", label: "XLR input 3", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-4", label: "XLR input 4", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-out-l", label: "Main out L", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-r", label: "Main out R", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "aux-out-1", label: "Aux out 1", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "aux-out-2", label: "Aux out 2", type: "xlr", direction: "audio-out", signal: "line" }
+        ]
+      },
+      "wired-microphone": {
+        id: "wired-microphone",
+        label: "Wired microphone",
+        icon: "MIC",
+        group: "basic",
+        size: { w: 1.5, h: 1.5 },
+        currentDraw: 0,
+        mic: { pickup: "cardioid", feedbackFt: 10 },
+        ports: [
+          { id: "xlr-out", label: "XLR output", type: "xlr", direction: "audio-out", signal: "mic" }
+        ]
+      },
+      performer: {
+        id: "performer",
+        label: "Performer",
+        icon: "PER",
+        group: "basic",
+        size: { w: 2, h: 2 },
+        currentDraw: 0,
+        ports: []
+      },
+      "mains-power-box": {
+        id: "mains-power-box",
+        label: "Mains power box",
+        icon: "PWR",
+        group: "basic",
+        size: { w: 3, h: 2.5 },
+        circuitRating: 60,
+        currentDraw: 0,
+        ports: [
+          { id: "out-1", label: "20A output 1", type: "edison", direction: "power-out", signal: "power" },
+          { id: "out-2", label: "20A output 2", type: "edison", direction: "power-out", signal: "power" },
+          { id: "out-3", label: "20A output 3", type: "edison", direction: "power-out", signal: "power" },
+          { id: "out-4", label: "20A output 4", type: "edison", direction: "power-out", signal: "power" }
+        ]
+      },
+      "wall-outlet": {
+        id: "wall-outlet",
+        label: "Wall outlet",
+        icon: "OUT",
+        group: "basic",
+        size: { w: 2.2, h: 1.6 },
+        circuitRating: 20,
+        currentDraw: 0,
+        ports: [
+          { id: "out-a", label: "Circuit output A", type: "edison", direction: "power-out", signal: "power" },
+          { id: "out-b", label: "Circuit output B", type: "edison", direction: "power-out", signal: "power" }
+        ]
+      },
+      "power-strip": {
+        id: "power-strip",
+        label: "Power strip",
+        icon: "STR",
+        group: "basic",
+        size: { w: 4, h: 1.4 },
+        currentDraw: 0,
+        ports: [
+          { id: "in", label: "Edison input", type: "edison", direction: "power-in", signal: "power" },
+          { id: "out-1", label: "Outlet 1", type: "edison", direction: "power-out", signal: "power" },
+          { id: "out-2", label: "Outlet 2", type: "edison", direction: "power-out", signal: "power" },
+          { id: "out-3", label: "Outlet 3", type: "edison", direction: "power-out", signal: "power" },
+          { id: "out-4", label: "Outlet 4", type: "edison", direction: "power-out", signal: "power" }
+        ]
+      },
+      "extension-cable": {
+        id: "extension-cable",
+        label: "Extension cable",
+        icon: "EXT",
+        group: "basic",
+        size: { w: 3.5, h: 1.2 },
+        currentDraw: 0,
+        ports: [
+          { id: "in", label: "Edison input", type: "edison", direction: "power-in", signal: "power" },
+          { id: "out", label: "Edison output", type: "edison", direction: "power-out", signal: "power" }
+        ]
+      },
+      "speaker-stand": {
+        id: "speaker-stand",
+        label: "Speaker stand",
+        icon: "STD",
+        group: "basic",
+        size: { w: 1.5, h: 1.5 },
+        currentDraw: 0,
+        ports: []
+      },
+      "yamaha-dm3": {
+        id: "yamaha-dm3",
+        label: "Yamaha DM3",
+        icon: "DM3",
+        group: "advanced",
+        base: "mixer",
+        size: { w: 4.6, h: 3.2 },
+        currentDraw: 1,
+        mixer: { channels: 16, outputs: 8 },
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in-1", label: "XLR input 1", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-2", label: "XLR input 2", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-3", label: "XLR input 3", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-4", label: "XLR input 4", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-5", label: "XLR input 5", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-6", label: "XLR input 6", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-out-1", label: "Omni out 1", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-2", label: "Omni out 2", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-3", label: "Omni out 3", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-4", label: "Omni out 4", type: "xlr", direction: "audio-out", signal: "line" }
+        ]
+      },
+      "yamaha-tf1": {
+        id: "yamaha-tf1",
+        label: "Yamaha TF1",
+        icon: "TF1",
+        group: "advanced",
+        base: "mixer",
+        size: { w: 5, h: 3.3 },
+        currentDraw: 1.1,
+        mixer: { channels: 16, outputs: 8 },
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in-1", label: "XLR input 1", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-2", label: "XLR input 2", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-3", label: "XLR input 3", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-4", label: "XLR input 4", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-out-1", label: "Main L", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-2", label: "Main R", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-3", label: "Aux 1", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-4", label: "Aux 2", type: "xlr", direction: "audio-out", signal: "line" }
+        ]
+      },
+      "allen-heath-sq5": {
+        id: "allen-heath-sq5",
+        label: "Allen & Heath SQ5",
+        icon: "SQ5",
+        group: "advanced",
+        base: "mixer",
+        size: { w: 5.2, h: 3.4 },
+        currentDraw: 1.2,
+        mixer: { channels: 24, outputs: 12 },
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in-1", label: "Local input 1", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-2", label: "Local input 2", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-3", label: "Local input 3", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-in-4", label: "Local input 4", type: "xlr", direction: "audio-in", signal: "mic" },
+          { id: "xlr-out-1", label: "Mix out 1", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-2", label: "Mix out 2", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-3", label: "Mix out 3", type: "xlr", direction: "audio-out", signal: "line" },
+          { id: "xlr-out-4", label: "Mix out 4", type: "xlr", direction: "audio-out", signal: "line" }
+        ]
+      },
+      "qsc-k12-2": {
+        id: "qsc-k12-2",
+        label: "QSC K12.2",
+        icon: "K12",
+        group: "advanced",
+        base: "powered-speaker",
+        size: { w: 3, h: 3 },
+        currentDraw: 3.5,
+        speaker: { powered: true, coverageH: 75, coverageV: 75, throwFt: 65, spl: 100 },
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-a", label: "Combo input A", type: "xlr", direction: "audio-in", signal: "line" },
+          { id: "xlr-b", label: "Combo input B", type: "xlr", direction: "audio-in", signal: "line" }
+        ]
+      },
+      "jbl-prx": {
+        id: "jbl-prx",
+        label: "JBL PRX",
+        icon: "PRX",
+        group: "advanced",
+        base: "powered-speaker",
+        size: { w: 3, h: 3 },
+        currentDraw: 3.7,
+        speaker: { powered: true, coverageH: 90, coverageV: 50, throwFt: 60, spl: 98 },
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in-1", label: "XLR input 1", type: "xlr", direction: "audio-in", signal: "line" },
+          { id: "xlr-through", label: "XLR through", type: "xlr", direction: "audio-out", signal: "line" }
+        ]
+      },
+      "crown-amplifier": {
+        id: "crown-amplifier",
+        label: "Crown amplifier",
+        icon: "CRN",
+        group: "advanced",
+        base: "amplifier",
+        size: { w: 4.4, h: 2.4 },
+        currentDraw: 7,
+        ports: [
+          { id: "iec-in", label: "IEC power input", type: "iec", direction: "power-in", signal: "power" },
+          { id: "xlr-in-a", label: "XLR input A", type: "xlr", direction: "audio-in", signal: "line" },
+          { id: "xlr-in-b", label: "XLR input B", type: "xlr", direction: "audio-in", signal: "line" },
+          { id: "speakon-out-a", label: "Speakon output A", type: "speakon", direction: "speaker-out", signal: "speaker" },
+          { id: "speakon-out-b", label: "Speakon output B", type: "speakon", direction: "speaker-out", signal: "speaker" }
+        ]
+      },
+      "shure-sm58": {
+        id: "shure-sm58",
+        label: "Shure SM58",
+        icon: "58",
+        group: "advanced",
+        base: "wired-microphone",
+        size: { w: 1.5, h: 1.5 },
+        currentDraw: 0,
+        mic: { pickup: "cardioid", feedbackFt: 9 },
+        ports: [
+          { id: "xlr-out", label: "XLR output", type: "xlr", direction: "audio-out", signal: "mic" }
+        ]
+      },
+      "shure-beta58": {
+        id: "shure-beta58",
+        label: "Shure Beta 58",
+        icon: "B58",
+        group: "advanced",
+        base: "wired-microphone",
+        size: { w: 1.5, h: 1.5 },
+        currentDraw: 0,
+        mic: { pickup: "supercardioid", feedbackFt: 8 },
+        ports: [
+          { id: "xlr-out", label: "XLR output", type: "xlr", direction: "audio-out", signal: "mic" }
+        ]
+      }
+    };
+
+    const DEFAULT_SCENARIOS = [
+      {
+        id: "speech",
+        title: "Speech",
+        difficulty: "Beginner",
+        instructions: "Reinforce one presenter for a small audience.",
+        inventory: ["mixer", "powered-speaker", "wired-microphone", "wall-outlet", "xlr", "iec"],
+        zones: [
+          { id: "z-stage", type: "stage", x: 6, y: 5, w: 22, h: 12, label: "Stage" },
+          { id: "z-aud", type: "audience", x: 6, y: 20, w: 34, h: 22, label: "Audience" },
+          { id: "z-foh", type: "foh", x: 31, y: 9, w: 9, h: 6, label: "FOH" }
+        ],
+        performers: [{ type: "performer", x: 16, y: 11 }],
+        hiddenZones: [
+          { type: "powered-speaker", x: 8, y: 18, w: 7, h: 5 },
+          { type: "mixer", x: 31, y: 9, w: 9, h: 6 },
+          { type: "wired-microphone", x: 14, y: 9, w: 6, h: 5 }
+        ],
+        requirements: { speakers: 1, microphones: 1, poweredSpeakersOk: true }
+      },
+      {
+        id: "choir",
+        title: "Choir rehearsal",
+        difficulty: "Beginner",
+        instructions: "Cover a rehearsal audience with a simple stereo powered speaker system.",
+        inventory: ["mixer", "powered-speaker", "wired-microphone", "wall-outlet", "power-strip", "xlr", "iec", "edison"],
+        zones: [
+          { id: "z-stage", type: "stage", x: 4, y: 4, w: 30, h: 14, label: "Choir risers" },
+          { id: "z-aud", type: "audience", x: 5, y: 21, w: 36, h: 24, label: "Listeners" },
+          { id: "z-foh", type: "foh", x: 35, y: 6, w: 8, h: 6, label: "FOH" }
+        ],
+        performers: [{ type: "performer", x: 13, y: 11 }, { type: "performer", x: 22, y: 11 }],
+        hiddenZones: [
+          { type: "powered-speaker", x: 4, y: 17, w: 8, h: 6 },
+          { type: "powered-speaker", x: 29, y: 17, w: 8, h: 6 },
+          { type: "mixer", x: 35, y: 6, w: 8, h: 6 }
+        ],
+        requirements: { speakers: 2, microphones: 1, poweredSpeakersOk: true }
+      },
+      {
+        id: "small-band",
+        title: "Small band",
+        difficulty: "Intermediate",
+        instructions: "Build a vocal PA with mains and power distribution.",
+        inventory: ["mixer", "powered-speaker", "wired-microphone", "wall-outlet", "power-strip", "extension-cable", "xlr", "iec", "edison", "extension"],
+        zones: [
+          { id: "z-stage", type: "stage", x: 4, y: 4, w: 36, h: 18, label: "Band stage" },
+          { id: "z-aud", type: "audience", x: 5, y: 26, w: 40, h: 24, label: "Audience" },
+          { id: "z-foh", type: "foh", x: 45, y: 12, w: 10, h: 7, label: "FOH" }
+        ],
+        performers: [{ type: "performer", x: 12, y: 13 }, { type: "performer", x: 22, y: 13 }, { type: "performer", x: 31, y: 13 }],
+        hiddenZones: [
+          { type: "powered-speaker", x: 4, y: 21, w: 7, h: 6 },
+          { type: "powered-speaker", x: 34, y: 21, w: 7, h: 6 },
+          { type: "mixer", x: 45, y: 12, w: 10, h: 7 }
+        ],
+        requirements: { speakers: 2, microphones: 2, poweredSpeakersOk: true }
+      },
+      {
+        id: "musical",
+        title: "Musical theatre",
+        difficulty: "Advanced",
+        instructions: "Route multiple microphones through a mixer to mains with correct power.",
+        inventory: ["yamaha-dm3", "qsc-k12-2", "shure-sm58", "wall-outlet", "mains-power-box", "power-strip", "extension-cable", "xlr", "iec", "edison", "extension"],
+        zones: [
+          { id: "z-stage", type: "stage", x: 4, y: 4, w: 42, h: 20, label: "Stage" },
+          { id: "z-aud", type: "audience", x: 5, y: 28, w: 48, h: 28, label: "House" },
+          { id: "z-back", type: "backstage", x: 47, y: 4, w: 14, h: 18, label: "Backstage" },
+          { id: "z-foh", type: "foh", x: 54, y: 32, w: 9, h: 7, label: "FOH" }
+        ],
+        performers: [{ type: "performer", x: 14, y: 14 }, { type: "performer", x: 24, y: 14 }, { type: "performer", x: 34, y: 14 }],
+        hiddenZones: [
+          { type: "qsc-k12-2", x: 4, y: 24, w: 8, h: 7 },
+          { type: "qsc-k12-2", x: 39, y: 24, w: 8, h: 7 },
+          { type: "yamaha-dm3", x: 54, y: 32, w: 9, h: 7 }
+        ],
+        requirements: { speakers: 2, microphones: 3, poweredSpeakersOk: true }
+      },
+      {
+        id: "multi-zone",
+        title: "Large multi-zone event",
+        difficulty: "Expert",
+        instructions: "Create mains and a remote overflow zone without overloading power.",
+        inventory: ["allen-heath-sq5", "qsc-k12-2", "jbl-prx", "shure-beta58", "wall-outlet", "mains-power-box", "power-strip", "extension-cable", "xlr", "iec", "edison", "extension"],
+        zones: [
+          { id: "z-stage", type: "stage", x: 4, y: 4, w: 42, h: 18, label: "Main stage" },
+          { id: "z-aud", type: "audience", x: 5, y: 26, w: 46, h: 28, label: "Main audience" },
+          { id: "z-over", type: "audience", x: 56, y: 27, w: 28, h: 22, label: "Overflow" },
+          { id: "z-foh", type: "foh", x: 58, y: 9, w: 10, h: 7, label: "FOH" }
+        ],
+        performers: [{ type: "performer", x: 15, y: 13 }, { type: "performer", x: 28, y: 13 }],
+        hiddenZones: [
+          { type: "qsc-k12-2", x: 4, y: 22, w: 8, h: 7 },
+          { type: "qsc-k12-2", x: 39, y: 22, w: 8, h: 7 },
+          { type: "jbl-prx", x: 58, y: 23, w: 8, h: 7 },
+          { type: "allen-heath-sq5", x: 58, y: 9, w: 10, h: 7 }
+        ],
+        requirements: { speakers: 3, microphones: 2, poweredSpeakersOk: true }
+      }
+    ];
+
+    const TROUBLESHOOTING_FAULTS = [
+      "missing-cable",
+      "wrong-cable",
+      "wrong-port",
+      "no-power",
+      "overloaded-circuit",
+      "muted-mixer-channel",
+      "incorrect-routing",
+      "misplaced-speaker",
+      "coverage-failure"
+    ];
+
+    const dom = {
+      canvas: document.getElementById("floorCanvas"),
+      buildModeButton: document.getElementById("buildModeButton"),
+      cableModeButton: document.getElementById("cableModeButton"),
+      skillControl: document.getElementById("skillControl"),
+      operationControl: document.getElementById("operationControl"),
+      scaleControl: document.getElementById("scaleControl"),
+      skillSelect: document.getElementById("skillSelect"),
+      operationSelect: document.getElementById("operationSelect"),
+      scaleSelect: document.getElementById("scaleSelect"),
+      snapToggle: document.getElementById("snapToggle"),
+      advancedLibraryToggle: document.getElementById("advancedLibraryToggle"),
+      timerDisplay: document.getElementById("timerDisplay"),
+      testButton: document.getElementById("testButton"),
+      doneButton: document.getElementById("doneButton"),
+      toolButtons: document.getElementById("toolButtons"),
+      zoneButtons: document.getElementById("zoneButtons"),
+      equipmentButtons: document.getElementById("equipmentButtons"),
+      cableButtons: document.getElementById("cableButtons"),
+      inspector: document.getElementById("inspector"),
+      metricsList: document.getElementById("metricsList"),
+      faultList: document.getElementById("faultList"),
+      statusBar: document.getElementById("statusBar"),
+      startGuide: document.getElementById("startGuide"),
+      basicChecklist: document.getElementById("basicChecklist"),
+      powerCheck: document.getElementById("powerCheck"),
+      audioCheck: document.getElementById("audioCheck"),
+      coverageCheck: document.getElementById("coverageCheck"),
+      cableCheck: document.getElementById("cableCheck"),
+      portPopup: document.getElementById("portPopup"),
+      scaleHud: document.getElementById("scaleHud"),
+      pointerHud: document.getElementById("pointerHud"),
+      measurementHud: document.getElementById("measurementHud"),
+      screenshotButton: document.getElementById("screenshotButton"),
+      saveButton: document.getElementById("saveButton"),
+      loadButton: document.getElementById("loadButton"),
+      clearButton: document.getElementById("clearButton"),
+      clearTopButton: document.getElementById("clearTopButton"),
+      toolsSection: document.getElementById("toolsSection"),
+      zonesSection: document.getElementById("zonesSection"),
+      projectSection: document.getElementById("projectSection"),
+      scenarioSection: document.getElementById("scenarioSection"),
+      teacherSection: document.getElementById("teacherSection"),
+      equipmentSection: document.getElementById("equipmentSection"),
+      cablesSection: document.getElementById("cablesSection"),
+      selectionSection: document.getElementById("selectionSection"),
+      metricsSection: document.getElementById("metricsSection"),
+      faultsSection: document.getElementById("faultsSection"),
+      projectFileInput: document.getElementById("projectFileInput"),
+      scenarioSelect: document.getElementById("scenarioSelect"),
+      startScenarioButton: document.getElementById("startScenarioButton"),
+      newFaultButton: document.getElementById("newFaultButton"),
+      scenarioProgress: document.getElementById("scenarioProgress"),
+      teacherTitle: document.getElementById("teacherTitle"),
+      teacherDifficulty: document.getElementById("teacherDifficulty"),
+      teacherInventory: document.getElementById("teacherInventory"),
+      teacherInstructions: document.getElementById("teacherInstructions"),
+      saveScenarioButton: document.getElementById("saveScenarioButton"),
+      loadScenarioButton: document.getElementById("loadScenarioButton"),
+      scenarioFileInput: document.getElementById("scenarioFileInput"),
+      modalBackdrop: document.getElementById("modalBackdrop"),
+      modalTitle: document.getElementById("modalTitle"),
+      modalBody: document.getElementById("modalBody"),
+      closeModalButton: document.getElementById("closeModalButton")
+    };
+
+    const ctx = dom.canvas.getContext("2d");
+    if (ctx === null) {
+      throw new Error("Canvas 2D context is not available.");
+    }
+
+    const state = {
+      skill: "basic",
+      operation: "practice",
+      scale: "0.5",
+      snap: true,
+      showAdvancedLibrary: false,
+      activeTool: "equipment",
+      activeZoneType: "stage",
+      activeEquipmentType: "wired-microphone",
+      activeCableType: "xlr",
+      viewport: { x: 60, y: 60, zoom: 1 },
+      pointer: { x: 0, y: 0 },
+      devices: [],
+      zones: [],
+      labels: [],
+      connections: [],
+      selected: null,
+      drag: null,
+      measure: null,
+      drawingZone: null,
+      cableDraft: null,
+      animation: { running: false, start: 0, paths: [] },
+      evaluations: [],
+      coverage: [],
+      quiz: { activeScenario: null, startedAt: null, completed: [], scenarioIndex: 0 },
+      customScenarios: [],
+      faults: []
+    };
+
+    function makeId(prefix) {
+      return prefix + "-" + Math.random().toString(36).slice(2, 9);
+    }
+
+    function getPixelsPerFoot() {
+      return SCALE_PIXELS_PER_FOOT[state.scale];
+    }
+
+    function cloneValue(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function worldToScreen(point) {
+      return {
+        x: point.x * getPixelsPerFoot() * state.viewport.zoom + state.viewport.x,
+        y: point.y * getPixelsPerFoot() * state.viewport.zoom + state.viewport.y
+      };
+    }
+
+    function screenToWorld(point) {
+      return {
+        x: (point.x - state.viewport.x) / (getPixelsPerFoot() * state.viewport.zoom),
+        y: (point.y - state.viewport.y) / (getPixelsPerFoot() * state.viewport.zoom)
+      };
+    }
+
+    function snapPoint(point) {
+      if (!state.snap) {
+        return point;
+      }
+      return {
+        x: Math.round(point.x),
+        y: Math.round(point.y)
+      };
+    }
+
+    function resizeCanvas() {
+      const rect = dom.canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      dom.canvas.width = Math.max(320, Math.floor(rect.width * ratio));
+      dom.canvas.height = Math.max(240, Math.floor(rect.height * ratio));
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      render();
+    }
+
+    function getCanvasPoint(event) {
+      const rect = dom.canvas.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function setStatus(message, tone) {
+      dom.statusBar.textContent = message;
+      dom.statusBar.className = "status-bar" + (tone ? " " + tone : "");
+    }
+
+    function isPowerDirection(fromPort, toPort) {
+      return fromPort.direction === "power-out" && toPort.direction === "power-in";
+    }
+
+    function isAudioDirection(fromPort, toPort) {
+      return fromPort.direction === "audio-out" && toPort.direction === "audio-in";
+    }
+
+    function isSpeakerDirection(fromPort, toPort) {
+      return fromPort.direction === "speaker-out" && toPort.direction === "speaker-in";
+    }
+
+    function findDevice(deviceId) {
+      return state.devices.find(function findDeviceById(device) {
+        return device.id === deviceId;
+      });
+    }
+
+    function getDefinition(device) {
+      const definition = DEVICE_DEFINITIONS[device.type];
+      if (!definition) {
+        throw new Error("Unknown device type: " + device.type);
+      }
+      return definition;
+    }
+
+    function getPort(device, portId) {
+      const definition = getDefinition(device);
+      const port = definition.ports.find(function findPort(candidate) {
+        return candidate.id === portId;
+      });
+      if (!port) {
+        throw new Error("Unknown port " + portId + " on device " + device.id);
+      }
+      return port;
+    }
+
+    function getDeviceCenter(device) {
+      return {
+        x: device.x + device.w / 2,
+        y: device.y + device.h / 2
+      };
+    }
+
+    function getZoneCenter(zone) {
+      return {
+        x: zone.x + zone.w / 2,
+        y: zone.y + zone.h / 2
+      };
+    }
+
+    function distance(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function manhattanDistance(a, b) {
+      return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    }
+
+    function getRouteLength(route) {
+      let total = 0;
+      for (let index = 1; index < route.length; index += 1) {
+        total += manhattanDistance(route[index - 1], route[index]);
+      }
+      return total;
+    }
+
+    function getCableAvoidanceZones(start, end) {
+      return state.zones.filter(function filterAvoidanceZone(zone) {
+        return zone.type === "audience" || zone.type === "stage";
+      });
+    }
+
+    function calculateCableRoute(start, end) {
+      const obstacles = getCableAvoidanceZones(start, end);
+      const startExit = getProtectedZoneExit(start, end, obstacles);
+      const endExit = getProtectedZoneExit(end, start, obstacles);
+      const middleRoute = findOrthogonalRoute(startExit, endExit, obstacles);
+      return simplifyRoute([start].concat(middleRoute).concat([end]));
+    }
+
+    function pointIsInsideRect(point, rect) {
+      return point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
+    }
+
+    function getProtectedZoneExit(point, target, obstacles) {
+      const containingZone = obstacles.find(function findContainingZone(zone) {
+        return pointIsInsideRect(point, zone);
+      });
+      if (!containingZone) {
+        return roundRoutePoint(point);
+      }
+      const exits = [
+        { x: containingZone.x - 1, y: point.y },
+        { x: containingZone.x + containingZone.w + 1, y: point.y },
+        { x: point.x, y: containingZone.y - 1 },
+        { x: point.x, y: containingZone.y + containingZone.h + 1 }
+      ];
+      return roundRoutePoint(exits.reduce(function chooseNearest(best, candidate) {
+        if (!best) {
+          return candidate;
+        }
+        return manhattanDistance(candidate, target) < manhattanDistance(best, target) ? candidate : best;
+      }, null));
+    }
+
+    function roundRoutePoint(point) {
+      return {
+        x: Math.round(point.x),
+        y: Math.round(point.y)
+      };
+    }
+
+    function findOrthogonalRoute(start, end, obstacles) {
+      const startNode = roundRoutePoint(start);
+      const endNode = roundRoutePoint(end);
+      const bounds = getRouteSearchBounds(startNode, endNode, obstacles);
+      const queue = [startNode];
+      const visited = new Set([routeKey(startNode)]);
+      const cameFrom = new Map();
+      const directions = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 }
+      ];
+      while (queue.length > 0) {
+        queue.sort(function compareNodes(a, b) {
+          return manhattanDistance(a, endNode) - manhattanDistance(b, endNode);
+        });
+        const current = queue.shift();
+        if (!current) {
+          break;
+        }
+        if (current.x === endNode.x && current.y === endNode.y) {
+          return rebuildRoute(current, cameFrom);
+        }
+        directions.forEach(function visitNeighbor(direction) {
+          const neighbor = { x: current.x + direction.x, y: current.y + direction.y };
+          const key = routeKey(neighbor);
+          if (visited.has(key) || !pointIsInsideRect(neighbor, bounds)) {
+            return;
+          }
+          if (pointIsBlockedForRoute(neighbor, obstacles, startNode, endNode)) {
+            return;
+          }
+          visited.add(key);
+          cameFrom.set(key, current);
+          queue.push(neighbor);
+        });
+      }
+      return [
+        startNode,
+        { x: endNode.x, y: startNode.y },
+        endNode
+      ];
+    }
+
+    function getRouteSearchBounds(start, end, obstacles) {
+      const points = [start, end];
+      obstacles.forEach(function addObstaclePoints(zone) {
+        points.push({ x: zone.x, y: zone.y });
+        points.push({ x: zone.x + zone.w, y: zone.y + zone.h });
+      });
+      const minX = Math.floor(Math.min.apply(null, points.map(function mapX(point) { return point.x; })) - 8);
+      const minY = Math.floor(Math.min.apply(null, points.map(function mapY(point) { return point.y; })) - 8);
+      const maxX = Math.ceil(Math.max.apply(null, points.map(function mapX(point) { return point.x; })) + 8);
+      const maxY = Math.ceil(Math.max.apply(null, points.map(function mapY(point) { return point.y; })) + 8);
+      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    }
+
+    function pointIsBlockedForRoute(point, obstacles, start, end) {
+      if ((point.x === start.x && point.y === start.y) || (point.x === end.x && point.y === end.y)) {
+        return false;
+      }
+      return obstacles.some(function testObstacle(zone) {
+        return point.x > zone.x && point.x < zone.x + zone.w && point.y > zone.y && point.y < zone.y + zone.h;
+      });
+    }
+
+    function routeKey(point) {
+      return point.x + "," + point.y;
+    }
+
+    function rebuildRoute(end, cameFrom) {
+      const route = [end];
+      let current = end;
+      while (cameFrom.has(routeKey(current))) {
+        current = cameFrom.get(routeKey(current));
+        route.push(current);
+      }
+      return simplifyRoute(route.reverse());
+    }
+
+    function simplifyRoute(route) {
+      if (route.length <= 2) {
+        return route.map(roundRoutePoint);
+      }
+      const simplified = [roundRoutePoint(route[0])];
+      for (let index = 1; index < route.length - 1; index += 1) {
+        const previous = simplified[simplified.length - 1];
+        const current = roundRoutePoint(route[index]);
+        const next = roundRoutePoint(route[index + 1]);
+        const sameHorizontal = previous.y === current.y && current.y === next.y;
+        const sameVertical = previous.x === current.x && current.x === next.x;
+        if (!sameHorizontal && !sameVertical) {
+          simplified.push(current);
+        }
+      }
+      simplified.push(roundRoutePoint(route[route.length - 1]));
+      return simplified.filter(function filterDuplicate(point, index, points) {
+        return index === 0 || point.x !== points[index - 1].x || point.y !== points[index - 1].y;
+      });
+    }
+
+    function getObstacleBounds(obstacles) {
+      if (obstacles.length === 0) {
+        return null;
+      }
+      const minX = Math.min.apply(null, obstacles.map(function mapMinX(zone) { return zone.x; }));
+      const minY = Math.min.apply(null, obstacles.map(function mapMinY(zone) { return zone.y; }));
+      const maxX = Math.max.apply(null, obstacles.map(function mapMaxX(zone) { return zone.x + zone.w; }));
+      const maxY = Math.max.apply(null, obstacles.map(function mapMaxY(zone) { return zone.y + zone.h; }));
+      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    }
+
+    function scoreCableRoute(route, obstacles) {
+      const intersections = countRouteObstacleIntersections(route, obstacles);
+      return getRouteLength(route) + intersections * 1000 + Math.max(0, route.length - 2) * 2;
+    }
+
+    function countRouteObstacleIntersections(route, obstacles) {
+      let count = 0;
+      for (let index = 1; index < route.length; index += 1) {
+        obstacles.forEach(function countIntersection(zone) {
+          if (segmentIntersectsRect(route[index - 1], route[index], zone)) {
+            count += 1;
+          }
+        });
+      }
+      return count;
+    }
+
+    function getConnectionRoute(connection) {
+      const fromDevice = findDevice(connection.fromDeviceId);
+      const toDevice = findDevice(connection.toDeviceId);
+      if (!fromDevice || !toDevice) {
+        return [];
+      }
+      const fromAnchor = getPortAnchorPoint(fromDevice, connection.fromPortId, getDeviceCenter(toDevice));
+      const toAnchor = getPortAnchorPoint(toDevice, connection.toPortId, getDeviceCenter(fromDevice));
+      const route = calculateCableRoute(fromAnchor, toAnchor);
+      connection.route = route;
+      connection.lengthFt = Math.round(getRouteLength(route));
+      return route;
+    }
+
+    function getPortAnchorPoint(device, portId, target) {
+      const port = getPort(device, portId);
+      const center = getDeviceCenter(device);
+      let side = "nearest";
+      if (port.direction === "power-in" || port.direction === "audio-in" || port.direction === "speaker-in") {
+        side = "left";
+      }
+      if (port.direction === "power-out" || port.direction === "audio-out" || port.direction === "speaker-out") {
+        side = "right";
+      }
+      if (side === "left") {
+        return { x: device.x, y: center.y };
+      }
+      if (side === "right") {
+        return { x: device.x + device.w, y: center.y };
+      }
+      return getNearestDeviceEdgePoint(device, target);
+    }
+
+    function getNearestDeviceEdgePoint(device, target) {
+      const center = getDeviceCenter(device);
+      const dx = target.x - center.x;
+      const dy = target.y - center.y;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return {
+          x: dx >= 0 ? device.x + device.w : device.x,
+          y: center.y
+        };
+      }
+      return {
+        x: center.x,
+        y: dy >= 0 ? device.y + device.h : device.y
+      };
+    }
+
+    function angleBetweenDegrees(a, b) {
+      const diff = Math.abs((((a - b) % 360) + 540) % 360 - 180);
+      return diff;
+    }
+
+    function normalizeDevice(rawDevice) {
+      const definition = DEVICE_DEFINITIONS[rawDevice.type];
+      if (!definition) {
+        throw new Error("Cannot place unknown device type: " + rawDevice.type);
+      }
+      const mixerSettings = definition.mixer ? createMixerSettings(definition.mixer.channels, definition.mixer.outputs) : null;
+      return {
+        id: rawDevice.id,
+        type: rawDevice.type,
+        label: rawDevice.label || definition.label,
+        x: rawDevice.x,
+        y: rawDevice.y,
+        w: rawDevice.w || definition.size.w,
+        h: rawDevice.h || definition.size.h,
+        rotation: rawDevice.rotation || 90,
+        monitorMode: Boolean(rawDevice.monitorMode),
+        mixerSettings: rawDevice.mixerSettings || mixerSettings,
+        powered: Boolean(rawDevice.powered)
+      };
+    }
+
+    function createMixerSettings(channels, outputs) {
+      const strips = [];
+      for (let index = 1; index <= channels; index += 1) {
+        strips.push({
+          channel: index,
+          gain: 50,
+          muted: false,
+          assignedOutput: index <= outputs ? 1 : 0
+        });
+      }
+      return { channels: strips, outputs: outputs };
+    }
+
+    function addDevice(type, point) {
+      const definition = DEVICE_DEFINITIONS[type];
+      if (!definition) {
+        throw new Error("Cannot add unknown device type: " + type);
+      }
+      if (state.operation === "quiz" && state.quiz.activeScenario) {
+        const allowed = state.quiz.activeScenario.inventory.includes(type) || state.quiz.activeScenario.inventory.includes(definition.base);
+        if (!allowed) {
+          setStatus("Quiz inventory does not include " + definition.label + ".", "warn");
+          return;
+        }
+      }
+      const device = normalizeDevice({
+        id: makeId("dev"),
+        type: type,
+        label: definition.label,
+        x: point.x - definition.size.w / 2,
+        y: point.y - definition.size.h / 2,
+        w: definition.size.w,
+        h: definition.size.h,
+        rotation: definition.speaker ? 90 : 0
+      });
+      state.devices.push(device);
+      state.selected = { type: "device", id: device.id };
+      setStatus(definition.label + " placed.", "good");
+      updateAll();
+    }
+
+    function addZone(type, start, end) {
+      const x = Math.min(start.x, end.x);
+      const y = Math.min(start.y, end.y);
+      const w = Math.abs(start.x - end.x);
+      const h = Math.abs(start.y - end.y);
+      if (w < 2 || h < 2) {
+        setStatus("Zone must be at least 2 ft wide and tall.", "warn");
+        return;
+      }
+      const definition = ZONE_DEFINITIONS[type];
+      state.zones.push({
+        id: makeId("zone"),
+        type: type,
+        x: x,
+        y: y,
+        w: w,
+        h: h,
+        label: definition.label
+      });
+      setStatus(definition.label + " zone drawn.", "good");
+      updateAll();
+    }
+
+    function addLabel(point) {
+      const text = window.prompt("Label text");
+      if (!text) {
+        return;
+      }
+      state.labels.push({
+        id: makeId("label"),
+        x: point.x,
+        y: point.y,
+        text: text
+      });
+      updateAll();
+    }
+
+    function hitTestDevice(point) {
+      for (let index = state.devices.length - 1; index >= 0; index -= 1) {
+        const device = state.devices[index];
+        if (point.x >= device.x && point.x <= device.x + device.w && point.y >= device.y && point.y <= device.y + device.h) {
+          return device;
+        }
+      }
+      return null;
+    }
+
+    function hitTestZone(point) {
+      for (let index = state.zones.length - 1; index >= 0; index -= 1) {
+        const zone = state.zones[index];
+        if (point.x >= zone.x && point.x <= zone.x + zone.w && point.y >= zone.y && point.y <= zone.y + zone.h) {
+          return zone;
+        }
+      }
+      return null;
+    }
+
+    function validateConnection(cableType, sourceDevice, sourcePort, destinationDevice, destinationPort) {
+      const cable = CABLE_DEFINITIONS[cableType];
+      const issues = [];
+      if (!cable.allowedPortTypes.includes(sourcePort.type) || !cable.allowedPortTypes.includes(destinationPort.type)) {
+        issues.push("Cable does not match both port types.");
+      }
+      if (sourcePort.signal === "power" || destinationPort.signal === "power") {
+        if (!isPowerDirection(sourcePort, destinationPort)) {
+          issues.push("Power must flow from an output to a power input.");
+        }
+      } else if (sourcePort.signal === "speaker" || destinationPort.signal === "speaker") {
+        if (!isSpeakerDirection(sourcePort, destinationPort)) {
+          issues.push("Speaker level must flow from amplifier output to passive speaker input.");
+        }
+      } else if (!isAudioDirection(sourcePort, destinationPort)) {
+        issues.push("Audio must flow from output to input.");
+      }
+      if (sourceDevice.id === destinationDevice.id) {
+        issues.push("Source and destination are the same device.");
+      }
+      return {
+        valid: issues.length === 0,
+        issues: issues
+      };
+    }
+
+    function shouldReverseConnection(sourcePort, destinationPort) {
+      if (sourcePort.direction === "power-in" && destinationPort.direction === "power-out") {
+        return true;
+      }
+      if (sourcePort.direction === "audio-in" && destinationPort.direction === "audio-out") {
+        return true;
+      }
+      if (sourcePort.direction === "speaker-in" && destinationPort.direction === "speaker-out") {
+        return true;
+      }
+      return false;
+    }
+
+    function createConnection(cableType, fromDeviceId, fromPortId, toDeviceId, toPortId) {
+      let fromDevice = findDevice(fromDeviceId);
+      let toDevice = findDevice(toDeviceId);
+      if (!fromDevice || !toDevice) {
+        throw new Error("Cannot create connection because a device is missing.");
+      }
+      let fromPort = getPort(fromDevice, fromPortId);
+      let toPort = getPort(toDevice, toPortId);
+      if (shouldReverseConnection(fromPort, toPort)) {
+        const originalFromDevice = fromDevice;
+        const originalFromPort = fromPort;
+        fromDevice = toDevice;
+        fromPort = toPort;
+        toDevice = originalFromDevice;
+        toPort = originalFromPort;
+        fromDeviceId = fromDevice.id;
+        fromPortId = fromPort.id;
+        toDeviceId = toDevice.id;
+        toPortId = toPort.id;
+      }
+      const validation = validateConnection(cableType, fromDevice, fromPort, toDevice, toPort);
+      const route = calculateCableRoute(getPortAnchorPoint(fromDevice, fromPortId, getDeviceCenter(toDevice)), getPortAnchorPoint(toDevice, toPortId, getDeviceCenter(fromDevice)));
+      const connection = {
+        id: makeId("conn"),
+        cableType: cableType,
+        fromDeviceId: fromDeviceId,
+        fromPortId: fromPortId,
+        toDeviceId: toDeviceId,
+        toPortId: toPortId,
+        valid: validation.valid,
+        issues: validation.issues,
+        route: route,
+        lengthFt: Math.round(getRouteLength(route))
+      };
+      state.connections.push(connection);
+      if (!validation.valid && state.operation === "practice") {
+        setStatus("Connection needs a fix: " + getStudentConnectionIssue(connection), "warn");
+      } else if (!validation.valid) {
+        setStatus("Connection created. It may prevent the system from passing.", "warn");
+      } else {
+        setStatus("Good " + getCableDisplayLabel(CABLE_DEFINITIONS[cableType]) + " connection created.", "good");
+      }
+      updateAll();
+    }
+
+    function showPortPopup(device, phase, screenPoint) {
+      const definition = getDefinition(device);
+      if (definition.ports.length === 0) {
+        setStatus(definition.label + " has no rear-panel ports.", "warn");
+        return;
+      }
+      dom.portPopup.hidden = false;
+      dom.portPopup.style.left = Math.min(screenPoint.x + 12, dom.canvas.clientWidth - 330) + "px";
+      dom.portPopup.style.top = Math.min(screenPoint.y + 12, dom.canvas.clientHeight - 320) + "px";
+      const title = getPortPopupTitle(phase);
+      const portRows = definition.ports.map(function mapPort(port) {
+        const disabled = state.cableDraft && phase === "destination" && state.cableDraft.sourceDeviceId === device.id;
+        const incompatible = !portMatchesCable(state.activeCableType, port);
+        const disabledText = disabled || incompatible ? " disabled" : "";
+        const label = getStudentPortLabel(port);
+        const meta = state.skill === "basic" ? port.label : port.type + " | " + port.direction;
+        return "<button type=\"button\" class=\"port-btn\" data-device=\"" + device.id + "\" data-port=\"" + port.id + "\" data-phase=\"" + phase + "\"" + disabledText + "><span>" + label + "</span><span class=\"port-meta\">" + meta + "</span></button>";
+      }).join("");
+      dom.portPopup.innerHTML = "<h3>" + title + "</h3><div class=\"port-grid\">" + portRows + "</div>";
+      dom.portPopup.setAttribute("role", "dialog");
+      dom.portPopup.setAttribute("aria-label", title);
+      const firstButton = dom.portPopup.querySelector("button:not([disabled])");
+      if (firstButton) {
+        firstButton.focus();
+      }
+    }
+
+    function getPortPopupTitle(phase) {
+      if (state.skill === "basic") {
+        return phase === "source" ? "Choose a port on the first device" : "Choose a port on the second device";
+      }
+      return phase === "source" ? "Select source port" : "Select destination port";
+    }
+
+    function portMatchesCable(cableType, port) {
+      const cable = CABLE_DEFINITIONS[cableType];
+      return cable.allowedPortTypes.includes(port.type);
+    }
+
+    function getStudentPortLabel(port) {
+      if (state.skill !== "basic") {
+        return port.label;
+      }
+      if (port.direction === "power-in") {
+        return "Power in";
+      }
+      if (port.direction === "power-out") {
+        return "Wall power";
+      }
+      if (port.direction === "audio-in") {
+        return "Audio in";
+      }
+      if (port.direction === "audio-out") {
+        return "Audio out";
+      }
+      if (port.direction === "speaker-in") {
+        return "Speaker in";
+      }
+      if (port.direction === "speaker-out") {
+        return "Speaker out";
+      }
+      return port.label;
+    }
+
+    function hidePortPopup() {
+      dom.portPopup.hidden = true;
+      dom.portPopup.innerHTML = "";
+      dom.canvas.focus();
+    }
+
+    function handlePortClick(button) {
+      const deviceId = button.getAttribute("data-device");
+      const portId = button.getAttribute("data-port");
+      const phase = button.getAttribute("data-phase");
+      const device = findDevice(deviceId);
+      if (!device) {
+        throw new Error("Port popup referenced missing device: " + deviceId);
+      }
+      if (phase === "source") {
+        state.cableDraft = {
+          cableType: state.activeCableType,
+          sourceDeviceId: device.id,
+          sourcePortId: portId,
+          pointer: getDeviceCenter(device)
+        };
+        hidePortPopup();
+        setStatus(state.skill === "basic" ? "First device selected. Now click the other device for this cable." : "Source selected. Click the destination device.", "");
+        render();
+        return;
+      }
+      if (!state.cableDraft) {
+        hidePortPopup();
+        return;
+      }
+      createConnection(state.cableDraft.cableType, state.cableDraft.sourceDeviceId, state.cableDraft.sourcePortId, device.id, portId);
+      state.cableDraft = null;
+      hidePortPopup();
+    }
+
+    function getIncomingConnections(device, signal) {
+      return state.connections.filter(function filterIncoming(connection) {
+        const destinationMatches = connection.toDeviceId === device.id;
+        if (!destinationMatches || !connection.valid) {
+          return false;
+        }
+        const fromDevice = findDevice(connection.fromDeviceId);
+        const toDevice = findDevice(connection.toDeviceId);
+        if (!fromDevice || !toDevice) {
+          return false;
+        }
+        const toPort = getPort(toDevice, connection.toPortId);
+        return toPort.signal === signal;
+      });
+    }
+
+    function getOutgoingConnections(device, signal) {
+      return state.connections.filter(function filterOutgoing(connection) {
+        const sourceMatches = connection.fromDeviceId === device.id;
+        if (!sourceMatches || !connection.valid) {
+          return false;
+        }
+        const fromDevice = findDevice(connection.fromDeviceId);
+        if (!fromDevice) {
+          return false;
+        }
+        const fromPort = getPort(fromDevice, connection.fromPortId);
+        return fromPort.signal === signal;
+      });
+    }
+
+    function evaluatePower() {
+      const poweredIds = new Set();
+      const sourceLoads = new Map();
+      const sourceDevices = state.devices.filter(function filterSource(device) {
+        return Boolean(getDefinition(device).circuitRating);
+      });
+      sourceDevices.forEach(function addSource(device) {
+        poweredIds.add(device.id);
+        sourceLoads.set(device.id, 0);
+      });
+      let changed = true;
+      while (changed) {
+        changed = false;
+        state.connections.forEach(function walkPower(connection) {
+          if (!connection.valid) {
+            return;
+          }
+          const cable = CABLE_DEFINITIONS[connection.cableType];
+          if (cable.signal !== "power") {
+            return;
+          }
+          if (poweredIds.has(connection.fromDeviceId) && !poweredIds.has(connection.toDeviceId)) {
+            poweredIds.add(connection.toDeviceId);
+            changed = true;
+          }
+        });
+      }
+      state.devices.forEach(function setPower(device) {
+        const definition = getDefinition(device);
+        if (definition.currentDraw > 0) {
+          device.powered = poweredIds.has(device.id);
+        } else if (definition.circuitRating) {
+          device.powered = true;
+        } else if (hasPowerPorts(definition)) {
+          device.powered = poweredIds.has(device.id);
+        } else {
+          device.powered = true;
+        }
+      });
+      state.devices.forEach(function addLoad(device) {
+        const definition = getDefinition(device);
+        if (definition.currentDraw <= 0 || !device.powered) {
+          return;
+        }
+        const sourceId = findPowerSourceForDevice(device.id);
+        if (sourceId) {
+          sourceLoads.set(sourceId, (sourceLoads.get(sourceId) || 0) + definition.currentDraw);
+        }
+      });
+      const issues = [];
+      sourceLoads.forEach(function evaluateLoad(load, sourceId) {
+        const source = findDevice(sourceId);
+        if (!source) {
+          return;
+        }
+        const rating = getDefinition(source).circuitRating || 0;
+        if (load > rating) {
+          issues.push({
+            severity: "bad",
+            category: "power",
+            message: source.label + " overloaded: " + load.toFixed(1) + "A on " + rating + "A circuit."
+          });
+          cutPowerFromSource(sourceId);
+        }
+      });
+      state.devices.forEach(function reportUnpowered(device) {
+        const definition = getDefinition(device);
+        if (definition.currentDraw > 0 && !device.powered) {
+          issues.push({
+            severity: "bad",
+            category: "power",
+            message: state.skill === "basic" ? device.label + " needs a power cable from the wall outlet." : device.label + " has no power."
+          });
+        }
+      });
+      return { issues: issues, sourceLoads: sourceLoads };
+    }
+
+    function hasPowerPorts(definition) {
+      return definition.ports.some(function testPowerPort(port) {
+        return port.signal === "power";
+      });
+    }
+
+    function findPowerSourceForDevice(deviceId) {
+      const visited = new Set();
+      const queue = [deviceId];
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        if (!currentId || visited.has(currentId)) {
+          continue;
+        }
+        visited.add(currentId);
+        const currentDevice = findDevice(currentId);
+        if (currentDevice && getDefinition(currentDevice).circuitRating) {
+          return currentId;
+        }
+        state.connections.forEach(function walkBack(connection) {
+          if (!connection.valid || connection.toDeviceId !== currentId) {
+            return;
+          }
+          const cable = CABLE_DEFINITIONS[connection.cableType];
+          if (cable.signal === "power") {
+            queue.push(connection.fromDeviceId);
+          }
+        });
+      }
+      return null;
+    }
+
+    function cutPowerFromSource(sourceId) {
+      const affected = new Set([sourceId]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        state.connections.forEach(function walkPower(connection) {
+          if (!connection.valid || !affected.has(connection.fromDeviceId)) {
+            return;
+          }
+          const cable = CABLE_DEFINITIONS[connection.cableType];
+          if (cable.signal === "power" && !affected.has(connection.toDeviceId)) {
+            affected.add(connection.toDeviceId);
+            changed = true;
+          }
+        });
+      }
+      affected.forEach(function depower(deviceId) {
+        if (deviceId === sourceId) {
+          return;
+        }
+        const device = findDevice(deviceId);
+        if (device && getDefinition(device).currentDraw > 0) {
+          device.powered = false;
+        }
+      });
+    }
+
+    function evaluateSignal() {
+      const issues = [];
+      const microphones = state.devices.filter(function filterMic(device) {
+        return Boolean(getDefinition(device).mic);
+      });
+      const mixers = state.devices.filter(function filterMixer(device) {
+        return Boolean(getDefinition(device).mixer);
+      });
+      const speakers = state.devices.filter(function filterSpeaker(device) {
+        return Boolean(getDefinition(device).speaker);
+      });
+      microphones.forEach(function evaluateMic(mic) {
+        const micOuts = getOutgoingConnections(mic, "mic");
+        if (micOuts.length === 0) {
+          issues.push({ severity: "bad", category: "audio", message: state.skill === "basic" ? "The microphone needs an XLR audio cable to the mixer." : mic.label + " is not connected to a mixer input." });
+        }
+      });
+      mixers.forEach(function evaluateMixer(mixer) {
+        if (!mixer.powered) {
+          issues.push({ severity: "bad", category: "power", message: state.skill === "basic" ? "The mixer needs a power cable before sound can pass through it." : mixer.label + " cannot pass signal without power." });
+          return;
+        }
+        const micInputs = getIncomingConnections(mixer, "mic");
+        const lineOutputs = getOutgoingConnections(mixer, "line");
+        if (micInputs.length === 0) {
+          issues.push({ severity: "bad", category: "audio", message: state.skill === "basic" ? "The mixer is missing the microphone audio cable." : mixer.label + " has no microphone input." });
+        }
+        if (lineOutputs.length === 0) {
+          issues.push({ severity: "bad", category: "audio", message: state.skill === "basic" ? "The mixer needs an XLR audio cable going out to the speaker." : mixer.label + " has no main output connected." });
+        }
+        if (state.skill === "advanced" && mixer.mixerSettings) {
+          const mutedChannels = mixer.mixerSettings.channels.filter(function filterMuted(strip) {
+            return strip.muted || strip.gain < 10 || strip.assignedOutput === 0;
+          });
+          if (mutedChannels.length >= Math.max(1, micInputs.length)) {
+            issues.push({ severity: "bad", message: mixer.label + " routing, mute, or gain settings block signal." });
+          }
+        }
+      });
+      speakers.forEach(function evaluateSpeaker(speaker) {
+        const definition = getDefinition(speaker);
+        const hasInput = definition.speaker.powered ? getIncomingConnections(speaker, "line").length > 0 : getIncomingConnections(speaker, "speaker").length > 0;
+        if (!hasInput) {
+          issues.push({ severity: "bad", category: "audio", message: state.skill === "basic" ? "This speaker has power, but no audio cable from the mixer." : speaker.label + " has no valid audio input." });
+        }
+        if (definition.speaker.powered && !speaker.powered) {
+          issues.push({ severity: "bad", category: "power", message: state.skill === "basic" ? "The speaker needs a power cable from the wall outlet." : speaker.label + " is wired for signal but has no AC power." });
+        }
+      });
+      state.connections.forEach(function evaluateConnection(connection) {
+        if (!connection.valid) {
+          issues.push({ severity: "bad", category: "cable", message: getStudentConnectionIssue(connection) });
+        }
+      });
+      return issues;
+    }
+
+    function getStudentConnectionIssue(connection) {
+      if (state.skill !== "basic") {
+        return connection.issues.join(" ");
+      }
+      const cable = CABLE_DEFINITIONS[connection.cableType];
+      if (cable.signal === "power") {
+        return "This power cable is on the wrong kind of port. Use it between wall power and a power input.";
+      }
+      if (connection.cableType === "xlr") {
+        return "This XLR audio cable is on the wrong kind of port. Use it between a microphone, mixer, and speaker audio port.";
+      }
+      return "This cable is plugged into the wrong kind of port.";
+    }
+
+    function evaluateCoverage() {
+      const audienceZones = state.zones.filter(function filterAudience(zone) {
+        return zone.type === "audience";
+      });
+      const speakers = state.devices.filter(function filterSpeakers(device) {
+        return Boolean(getDefinition(device).speaker);
+      });
+      const coverage = audienceZones.map(function mapZone(zone) {
+        let score = 0;
+        speakers.forEach(function scoreSpeaker(speaker) {
+          const definition = getDefinition(speaker);
+          const speakerData = definition.speaker;
+          const speakerCenter = getDeviceCenter(speaker);
+          const zoneCenter = getZoneCenter(zone);
+          const dist = distance(speakerCenter, zoneCenter);
+          const horizontalCoverage = speaker.monitorMode ? 70 : speakerData.coverageH;
+          const angle = angleBetweenDegrees(speaker.rotation, Math.atan2(zoneCenter.y - speakerCenter.y, zoneCenter.x - speakerCenter.x) * 180 / Math.PI);
+          const insideCone = angle <= horizontalCoverage / 2;
+          const throwRatio = Math.max(0, 1 - dist / speakerData.throwFt);
+          if (insideCone) {
+            score += 55 + throwRatio * 55;
+          } else if (angle <= horizontalCoverage) {
+            score += 28 + throwRatio * 28;
+          }
+        });
+        let status = "too quiet";
+        if (score >= 65 && score <= 135) {
+          status = "covered";
+        }
+        if (score > 135) {
+          status = "too loud";
+        }
+        return { zoneId: zone.id, score: score, status: status };
+      });
+      state.coverage = coverage;
+      const issues = coverage.filter(function filterBad(item) {
+        return item.status !== "covered";
+      }).map(function mapCoverage(item) {
+        const zone = state.zones.find(function findZone(candidate) {
+          return candidate.id === item.zoneId;
+        });
+        return {
+          severity: item.status === "too quiet" ? "bad" : "warn",
+          category: "coverage",
+          message: (zone ? zone.label : "Audience zone") + " is " + item.status + "."
+        };
+      });
+      return issues;
+    }
+
+    function evaluateCableManagement() {
+      let score = 100;
+      const issues = [];
+      state.connections.forEach(function evaluateRun(connection) {
+        const route = getConnectionRoute(connection);
+        if (connection.lengthFt > 75) {
+          score -= 12;
+          issues.push({ severity: "warn", category: "cable", message: "Long " + CABLE_DEFINITIONS[connection.cableType].label + " run: " + connection.lengthFt + " ft." });
+        } else if (connection.lengthFt > 45) {
+          score -= 5;
+        }
+        const fromDevice = findDevice(connection.fromDeviceId);
+        const toDevice = findDevice(connection.toDeviceId);
+        if (!fromDevice || !toDevice) {
+          return;
+        }
+        const routeStart = getDeviceCenter(fromDevice);
+        const routeEnd = getDeviceCenter(toDevice);
+        const crossedZone = state.zones.find(function testZone(zone) {
+          if (zone.type !== "audience" && zone.type !== "stage") {
+            return false;
+          }
+          if (pointIsInsideRect(routeStart, zone) || pointIsInsideRect(routeEnd, zone)) {
+            return false;
+          }
+          return countRouteObstacleIntersections(route, [zone]) > 0;
+        });
+        if (crossedZone) {
+          score -= 10;
+          issues.push({ severity: "warn", category: "cable", message: CABLE_DEFINITIONS[connection.cableType].label + " cable crosses the " + crossedZone.label + " area." });
+        }
+      });
+      return {
+        score: Math.max(0, Math.round(score)),
+        issues: issues
+      };
+    }
+
+    function segmentIntersectsRect(a, b, rect) {
+      const insideA = a.x >= rect.x && a.x <= rect.x + rect.w && a.y >= rect.y && a.y <= rect.y + rect.h;
+      const insideB = b.x >= rect.x && b.x <= rect.x + rect.w && b.y >= rect.y && b.y <= rect.y + rect.h;
+      if (insideA || insideB) {
+        return true;
+      }
+      const edges = [
+        [{ x: rect.x, y: rect.y }, { x: rect.x + rect.w, y: rect.y }],
+        [{ x: rect.x + rect.w, y: rect.y }, { x: rect.x + rect.w, y: rect.y + rect.h }],
+        [{ x: rect.x + rect.w, y: rect.y + rect.h }, { x: rect.x, y: rect.y + rect.h }],
+        [{ x: rect.x, y: rect.y + rect.h }, { x: rect.x, y: rect.y }]
+      ];
+      return edges.some(function edgeIntersects(edge) {
+        return segmentsIntersect(a, b, edge[0], edge[1]);
+      });
+    }
+
+    function segmentsIntersect(a, b, c, d) {
+      const det = (b.x - a.x) * (d.y - c.y) - (b.y - a.y) * (d.x - c.x);
+      if (det === 0) {
+        return false;
+      }
+      const lambda = ((d.y - c.y) * (d.x - a.x) + (c.x - d.x) * (d.y - a.y)) / det;
+      const gamma = ((a.y - b.y) * (d.x - a.x) + (b.x - a.x) * (d.y - a.y)) / det;
+      return lambda > 0 && lambda < 1 && gamma > 0 && gamma < 1;
+    }
+
+    function evaluateSystem() {
+      const power = evaluatePower();
+      const signal = evaluateSignal();
+      const coverage = evaluateCoverage();
+      const cableManagement = evaluateCableManagement();
+      const issues = power.issues.concat(signal, coverage, cableManagement.issues);
+      state.evaluations = issues;
+      return {
+        ready: issues.filter(function filterBad(issue) {
+          return issue.severity === "bad";
+        }).length === 0 && hasMinimumSystem(),
+        issues: issues,
+        cableScore: cableManagement.score,
+        power: power
+      };
+    }
+
+    function updateBasicChecklist(result) {
+      if (state.skill !== "basic") {
+        dom.basicChecklist.hidden = true;
+        return;
+      }
+      dom.basicChecklist.hidden = false;
+      setChecklistItem(dom.powerCheck, getCategoryStatus(result.issues, "power"));
+      setChecklistItem(dom.audioCheck, getCategoryStatus(result.issues, "audio"));
+      setChecklistItem(dom.coverageCheck, getCategoryStatus(result.issues, "coverage"));
+      setChecklistItem(dom.cableCheck, getCategoryStatus(result.issues, "cable"));
+    }
+
+    function getCategoryStatus(issues, category) {
+      const categoryIssues = issues.filter(function filterCategory(issue) {
+        return issue.category === category;
+      });
+      if (categoryIssues.some(function hasBad(issue) { return issue.severity === "bad"; })) {
+        return "bad";
+      }
+      if (categoryIssues.length > 0) {
+        return "warn";
+      }
+      return "good";
+    }
+
+    function setChecklistItem(element, status) {
+      element.className = "check-dot " + status;
+      if (status === "good") {
+        element.textContent = "OK";
+      } else if (status === "warn") {
+        element.textContent = "!";
+      } else {
+        element.textContent = "X";
+      }
+    }
+
+    function hasMinimumSystem() {
+      const hasMic = state.devices.some(function findMic(device) {
+        return Boolean(getDefinition(device).mic);
+      });
+      const hasMixer = state.devices.some(function findMixer(device) {
+        return Boolean(getDefinition(device).mixer);
+      });
+      const hasSpeaker = state.devices.some(function findSpeaker(device) {
+        return Boolean(getDefinition(device).speaker);
+      });
+      return hasMic && hasMixer && hasSpeaker;
+    }
+
+    function buildSignalPaths() {
+      return state.connections.map(function mapConnection(connection) {
+        const fromDevice = findDevice(connection.fromDeviceId);
+        const toDevice = findDevice(connection.toDeviceId);
+        if (!fromDevice || !toDevice) {
+          return null;
+        }
+        return {
+          connectionId: connection.id,
+          cableType: connection.cableType,
+          route: getConnectionRoute(connection),
+          blocked: !connection.valid || isConnectionBlocked(connection),
+          invalid: !connection.valid,
+          blockedProgress: getBlockedProgress(connection)
+        };
+      }).filter(function filterNull(path) {
+        return path !== null;
+      });
+    }
+
+    function isConnectionBlocked(connection) {
+      const fromDevice = findDevice(connection.fromDeviceId);
+      const toDevice = findDevice(connection.toDeviceId);
+      if (!fromDevice || !toDevice) {
+        return true;
+      }
+      const cable = CABLE_DEFINITIONS[connection.cableType];
+      if (cable.signal === "power") {
+        return !fromDevice.powered;
+      }
+      if (getDefinition(fromDevice).currentDraw > 0 && !fromDevice.powered) {
+        return true;
+      }
+      if (getDefinition(toDevice).currentDraw > 0 && !toDevice.powered) {
+        return true;
+      }
+      if (state.skill === "advanced" && getDefinition(fromDevice).mixer && fromDevice.mixerSettings) {
+        return fromDevice.mixerSettings.channels.every(function blocked(strip) {
+          return strip.muted || strip.gain < 10 || strip.assignedOutput === 0;
+        });
+      }
+      return false;
+    }
+
+    function getBlockedProgress(connection) {
+      if (!connection.valid) {
+        return 0.5;
+      }
+      const fromDevice = findDevice(connection.fromDeviceId);
+      const toDevice = findDevice(connection.toDeviceId);
+      if (!fromDevice || !toDevice) {
+        return 0.5;
+      }
+      const cable = CABLE_DEFINITIONS[connection.cableType];
+      if (cable.signal === "power" && !fromDevice.powered) {
+        return 0.08;
+      }
+      if (getDefinition(fromDevice).currentDraw > 0 && !fromDevice.powered) {
+        return 0.08;
+      }
+      if (getDefinition(toDevice).currentDraw > 0 && !toDevice.powered) {
+        return 0.92;
+      }
+      return 0.92;
+    }
+
+    function runSystemTest() {
+      const result = evaluateSystem();
+      updateBasicChecklist(result);
+      state.animation = {
+        running: true,
+        start: performance.now(),
+        paths: buildSignalPaths()
+      };
+      if (result.ready) {
+        setStatus("System passes. Signal and power flow through the design.", "good");
+      } else if (state.operation === "quiz") {
+        setStatus("System not ready. Continue troubleshooting.", "warn");
+      } else {
+        setStatus("System has faults. Signal animation stops at blocked points.", "warn");
+      }
+      updateAll();
+      requestAnimationFrame(render);
+    }
+
+    function completeScenario() {
+      const result = evaluateSystem();
+      if (state.operation === "quiz") {
+        const placementPass = evaluateHiddenPlacement();
+        if (!result.ready || !placementPass) {
+          setStatus("System not ready. Continue troubleshooting.", "warn");
+          updateAll();
+          return;
+        }
+        const elapsedMs = state.quiz.startedAt ? Date.now() - state.quiz.startedAt : 0;
+        state.quiz.completed.push({
+          title: state.quiz.activeScenario ? state.quiz.activeScenario.title : "Scenario",
+          elapsedMs: elapsedMs
+        });
+        if (state.quiz.completed.length >= 5) {
+          showQuizSummary();
+          state.quiz.startedAt = null;
+          state.quiz.activeScenario = null;
+        } else {
+          setStatus("Scenario complete. Start the next scenario when ready.", "good");
+        }
+        updateScenarioProgress();
+        return;
+      }
+      if (state.operation === "troubleshooting") {
+        if (!result.ready) {
+          setStatus("Fault remains. Continue troubleshooting.", "warn");
+          return;
+        }
+        setStatus("Troubleshooting complete. The system is ready.", "good");
+        return;
+      }
+      if (result.ready) {
+        setStatus("System ready.", "good");
+      } else {
+        setStatus("System not ready. Run Test System and inspect the flagged areas.", "warn");
+      }
+    }
+
+    function evaluateHiddenPlacement() {
+      const scenario = state.quiz.activeScenario;
+      if (!scenario || !scenario.hiddenZones) {
+        return true;
+      }
+      return scenario.hiddenZones.every(function validateHiddenZone(hidden) {
+        return state.devices.some(function deviceInZone(device) {
+          const definition = getDefinition(device);
+          const typeMatches = device.type === hidden.type || definition.base === hidden.type;
+          if (!typeMatches) {
+            return false;
+          }
+          const center = getDeviceCenter(device);
+          return center.x >= hidden.x && center.x <= hidden.x + hidden.w && center.y >= hidden.y && center.y <= hidden.y + hidden.h;
+        });
+      });
+    }
+
+    function showQuizSummary() {
+      const total = state.quiz.completed.reduce(function sumElapsed(accumulator, entry) {
+        return accumulator + entry.elapsedMs;
+      }, 0);
+      const average = total / state.quiz.completed.length;
+      const body = state.quiz.completed.map(function mapEntry(entry, index) {
+        return "<li><strong>" + (index + 1) + ". " + entry.title + "</strong><span>" + formatTime(entry.elapsedMs) + "</span></li>";
+      }).join("");
+      dom.modalTitle.textContent = "Quiz completion summary";
+      dom.modalBody.innerHTML = "<ul class=\"metric-list\">" + body + "</ul><p><strong>Average time:</strong> " + formatTime(average) + "</p><button type=\"button\" id=\"summaryScreenshotButton\">Screenshot Export</button>";
+      dom.modalBackdrop.classList.add("open");
+      document.getElementById("summaryScreenshotButton").addEventListener("click", exportScreenshot);
+    }
+
+    function formatTime(milliseconds) {
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    }
+
+    function updateTimer() {
+      if (state.quiz.startedAt) {
+        dom.timerDisplay.textContent = formatTime(Date.now() - state.quiz.startedAt);
+      } else {
+        dom.timerDisplay.textContent = "00:00";
+      }
+    }
+
+    function serializeProject() {
+      return {
+        version: 1,
+        skill: state.skill,
+        operation: state.operation,
+        scale: state.scale,
+        snap: state.snap,
+        viewport: state.viewport,
+        devices: state.devices,
+        zones: state.zones,
+        labels: state.labels,
+        connections: state.connections,
+        settings: {
+          activeTool: state.activeTool,
+          showAdvancedLibrary: state.showAdvancedLibrary
+        }
+      };
+    }
+
+    function loadProject(project) {
+      if (!project || !Array.isArray(project.devices) || !Array.isArray(project.zones) || !Array.isArray(project.connections)) {
+        throw new Error("Project JSON is missing devices, zones, or connections arrays.");
+      }
+      state.skill = project.skill || "basic";
+      state.operation = project.operation || "practice";
+      state.scale = String(project.scale || "0.5");
+      state.snap = Boolean(project.snap);
+      state.viewport = project.viewport || { x: 60, y: 60, zoom: 1 };
+      state.devices = project.devices.map(normalizeDevice);
+      state.zones = project.zones;
+      state.labels = Array.isArray(project.labels) ? project.labels : [];
+      state.connections = project.connections;
+      state.selected = null;
+      state.cableDraft = null;
+      syncControls();
+      updateAll();
+      setStatus("Project loaded.", "good");
+    }
+
+    function downloadJson(filename, data) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function readJsonFile(file, onLoad) {
+      const reader = new FileReader();
+      reader.addEventListener("load", function handleLoad() {
+        try {
+          onLoad(JSON.parse(String(reader.result)));
+        } catch (error) {
+          setStatus("Could not load JSON: " + error.message, "bad");
+        }
+      });
+      reader.readAsText(file);
+    }
+
+    function exportScreenshot() {
+      render();
+      const link = document.createElement("a");
+      link.href = dom.canvas.toDataURL("image/png");
+      link.download = "live-sound-system-simulator.png";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function buildTeacherScenario() {
+      const inventory = dom.teacherInventory.value.split(",").map(function trimValue(value) {
+        return value.trim();
+      }).filter(function hasValue(value) {
+        return value.length > 0;
+      });
+      return {
+        id: "teacher-" + Date.now(),
+        title: dom.teacherTitle.value,
+        difficulty: dom.teacherDifficulty.value,
+        instructions: dom.teacherInstructions.value,
+        inventory: inventory,
+        zones: cloneValue(state.zones.filter(function filterVisibleZone(zone) {
+          return zone.type !== "hidden";
+        })),
+        performers: state.devices.filter(function filterPerformer(device) {
+          return device.type === "performer";
+        }).map(function mapPerformer(device) {
+          return { type: device.type, x: device.x, y: device.y };
+        }),
+        hiddenZones: state.zones.filter(function filterHidden(zone) {
+          return zone.type === "hidden";
+        }).map(function mapHidden(zone) {
+          return { type: "powered-speaker", x: zone.x, y: zone.y, w: zone.w, h: zone.h };
+        }),
+        correctSolution: serializeProject(),
+        requirements: inferScenarioRequirements()
+      };
+    }
+
+    function inferScenarioRequirements() {
+      return {
+        speakers: state.devices.filter(function filterSpeakers(device) {
+          return Boolean(getDefinition(device).speaker);
+        }).length,
+        microphones: state.devices.filter(function filterMics(device) {
+          return Boolean(getDefinition(device).mic);
+        }).length,
+        poweredSpeakersOk: true
+      };
+    }
+
+    function startScenario(scenario) {
+      state.operation = dom.operationSelect.value;
+      state.quiz.activeScenario = scenario;
+      state.quiz.startedAt = Date.now();
+      state.devices = [];
+      state.connections = [];
+      state.labels = [];
+      state.zones = cloneValue(scenario.zones || []);
+      if (scenario.performers) {
+        scenario.performers.forEach(function addPerformer(performer) {
+          addScenarioDevice(performer.type, performer.x, performer.y);
+        });
+      }
+      state.selected = null;
+      syncControls();
+      updateAll();
+      setStatus(scenario.title + ": " + scenario.instructions, "good");
+    }
+
+    function addScenarioDevice(type, x, y) {
+      const definition = DEVICE_DEFINITIONS[type];
+      if (!definition) {
+        throw new Error("Scenario references unknown device type: " + type);
+      }
+      state.devices.push(normalizeDevice({
+        id: makeId("dev"),
+        type: type,
+        label: definition.label,
+        x: x,
+        y: y,
+        w: definition.size.w,
+        h: definition.size.h
+      }));
+    }
+
+    function startTroubleshooting() {
+      const scenario = DEFAULT_SCENARIOS[0];
+      state.operation = "troubleshooting";
+      state.quiz.startedAt = Date.now();
+      state.zones = cloneValue(scenario.zones);
+      state.devices = [];
+      state.connections = [];
+      state.labels = [];
+      addScenarioDevice("wall-outlet", 2, 2);
+      addScenarioDevice("mixer", 31, 9);
+      addScenarioDevice("wired-microphone", 15, 10);
+      addScenarioDevice("powered-speaker", 8, 18);
+      const outlet = state.devices.find(function findOutlet(device) { return device.type === "wall-outlet"; });
+      const mixer = state.devices.find(function findMixerDevice(device) { return device.type === "mixer"; });
+      const mic = state.devices.find(function findMicDevice(device) { return device.type === "wired-microphone"; });
+      const speaker = state.devices.find(function findSpeakerDevice(device) { return device.type === "powered-speaker"; });
+      if (!outlet || !mixer || !mic || !speaker) {
+        throw new Error("Troubleshooting template failed to create required devices.");
+      }
+      createConnection("iec", outlet.id, "out-a", mixer.id, "iec-in");
+      createConnection("iec", outlet.id, "out-b", speaker.id, "iec-in");
+      createConnection("xlr", mic.id, "xlr-out", mixer.id, "xlr-in-1");
+      createConnection("xlr", mixer.id, "xlr-out-l", speaker.id, "xlr-in");
+      const fault = TROUBLESHOOTING_FAULTS[Math.floor(Math.random() * TROUBLESHOOTING_FAULTS.length)];
+      applyTroubleshootingFault(fault, mixer, speaker);
+      state.faults = [{ id: makeId("fault"), type: fault, resolved: false }];
+      setStatus("Troubleshooting system loaded. Diagnose and fix the fault.", "warn");
+      updateAll();
+    }
+
+    function applyTroubleshootingFault(fault, mixer, speaker) {
+      if (fault === "missing-cable") {
+        state.connections = state.connections.filter(function removeSpeakerConnection(connection) {
+          return connection.toDeviceId !== speaker.id;
+        });
+      }
+      if (fault === "wrong-cable") {
+        const connection = state.connections.find(function findSpeakerConnection(candidate) {
+          return candidate.toDeviceId === speaker.id;
+        });
+        if (connection) {
+          connection.cableType = "speakon";
+          connection.valid = false;
+          connection.issues = ["Wrong cable type for powered speaker line input."];
+        }
+      }
+      if (fault === "wrong-port") {
+        const connection = state.connections.find(function findMixerConnection(candidate) {
+          return candidate.fromDeviceId === mixer.id;
+        });
+        if (connection) {
+          connection.fromPortId = "xlr-in-2";
+          connection.valid = false;
+          connection.issues = ["Cable starts from an input port instead of an output port."];
+        }
+      }
+      if (fault === "no-power") {
+        state.connections = state.connections.filter(function removePowerConnection(connection) {
+          return connection.toDeviceId !== mixer.id && connection.toDeviceId !== speaker.id;
+        });
+      }
+      if (fault === "overloaded-circuit") {
+        for (let index = 0; index < 7; index += 1) {
+          addScenarioDevice("powered-speaker", 3 + index * 3.5, 31);
+        }
+      }
+      if (fault === "muted-mixer-channel" && mixer.mixerSettings) {
+        mixer.mixerSettings.channels[0].muted = true;
+        mixer.mixerSettings.channels[0].assignedOutput = 0;
+      }
+      if (fault === "incorrect-routing" && mixer.mixerSettings) {
+        mixer.mixerSettings.channels.forEach(function muteRoute(strip) {
+          strip.assignedOutput = 0;
+        });
+      }
+      if (fault === "misplaced-speaker") {
+        speaker.x = 35;
+        speaker.y = 7;
+        speaker.rotation = 270;
+      }
+      if (fault === "coverage-failure") {
+        speaker.rotation = 0;
+      }
+    }
+
+    function populateScenarioSelect() {
+      const scenarios = DEFAULT_SCENARIOS.concat(state.customScenarios);
+      dom.scenarioSelect.innerHTML = scenarios.map(function mapScenario(scenario, index) {
+        return "<option value=\"" + index + "\">" + scenario.difficulty + ": " + scenario.title + "</option>";
+      }).join("");
+    }
+
+    function getSelectedScenario() {
+      const scenarios = DEFAULT_SCENARIOS.concat(state.customScenarios);
+      const index = Number(dom.scenarioSelect.value);
+      return scenarios[index] || scenarios[0];
+    }
+
+    function updateScenarioProgress() {
+      if (state.quiz.completed.length === 0) {
+        dom.scenarioProgress.innerHTML = "<li><span>No completed scenarios</span><span>0 / 5</span></li>";
+        return;
+      }
+      dom.scenarioProgress.innerHTML = state.quiz.completed.map(function mapCompleted(entry) {
+        return "<li><span>" + entry.title + "</span><span>" + formatTime(entry.elapsedMs) + "</span></li>";
+      }).join("");
+    }
+
+    function buildToolButtons() {
+      const tools = [
+        { id: "select", icon: "SEL", label: "Select" },
+        { id: "pan", icon: "PAN", label: "Pan" },
+        { id: "measure", icon: "FT", label: "Measure" },
+        { id: "label", icon: "T", label: "Label" }
+      ];
+      dom.toolButtons.innerHTML = tools.map(function mapTool(tool) {
+        return "<button type=\"button\" class=\"tool-btn\" data-tool=\"" + tool.id + "\"><span class=\"icon\">" + tool.icon + "</span><span>" + tool.label + "</span></button>";
+      }).join("");
+    }
+
+    function buildZoneButtons() {
+      const zones = getVisibleZoneTypes();
+      dom.zoneButtons.innerHTML = zones.map(function mapZone(type) {
+        const zone = ZONE_DEFINITIONS[type];
+        return "<button type=\"button\" class=\"tool-btn\" data-zone=\"" + type + "\"><span class=\"icon\">BOX</span><span>" + zone.label + "</span></button>";
+      }).join("");
+    }
+
+    function getVisibleZoneTypes() {
+      if (state.operation === "teacher") {
+        return Object.keys(ZONE_DEFINITIONS);
+      }
+      if (state.skill === "basic") {
+        return ["stage", "audience", "foh"];
+      }
+      return ["stage", "audience", "backstage", "foh", "custom"];
+    }
+
+    function buildEquipmentButtons() {
+      const entries = Object.values(DEVICE_DEFINITIONS).filter(function filterDefinition(definition) {
+        if (state.skill === "basic") {
+          return BASIC_DEVICE_TYPES.includes(definition.id);
+        }
+        return definition.group === "basic" || state.showAdvancedLibrary || state.skill === "advanced";
+      });
+      if (state.operation === "quiz" && state.quiz.activeScenario) {
+        const inventory = state.quiz.activeScenario.inventory;
+        dom.equipmentButtons.innerHTML = entries.filter(function filterInventory(definition) {
+          return inventory.includes(definition.id) || inventory.includes(definition.base);
+        }).map(renderEquipmentButton).join("");
+        return;
+      }
+      dom.equipmentButtons.innerHTML = entries.map(renderEquipmentButton).join("");
+    }
+
+    function renderEquipmentButton(definition) {
+      return "<button type=\"button\" class=\"equipment-btn\" data-equipment=\"" + definition.id + "\" aria-pressed=\"false\"><span class=\"icon\">" + definition.icon + "</span><span>" + definition.label + "</span></button>";
+    }
+
+    function buildCableButtons() {
+      const cableEntries = Object.values(CABLE_DEFINITIONS).filter(function filterBasicCable(cable) {
+        return state.skill !== "basic" || BASIC_CABLE_TYPES.includes(cable.id);
+      });
+      const filtered = state.operation === "quiz" && state.quiz.activeScenario ? cableEntries.filter(function filterCable(cable) {
+        return state.quiz.activeScenario.inventory.includes(cable.id);
+      }) : cableEntries;
+      dom.cableButtons.innerHTML = filtered.map(function mapCable(cable) {
+        const label = state.skill === "basic" ? cable.basicLabel : cable.label;
+        return "<button type=\"button\" class=\"cable-btn\" data-cable=\"" + cable.id + "\" aria-pressed=\"false\"><span class=\"icon\" style=\"background:" + cable.color + ";color:#fff\">" + getCableCue(cable) + "</span><span>" + label + "</span></button>";
+      }).join("");
+    }
+
+    function getCableCue(cable) {
+      if (cable.pattern === "audio") {
+        return "A";
+      }
+      if (cable.pattern === "power") {
+        return "P";
+      }
+      if (cable.pattern === "speaker") {
+        return "S";
+      }
+      return "E";
+    }
+
+    function updateActiveButtons() {
+      document.querySelectorAll("[data-tool]").forEach(function updateTool(button) {
+        button.classList.toggle("active", button.getAttribute("data-tool") === state.activeTool);
+        button.setAttribute("aria-pressed", button.getAttribute("data-tool") === state.activeTool ? "true" : "false");
+      });
+      document.querySelectorAll("[data-zone]").forEach(function updateZone(button) {
+        button.classList.toggle("active", state.activeTool === "zone" && button.getAttribute("data-zone") === state.activeZoneType);
+        button.setAttribute("aria-pressed", state.activeTool === "zone" && button.getAttribute("data-zone") === state.activeZoneType ? "true" : "false");
+      });
+      document.querySelectorAll("[data-equipment]").forEach(function updateEquipment(button) {
+        button.classList.toggle("active", state.activeTool === "equipment" && button.getAttribute("data-equipment") === state.activeEquipmentType);
+        button.setAttribute("aria-pressed", state.activeTool === "equipment" && button.getAttribute("data-equipment") === state.activeEquipmentType ? "true" : "false");
+      });
+      document.querySelectorAll("[data-cable]").forEach(function updateCable(button) {
+        button.classList.toggle("active", state.activeTool === "cable" && button.getAttribute("data-cable") === state.activeCableType);
+        button.setAttribute("aria-pressed", state.activeTool === "cable" && button.getAttribute("data-cable") === state.activeCableType ? "true" : "false");
+      });
+      dom.buildModeButton.classList.toggle("active", state.activeTool === "equipment");
+      dom.cableModeButton.classList.toggle("active", state.activeTool === "cable");
+      dom.buildModeButton.setAttribute("aria-pressed", state.activeTool === "equipment" ? "true" : "false");
+      dom.cableModeButton.setAttribute("aria-pressed", state.activeTool === "cable" ? "true" : "false");
+    }
+
+    function syncControls() {
+      dom.skillSelect.value = state.skill;
+      dom.operationSelect.value = state.operation;
+      dom.scaleSelect.value = state.scale;
+      dom.snapToggle.classList.toggle("active", state.snap);
+      dom.advancedLibraryToggle.classList.toggle("active", state.showAdvancedLibrary);
+      const scaleLabel = dom.scaleSelect.options[dom.scaleSelect.selectedIndex].textContent;
+      dom.scaleHud.textContent = scaleLabel + " | " + getPixelsPerFoot() + " px / ft";
+      updateInterfaceVisibility();
+      buildZoneButtons();
+      buildEquipmentButtons();
+      buildCableButtons();
+      updateActiveButtons();
+    }
+
+    function updateInterfaceVisibility() {
+      const simpleBasic = state.skill === "basic";
+      if (simpleBasic) {
+        state.showAdvancedLibrary = false;
+      }
+      dom.skillControl.hidden = false;
+      dom.operationControl.hidden = simpleBasic;
+      dom.scaleControl.hidden = simpleBasic;
+      dom.snapToggle.hidden = simpleBasic;
+      dom.timerDisplay.hidden = simpleBasic;
+      dom.advancedLibraryToggle.hidden = simpleBasic;
+      dom.toolsSection.hidden = simpleBasic;
+      dom.zonesSection.hidden = simpleBasic;
+      dom.projectSection.hidden = simpleBasic;
+      dom.scenarioSection.hidden = simpleBasic || state.operation === "practice";
+      dom.teacherSection.hidden = state.operation !== "teacher";
+      dom.selectionSection.hidden = simpleBasic;
+      dom.metricsSection.hidden = simpleBasic;
+      dom.faultsSection.hidden = simpleBasic;
+      dom.doneButton.hidden = simpleBasic || state.operation === "practice";
+      dom.scaleHud.hidden = simpleBasic;
+      dom.pointerHud.hidden = simpleBasic;
+      dom.measurementHud.hidden = simpleBasic;
+      dom.startGuide.hidden = !simpleBasic || state.devices.length > 2 || state.connections.length > 0;
+      updateOperationChoices();
+      if (simpleBasic && state.activeZoneType !== "stage" && state.activeZoneType !== "audience" && state.activeZoneType !== "foh") {
+        state.activeZoneType = "stage";
+      }
+      if (simpleBasic && !BASIC_DEVICE_TYPES.includes(state.activeEquipmentType)) {
+        state.activeEquipmentType = "wired-microphone";
+      }
+      if (simpleBasic && !BASIC_CABLE_TYPES.includes(state.activeCableType)) {
+        state.activeCableType = "xlr";
+      }
+    }
+
+    function updateOperationChoices() {
+      Array.from(dom.operationSelect.options).forEach(function updateOption(option) {
+        option.hidden = state.skill === "basic" && option.value === "teacher";
+      });
+      if (state.skill === "basic" && state.operation === "teacher") {
+        state.operation = "practice";
+      }
+      dom.operationSelect.value = state.operation;
+    }
+
+    function updateInspector() {
+      if (!state.selected) {
+        dom.inspector.innerHTML = "<p class=\"pill\">Nothing selected</p>";
+        return;
+      }
+      if (state.selected.type === "device") {
+        const device = findDevice(state.selected.id);
+        if (!device) {
+          dom.inspector.innerHTML = "<p class=\"pill bad\">Selected device missing</p>";
+          return;
+        }
+        const definition = getDefinition(device);
+        const speakerTools = definition.speaker ? "<div class=\"row\"><button type=\"button\" id=\"rotateLeftButton\">Aim -15 deg</button><button type=\"button\" id=\"rotateRightButton\">Aim +15 deg</button><button type=\"button\" id=\"monitorModeButton\">" + (device.monitorMode ? "Main Mode" : "Monitor Mode") + "</button></div>" : "";
+        const mixerTool = definition.mixer ? "<button type=\"button\" id=\"openMixerButton\">Open Mixer</button>" : "";
+        dom.inspector.innerHTML = "<div class=\"field\"><strong>" + device.label + "</strong><span>" + definition.ports.length + " ports | current draw " + definition.currentDraw + "A</span></div><div class=\"row\"><span class=\"pill " + (device.powered ? "good" : "bad") + "\">" + (device.powered ? "Powered" : "No power") + "</span><span class=\"pill\">x " + device.x.toFixed(1) + " ft</span><span class=\"pill\">y " + device.y.toFixed(1) + " ft</span></div>" + speakerTools + "<div class=\"row\">" + mixerTool + "<button type=\"button\" id=\"deleteSelectionButton\" class=\"danger\">Delete</button></div>";
+        bindInspectorButtons(device);
+        return;
+      }
+      if (state.selected.type === "zone") {
+        const zone = state.zones.find(function findSelectedZone(candidate) {
+          return candidate.id === state.selected.id;
+        });
+        if (!zone) {
+          dom.inspector.innerHTML = "<p class=\"pill bad\">Selected zone missing</p>";
+          return;
+        }
+        dom.inspector.innerHTML = "<label class=\"field\"><strong>Zone label</strong><input id=\"zoneLabelInput\" type=\"text\" value=\"" + escapeHtml(zone.label) + "\"></label><div class=\"row\"><span class=\"pill\">" + zone.type + "</span><span class=\"pill\">" + Math.round(zone.w) + " ft x " + Math.round(zone.h) + " ft</span><button type=\"button\" id=\"deleteSelectionButton\" class=\"danger\">Delete</button></div>";
+        const input = document.getElementById("zoneLabelInput");
+        input.addEventListener("input", function updateZoneLabel() {
+          zone.label = input.value;
+          render();
+        });
+        bindDeleteButton();
+      }
+    }
+
+    function bindInspectorButtons(device) {
+      const left = document.getElementById("rotateLeftButton");
+      const right = document.getElementById("rotateRightButton");
+      const monitor = document.getElementById("monitorModeButton");
+      const mixer = document.getElementById("openMixerButton");
+      if (left) {
+        left.addEventListener("click", function rotateLeft() {
+          device.rotation = (device.rotation - 15 + 360) % 360;
+          updateAll();
+        });
+      }
+      if (right) {
+        right.addEventListener("click", function rotateRight() {
+          device.rotation = (device.rotation + 15) % 360;
+          updateAll();
+        });
+      }
+      if (monitor) {
+        monitor.addEventListener("click", function toggleMonitor() {
+          device.monitorMode = !device.monitorMode;
+          updateAll();
+        });
+      }
+      if (mixer) {
+        mixer.addEventListener("click", function openMixer() {
+          openMixerModal(device);
+        });
+      }
+      bindDeleteButton();
+    }
+
+    function bindDeleteButton() {
+      const button = document.getElementById("deleteSelectionButton");
+      if (!button) {
+        return;
+      }
+      button.addEventListener("click", function deleteSelection() {
+        if (!state.selected) {
+          return;
+        }
+        if (state.selected.type === "device") {
+          state.devices = state.devices.filter(function keepDevice(device) {
+            return device.id !== state.selected.id;
+          });
+          state.connections = state.connections.filter(function keepConnection(connection) {
+            return connection.fromDeviceId !== state.selected.id && connection.toDeviceId !== state.selected.id;
+          });
+        }
+        if (state.selected.type === "zone") {
+          state.zones = state.zones.filter(function keepZone(zone) {
+            return zone.id !== state.selected.id;
+          });
+        }
+        state.selected = null;
+        updateAll();
+      });
+    }
+
+    function openMixerModal(device) {
+      if (!device.mixerSettings) {
+        throw new Error("Device is missing mixer settings: " + device.id);
+      }
+      dom.modalTitle.textContent = device.label + " mixer";
+      dom.modalBody.innerHTML = "<div class=\"mixer-grid\">" + device.mixerSettings.channels.slice(0, 12).map(function renderStrip(strip) {
+        return "<div class=\"channel-strip\"><h4>Channel " + strip.channel + "</h4><label>Gain <input type=\"range\" min=\"0\" max=\"100\" value=\"" + strip.gain + "\" data-mixer-gain=\"" + strip.channel + "\"></label><label><input type=\"checkbox\" data-mixer-mute=\"" + strip.channel + "\"" + (strip.muted ? " checked" : "") + "> Mute</label><label>Output <select data-mixer-output=\"" + strip.channel + "\"><option value=\"0\">None</option>" + renderOutputOptions(device.mixerSettings.outputs, strip.assignedOutput) + "</select></label></div>";
+      }).join("") + "</div>";
+      dom.modalBackdrop.classList.add("open");
+      dom.modalBody.querySelectorAll("[data-mixer-gain]").forEach(function bindGain(input) {
+        input.addEventListener("input", function updateGain() {
+          const channel = Number(input.getAttribute("data-mixer-gain"));
+          const strip = device.mixerSettings.channels.find(function findStrip(candidate) { return candidate.channel === channel; });
+          if (strip) {
+            strip.gain = Number(input.value);
+            updateAll();
+          }
+        });
+      });
+      dom.modalBody.querySelectorAll("[data-mixer-mute]").forEach(function bindMute(input) {
+        input.addEventListener("change", function updateMute() {
+          const channel = Number(input.getAttribute("data-mixer-mute"));
+          const strip = device.mixerSettings.channels.find(function findStrip(candidate) { return candidate.channel === channel; });
+          if (strip) {
+            strip.muted = input.checked;
+            updateAll();
+          }
+        });
+      });
+      dom.modalBody.querySelectorAll("[data-mixer-output]").forEach(function bindOutput(select) {
+        select.addEventListener("change", function updateOutput() {
+          const channel = Number(select.getAttribute("data-mixer-output"));
+          const strip = device.mixerSettings.channels.find(function findStrip(candidate) { return candidate.channel === channel; });
+          if (strip) {
+            strip.assignedOutput = Number(select.value);
+            updateAll();
+          }
+        });
+      });
+    }
+
+    function renderOutputOptions(count, selected) {
+      let html = "";
+      for (let index = 1; index <= count; index += 1) {
+        html += "<option value=\"" + index + "\"" + (index === selected ? " selected" : "") + ">Output " + index + "</option>";
+      }
+      return html;
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, function replaceChar(char) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" })[char];
+      });
+    }
+
+    function updateMetrics() {
+      const result = evaluateSystem();
+      const counts = {
+        devices: state.devices.length,
+        cables: state.connections.length,
+        faults: result.issues.length
+      };
+      dom.metricsList.innerHTML = [
+        ["Devices", String(counts.devices)],
+        ["Cables", String(counts.cables)],
+        ["Cable score", String(result.cableScore) + "%"],
+        ["Readiness", result.ready ? "Ready" : "Not ready"]
+      ].map(function mapMetric(metric) {
+        return "<li><span>" + metric[0] + "</span><strong>" + metric[1] + "</strong></li>";
+      }).join("");
+      if (state.operation === "practice" || state.operation === "teacher") {
+        dom.faultList.innerHTML = result.issues.length === 0 ? "<li><span>No current faults</span><span class=\"pill good\">clear</span></li>" : result.issues.slice(0, 8).map(function mapIssue(issue) {
+          return "<li><span>" + issue.message + "</span><span class=\"pill " + issue.severity + "\">" + issue.severity + "</span></li>";
+        }).join("");
+      } else if (state.operation === "troubleshooting") {
+        dom.faultList.innerHTML = "<li><span>Fault hidden from student</span><span class=\"pill warn\">diagnose</span></li>";
+      } else {
+        dom.faultList.innerHTML = "<li><span>Quiz errors are hidden until solved</span><span class=\"pill\">private</span></li>";
+      }
+    }
+
+    function updateAll() {
+      syncControls();
+      updateInspector();
+      updateMetrics();
+      updateScenarioProgress();
+      render();
+    }
+
+    function drawGrid() {
+      const width = dom.canvas.clientWidth;
+      const height = dom.canvas.clientHeight;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#dfe6ed";
+      ctx.fillRect(0, 0, width, height);
+      const pxPerFoot = getPixelsPerFoot() * state.viewport.zoom;
+      const small = Math.max(4, pxPerFoot);
+      const major = small * 5;
+      const startX = state.viewport.x % small;
+      const startY = state.viewport.y % small;
+      ctx.lineWidth = 1;
+      for (let x = startX; x < width; x += small) {
+        ctx.strokeStyle = Math.abs((x - state.viewport.x) % major) < 0.01 ? "#aab8c6" : "#cdd7e1";
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = startY; y < height; y += small) {
+        ctx.strokeStyle = Math.abs((y - state.viewport.y) % major) < 0.01 ? "#aab8c6" : "#cdd7e1";
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+    }
+
+    function render() {
+      drawGrid();
+      drawZones();
+      drawCoverage();
+      drawConnections();
+      drawDevices();
+      drawLabels();
+      drawDrafts();
+      drawSignalAnimation();
+    }
+
+    function drawZones() {
+      state.zones.forEach(function drawZone(zone) {
+        const definition = ZONE_DEFINITIONS[zone.type] || ZONE_DEFINITIONS.custom;
+        const point = worldToScreen({ x: zone.x, y: zone.y });
+        const width = zone.w * getPixelsPerFoot() * state.viewport.zoom;
+        const height = zone.h * getPixelsPerFoot() * state.viewport.zoom;
+        const selected = state.selected && state.selected.type === "zone" && state.selected.id === zone.id;
+        const coverageStatus = state.coverage.find(function findCoverage(item) {
+          return item.zoneId === zone.id;
+        });
+        ctx.fillStyle = getZoneFill(definition.color, coverageStatus);
+        ctx.strokeStyle = selected ? "#0b5cab" : definition.stroke;
+        ctx.lineWidth = selected ? 3 : 2;
+        ctx.setLineDash(zone.type === "hidden" ? [8, 5] : []);
+        ctx.fillRect(point.x, point.y, width, height);
+        ctx.strokeRect(point.x, point.y, width, height);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#1e293b";
+        ctx.font = "600 13px system-ui";
+        ctx.fillText(zone.label, point.x + 8, point.y + 18);
+        if (coverageStatus && zone.type === "audience") {
+          ctx.font = "12px system-ui";
+          ctx.fillText(coverageStatus.status + " (" + Math.round(coverageStatus.score) + ")", point.x + 8, point.y + 34);
+        }
+      });
+    }
+
+    function getZoneFill(baseColor, coverageStatus) {
+      if (!coverageStatus) {
+        return baseColor;
+      }
+      if (coverageStatus.status === "covered") {
+        return "rgba(53, 159, 107, 0.28)";
+      }
+      if (coverageStatus.status === "too loud") {
+        return "rgba(179, 49, 49, 0.22)";
+      }
+      return "rgba(198, 132, 0, 0.22)";
+    }
+
+    function drawCoverage() {
+      state.devices.forEach(function drawSpeakerCoverage(device) {
+        const definition = getDefinition(device);
+        if (!definition.speaker) {
+          return;
+        }
+        const selected = state.selected && state.selected.type === "device" && state.selected.id === device.id;
+        if (!selected) {
+          return;
+        }
+        const speaker = definition.speaker;
+        const center = worldToScreen(getDeviceCenter(device));
+        const zoomScale = getPixelsPerFoot() * state.viewport.zoom;
+        const range = speaker.throwFt * zoomScale;
+        const coverageH = (device.monitorMode ? 70 : speaker.coverageH) * Math.PI / 180;
+        const angle = device.rotation * Math.PI / 180;
+        ctx.save();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(angle);
+        drawCoverageWedge(range, coverageH, "rgba(53, 159, 107, 0.22)");
+        drawCoverageWedge(range * 1.25, coverageH * 1.12, "rgba(198, 132, 0, 0.16)");
+        drawCoverageWedge(range * 1.55, coverageH * 1.25, "rgba(179, 49, 49, 0.12)");
+        if (state.skill === "advanced") {
+          ctx.fillStyle = "#243447";
+          ctx.rotate(-angle);
+          ctx.font = "12px system-ui";
+          ctx.fillText("H " + speaker.coverageH + " deg | V " + speaker.coverageV + " deg | throw " + speaker.throwFt + " ft", 12, -12);
+        }
+        ctx.restore();
+      });
+    }
+
+    function drawCoverageWedge(radius, angle, fill) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, radius, -angle / 2, angle / 2);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+
+    function drawConnections() {
+      state.connections.forEach(function drawConnection(connection) {
+        const fromDevice = findDevice(connection.fromDeviceId);
+        const toDevice = findDevice(connection.toDeviceId);
+        if (!fromDevice || !toDevice) {
+          return;
+        }
+        const cable = CABLE_DEFINITIONS[connection.cableType];
+        const route = getConnectionRoute(connection);
+        if (route.length < 2) {
+          return;
+        }
+        const screenRoute = route.map(worldToScreen);
+        ctx.strokeStyle = connection.valid ? cable.color : "#b33131";
+        ctx.lineWidth = connection.valid ? 3 : 4;
+        ctx.setLineDash(connection.valid ? getCableLineDash(cable) : [8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(screenRoute[0].x, screenRoute[0].y);
+        for (let index = 1; index < screenRoute.length; index += 1) {
+          ctx.lineTo(screenRoute[index].x, screenRoute[index].y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const labelPoint = getRouteMidpoint(screenRoute);
+        ctx.fillStyle = "#111827";
+        ctx.font = "11px system-ui";
+        ctx.fillText(getCableDisplayLabel(cable) + " | " + connection.lengthFt + " ft", labelPoint.x + 6, labelPoint.y - 6);
+        drawCableWarnings(connection, route);
+      });
+    }
+
+    function getCableLineDash(cable) {
+      if (cable.pattern === "audio") {
+        return [];
+      }
+      if (cable.pattern === "power") {
+        return [12, 5];
+      }
+      if (cable.pattern === "speaker") {
+        return [3, 4];
+      }
+      return [8, 4, 2, 4];
+    }
+
+    function getCableDisplayLabel(cable) {
+      return state.skill === "basic" ? cable.basicLabel : cable.label;
+    }
+
+    function drawCableWarnings(connection, route) {
+      const crossedZone = getCrossedProtectedZone(connection, route);
+      if (!crossedZone) {
+        return;
+      }
+      const warningPoint = worldToScreen(getRouteMidpoint(route));
+      ctx.fillStyle = "#fff3cf";
+      ctx.strokeStyle = "#b05f00";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(warningPoint.x, warningPoint.y, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#7a4300";
+      ctx.font = "800 14px system-ui";
+      ctx.fillText("!", warningPoint.x - 3.5, warningPoint.y + 5);
+      ctx.font = "11px system-ui";
+      ctx.fillText("Route around " + crossedZone.label, warningPoint.x + 16, warningPoint.y + 4);
+    }
+
+    function getCrossedProtectedZone(connection, route) {
+      const fromDevice = findDevice(connection.fromDeviceId);
+      const toDevice = findDevice(connection.toDeviceId);
+      if (!fromDevice || !toDevice) {
+        return null;
+      }
+      const routeStart = getDeviceCenter(fromDevice);
+      const routeEnd = getDeviceCenter(toDevice);
+      return state.zones.find(function findCrossedZone(zone) {
+        if (zone.type !== "audience" && zone.type !== "stage") {
+          return false;
+        }
+        if (pointIsInsideRect(routeStart, zone) || pointIsInsideRect(routeEnd, zone)) {
+          return false;
+        }
+        return countRouteObstacleIntersections(route, [zone]) > 0;
+      }) || null;
+    }
+
+    function getRouteMidpoint(route) {
+      const total = getScreenRouteLength(route);
+      let traveled = 0;
+      for (let index = 1; index < route.length; index += 1) {
+        const start = route[index - 1];
+        const end = route[index];
+        const segmentLength = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
+        if (traveled + segmentLength >= total / 2) {
+          const remaining = total / 2 - traveled;
+          const ratio = segmentLength === 0 ? 0 : remaining / segmentLength;
+          return {
+            x: start.x + (end.x - start.x) * ratio,
+            y: start.y + (end.y - start.y) * ratio
+          };
+        }
+        traveled += segmentLength;
+      }
+      return route[route.length - 1];
+    }
+
+    function getScreenRouteLength(route) {
+      let total = 0;
+      for (let index = 1; index < route.length; index += 1) {
+        total += Math.abs(route[index].x - route[index - 1].x) + Math.abs(route[index].y - route[index - 1].y);
+      }
+      return total;
+    }
+
+    function drawDevices() {
+      state.devices.forEach(function drawDevice(device) {
+        const definition = getDefinition(device);
+        const point = worldToScreen({ x: device.x, y: device.y });
+        const width = device.w * getPixelsPerFoot() * state.viewport.zoom;
+        const height = device.h * getPixelsPerFoot() * state.viewport.zoom;
+        const selected = state.selected && state.selected.type === "device" && state.selected.id === device.id;
+        ctx.fillStyle = definition.speaker ? "#eef8f2" : definition.mixer ? "#f7f1e7" : definition.mic ? "#edf3fa" : "#f8fafc";
+        ctx.strokeStyle = selected ? "#0b5cab" : (device.powered ? "#526171" : "#b33131");
+        ctx.lineWidth = selected ? 3 : 2;
+        ctx.beginPath();
+        roundedRect(point.x, point.y, width, height, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#17212e";
+        ctx.font = "700 12px system-ui";
+        ctx.fillText(definition.icon, point.x + 8, point.y + 17);
+        ctx.font = "11px system-ui";
+        ctx.fillText(device.label, point.x + 8, point.y + Math.min(height - 8, 34));
+        if (definition.speaker) {
+          drawAimArrow(device);
+        }
+        if (definition.mic && state.skill === "advanced") {
+          drawMicPattern(device);
+        }
+      });
+    }
+
+    function roundedRect(x, y, width, height, radius) {
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+    }
+
+    function drawAimArrow(device) {
+      const center = worldToScreen(getDeviceCenter(device));
+      const angle = device.rotation * Math.PI / 180;
+      ctx.strokeStyle = "#176f9f";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(center.x, center.y);
+      ctx.lineTo(center.x + Math.cos(angle) * 26, center.y + Math.sin(angle) * 26);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(center.x + Math.cos(angle) * 26, center.y + Math.sin(angle) * 26, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#176f9f";
+      ctx.fill();
+    }
+
+    function drawMicPattern(device) {
+      const center = worldToScreen(getDeviceCenter(device));
+      const radius = (getDefinition(device).mic.feedbackFt || 8) * getPixelsPerFoot() * state.viewport.zoom;
+      ctx.strokeStyle = "rgba(179, 49, 49, 0.36)";
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawLabels() {
+      state.labels.forEach(function drawLabel(label) {
+        const point = worldToScreen({ x: label.x, y: label.y });
+        ctx.fillStyle = "#101820";
+        ctx.font = "700 14px system-ui";
+        ctx.fillText(label.text, point.x, point.y);
+      });
+    }
+
+    function drawDrafts() {
+      if (state.drawingZone) {
+        const start = worldToScreen(state.drawingZone.start);
+        const end = worldToScreen(state.drawingZone.current);
+        const x = Math.min(start.x, end.x);
+        const y = Math.min(start.y, end.y);
+        const w = Math.abs(start.x - end.x);
+        const h = Math.abs(start.y - end.y);
+        const definition = ZONE_DEFINITIONS[state.activeZoneType];
+        ctx.fillStyle = definition.color;
+        ctx.strokeStyle = definition.stroke;
+        ctx.setLineDash([6, 5]);
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
+      }
+      if (state.cableDraft) {
+        const fromDevice = findDevice(state.cableDraft.sourceDeviceId);
+        if (fromDevice) {
+          const route = calculateCableRoute(getPortAnchorPoint(fromDevice, state.cableDraft.sourcePortId, state.pointer), state.pointer).map(worldToScreen);
+          const cable = CABLE_DEFINITIONS[state.cableDraft.cableType];
+          ctx.strokeStyle = cable.color;
+          ctx.lineWidth = 3;
+          ctx.setLineDash(getCableLineDash(cable).length > 0 ? getCableLineDash(cable) : [4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(route[0].x, route[0].y);
+          for (let index = 1; index < route.length; index += 1) {
+            ctx.lineTo(route[index].x, route[index].y);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+      if (state.measure) {
+        const start = worldToScreen(state.measure.start);
+        const end = worldToScreen(state.measure.current);
+        ctx.strokeStyle = "#0b5cab";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawSignalAnimation() {
+      if (!state.animation.running) {
+        return;
+      }
+      const elapsed = performance.now() - state.animation.start;
+      const progress = (elapsed % 2600) / 2600;
+      state.animation.paths.forEach(function drawPath(path) {
+        const screenRoute = path.route.map(worldToScreen);
+        if (screenRoute.length < 2) {
+          return;
+        }
+        const effectiveProgress = path.blocked ? Math.min(progress, path.blockedProgress) : progress;
+        const dot = getRoutePointAtProgress(screenRoute, effectiveProgress);
+        ctx.fillStyle = path.blocked ? "#b33131" : CABLE_DEFINITIONS[path.cableType].color;
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, path.invalid ? 7 : path.blocked ? 6 : 5, 0, Math.PI * 2);
+        ctx.fill();
+        if (path.blocked) {
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          if (path.invalid) {
+            ctx.strokeStyle = "#b33131";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(screenRoute[0].x, screenRoute[0].y);
+            for (let index = 1; index < screenRoute.length; index += 1) {
+              ctx.lineTo(screenRoute[index].x, screenRoute[index].y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      });
+      requestAnimationFrame(render);
+    }
+
+    function getRoutePointAtProgress(route, progress) {
+      const total = getScreenRouteLength(route);
+      const target = total * progress;
+      let traveled = 0;
+      for (let index = 1; index < route.length; index += 1) {
+        const start = route[index - 1];
+        const end = route[index];
+        const segmentLength = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
+        if (traveled + segmentLength >= target) {
+          const remaining = target - traveled;
+          const ratio = segmentLength === 0 ? 0 : remaining / segmentLength;
+          return {
+            x: start.x + (end.x - start.x) * ratio,
+            y: start.y + (end.y - start.y) * ratio
+          };
+        }
+        traveled += segmentLength;
+      }
+      return route[route.length - 1];
+    }
+
+    function handlePointerDown(event) {
+      const screenPoint = getCanvasPoint(event);
+      const worldPoint = snapPoint(screenToWorld(screenPoint));
+      state.pointer = worldPoint;
+      hidePortPopup();
+      if (state.activeTool === "pan" || event.button === 1 || event.shiftKey) {
+        state.drag = { type: "pan", startScreen: screenPoint, viewport: cloneValue(state.viewport) };
+        return;
+      }
+      if (state.activeTool === "equipment") {
+        const existingDevice = hitTestDevice(worldPoint);
+        if (existingDevice) {
+          state.selected = { type: "device", id: existingDevice.id };
+          state.drag = { type: "device", id: existingDevice.id, offset: { x: worldPoint.x - existingDevice.x, y: worldPoint.y - existingDevice.y } };
+          updateAll();
+          return;
+        }
+        addDevice(state.activeEquipmentType, worldPoint);
+        return;
+      }
+      if (state.activeTool === "zone") {
+        state.drawingZone = { start: worldPoint, current: worldPoint };
+        return;
+      }
+      if (state.activeTool === "label") {
+        addLabel(worldPoint);
+        return;
+      }
+      if (state.activeTool === "measure") {
+        state.measure = { start: worldPoint, current: worldPoint };
+        updateMeasurementHud();
+        return;
+      }
+      if (state.activeTool === "cable") {
+        const device = hitTestDevice(worldPoint);
+        if (!device) {
+          setStatus("Click a source device to begin cabling.", "warn");
+          return;
+        }
+        if (!state.cableDraft) {
+          showPortPopup(device, "source", screenPoint);
+        } else {
+          showPortPopup(device, "destination", screenPoint);
+        }
+        return;
+      }
+      const device = hitTestDevice(worldPoint);
+      if (device) {
+        state.selected = { type: "device", id: device.id };
+        state.drag = { type: "device", id: device.id, offset: { x: worldPoint.x - device.x, y: worldPoint.y - device.y } };
+        updateAll();
+        return;
+      }
+      const zone = hitTestZone(worldPoint);
+      if (zone) {
+        state.selected = { type: "zone", id: zone.id };
+        state.drag = { type: "zone", id: zone.id, offset: { x: worldPoint.x - zone.x, y: worldPoint.y - zone.y } };
+        updateAll();
+        return;
+      }
+      state.selected = null;
+      updateAll();
+    }
+
+    function handlePointerMove(event) {
+      const screenPoint = getCanvasPoint(event);
+      const rawWorld = screenToWorld(screenPoint);
+      const worldPoint = snapPoint(rawWorld);
+      state.pointer = rawWorld;
+      dom.pointerHud.textContent = "Pointer: " + rawWorld.x.toFixed(1) + " ft, " + rawWorld.y.toFixed(1) + " ft";
+      if (state.drag && state.drag.type === "pan") {
+        state.viewport.x = state.drag.viewport.x + screenPoint.x - state.drag.startScreen.x;
+        state.viewport.y = state.drag.viewport.y + screenPoint.y - state.drag.startScreen.y;
+        render();
+        return;
+      }
+      if (state.drag && state.drag.type === "device") {
+        const device = findDevice(state.drag.id);
+        if (device) {
+          device.x = worldPoint.x - state.drag.offset.x;
+          device.y = worldPoint.y - state.drag.offset.y;
+          updateAll();
+        }
+        return;
+      }
+      if (state.drag && state.drag.type === "zone") {
+        const zone = state.zones.find(function findDraggedZone(candidate) {
+          return candidate.id === state.drag.id;
+        });
+        if (zone) {
+          zone.x = worldPoint.x - state.drag.offset.x;
+          zone.y = worldPoint.y - state.drag.offset.y;
+          updateAll();
+        }
+        return;
+      }
+      if (state.drawingZone) {
+        state.drawingZone.current = worldPoint;
+        render();
+      }
+      if (state.measure) {
+        state.measure.current = rawWorld;
+        updateMeasurementHud();
+        render();
+      }
+      if (state.cableDraft) {
+        state.cableDraft.pointer = rawWorld;
+        render();
+      }
+    }
+
+    function handlePointerUp() {
+      if (state.drawingZone) {
+        addZone(state.activeZoneType, state.drawingZone.start, state.drawingZone.current);
+        state.drawingZone = null;
+      }
+      state.drag = null;
+    }
+
+    function handleWheel(event) {
+      event.preventDefault();
+      const screenPoint = getCanvasPoint(event);
+      const before = screenToWorld(screenPoint);
+      const factor = event.deltaY < 0 ? 1.1 : 0.9;
+      state.viewport.zoom = Math.min(3.5, Math.max(0.35, state.viewport.zoom * factor));
+      const after = worldToScreen(before);
+      state.viewport.x += screenPoint.x - after.x;
+      state.viewport.y += screenPoint.y - after.y;
+      render();
+    }
+
+    function updateMeasurementHud() {
+      if (!state.measure) {
+        dom.measurementHud.textContent = "Measurement: inactive";
+        return;
+      }
+      const feet = distance(state.measure.start, state.measure.current);
+      dom.measurementHud.textContent = "Measurement: " + feet.toFixed(1) + " ft";
+    }
+
+    function clearWorkspace(requireConfirmation) {
+      if (requireConfirmation && !window.confirm("Clear all equipment, zones, labels, and cables?")) {
+        return;
+      }
+      state.devices = [];
+      state.zones = [];
+      state.labels = [];
+      state.connections = [];
+      state.selected = null;
+      state.drag = null;
+      state.measure = null;
+      state.drawingZone = null;
+      state.cableDraft = null;
+      state.animation = { running: false, start: 0, paths: [] };
+      state.faults = [];
+      state.coverage = [];
+      state.evaluations = [];
+      state.quiz.startedAt = null;
+      state.quiz.activeScenario = null;
+      hidePortPopup();
+      updateMeasurementHud();
+      dom.basicChecklist.hidden = true;
+      setStatus("Workspace cleared.", "");
+      updateAll();
+    }
+
+    function bindEvents() {
+      window.addEventListener("resize", resizeCanvas);
+      dom.canvas.addEventListener("pointerdown", handlePointerDown);
+      dom.canvas.addEventListener("pointermove", handlePointerMove);
+      dom.canvas.addEventListener("pointerup", handlePointerUp);
+      dom.canvas.addEventListener("pointerleave", handlePointerUp);
+      dom.canvas.addEventListener("wheel", handleWheel, { passive: false });
+      dom.portPopup.addEventListener("click", function popupClick(event) {
+        const button = event.target.closest("button[data-port]");
+        if (button) {
+          handlePortClick(button);
+        }
+      });
+      dom.toolButtons.addEventListener("click", function toolClick(event) {
+        const button = event.target.closest("[data-tool]");
+        if (!button) {
+          return;
+        }
+        state.activeTool = button.getAttribute("data-tool");
+        state.cableDraft = null;
+        if (state.activeTool !== "measure") {
+          state.measure = null;
+          updateMeasurementHud();
+        }
+        updateActiveButtons();
+      });
+      dom.zoneButtons.addEventListener("click", function zoneClick(event) {
+        const button = event.target.closest("[data-zone]");
+        if (!button) {
+          return;
+        }
+        state.activeTool = "zone";
+        state.activeZoneType = button.getAttribute("data-zone");
+        updateActiveButtons();
+      });
+      dom.equipmentButtons.addEventListener("click", function equipmentClick(event) {
+        const button = event.target.closest("[data-equipment]");
+        if (!button) {
+          return;
+        }
+        state.activeTool = "equipment";
+        state.activeEquipmentType = button.getAttribute("data-equipment");
+        updateActiveButtons();
+      });
+      dom.cableButtons.addEventListener("click", function cableClick(event) {
+        const button = event.target.closest("[data-cable]");
+        if (!button) {
+          return;
+        }
+        state.activeTool = "cable";
+        state.activeCableType = button.getAttribute("data-cable");
+        state.cableDraft = null;
+        updateActiveButtons();
+      });
+      dom.skillSelect.addEventListener("change", function skillChange() {
+        state.skill = dom.skillSelect.value;
+        state.showAdvancedLibrary = state.skill === "advanced";
+        updateAll();
+      });
+      dom.operationSelect.addEventListener("change", function operationChange() {
+        state.operation = dom.operationSelect.value;
+        if (state.operation === "troubleshooting") {
+          startTroubleshooting();
+        } else {
+          updateAll();
+        }
+      });
+      dom.scaleSelect.addEventListener("change", function scaleChange() {
+        state.scale = dom.scaleSelect.value;
+        syncControls();
+        render();
+      });
+      dom.snapToggle.addEventListener("click", function toggleSnap() {
+        state.snap = !state.snap;
+        syncControls();
+      });
+      dom.advancedLibraryToggle.addEventListener("click", function toggleLibrary() {
+        state.showAdvancedLibrary = !state.showAdvancedLibrary;
+        syncControls();
+      });
+      dom.buildModeButton.addEventListener("click", function activateBuildMode() {
+        state.activeTool = "equipment";
+        if (!BASIC_DEVICE_TYPES.includes(state.activeEquipmentType) && state.skill === "basic") {
+          state.activeEquipmentType = "powered-speaker";
+        }
+        setStatus("Build mode: choose equipment, then click the floor plan to place it.", "");
+        updateActiveButtons();
+      });
+      dom.cableModeButton.addEventListener("click", function activateCableMode() {
+        state.activeTool = "cable";
+        if (!BASIC_CABLE_TYPES.includes(state.activeCableType) && state.skill === "basic") {
+          state.activeCableType = "xlr";
+        }
+        setStatus("Cable mode: choose a cable, then click two devices to connect them.", "");
+        updateActiveButtons();
+      });
+      dom.testButton.addEventListener("click", runSystemTest);
+      dom.doneButton.addEventListener("click", completeScenario);
+      dom.screenshotButton.addEventListener("click", exportScreenshot);
+      dom.saveButton.addEventListener("click", function saveProject() {
+        downloadJson("live-sound-system-project.json", serializeProject());
+      });
+      dom.loadButton.addEventListener("click", function triggerLoad() {
+        dom.projectFileInput.click();
+      });
+      dom.projectFileInput.addEventListener("change", function projectFileChanged() {
+        const file = dom.projectFileInput.files[0];
+        if (file) {
+          readJsonFile(file, loadProject);
+        }
+      });
+      dom.clearButton.addEventListener("click", function clearFromProject() {
+        clearWorkspace(true);
+      });
+      dom.clearTopButton.addEventListener("click", function clearFromTopbar() {
+        clearWorkspace(true);
+      });
+      dom.startScenarioButton.addEventListener("click", function scenarioStartClick() {
+        state.operation = "quiz";
+        dom.operationSelect.value = "quiz";
+        startScenario(getSelectedScenario());
+      });
+      dom.newFaultButton.addEventListener("click", startTroubleshooting);
+      dom.saveScenarioButton.addEventListener("click", function saveScenario() {
+        downloadJson("live-sound-teacher-scenario.json", buildTeacherScenario());
+      });
+      dom.loadScenarioButton.addEventListener("click", function triggerScenarioLoad() {
+        dom.scenarioFileInput.click();
+      });
+      dom.scenarioFileInput.addEventListener("change", function scenarioFileChanged() {
+        const file = dom.scenarioFileInput.files[0];
+        if (file) {
+          readJsonFile(file, function loadedScenario(scenario) {
+            state.customScenarios.push(scenario);
+            populateScenarioSelect();
+            setStatus("Teacher scenario loaded into the scenario list.", "good");
+          });
+        }
+      });
+      dom.closeModalButton.addEventListener("click", function closeModal() {
+        dom.modalBackdrop.classList.remove("open");
+      });
+      dom.modalBackdrop.addEventListener("click", function backdropClick(event) {
+        if (event.target === dom.modalBackdrop) {
+          dom.modalBackdrop.classList.remove("open");
+        }
+      });
+      window.addEventListener("keydown", function keydown(event) {
+        if (event.key === "Escape") {
+          state.cableDraft = null;
+          hidePortPopup();
+          dom.modalBackdrop.classList.remove("open");
+          render();
+        }
+        if (event.key === "Delete" || event.key === "Backspace") {
+          const deleteButton = document.getElementById("deleteSelectionButton");
+          if (deleteButton && state.selected) {
+            deleteButton.click();
+          }
+        }
+      });
+    }
+
+    function seedInitialLayout() {
+      state.zones = [
+        { id: makeId("zone"), type: "stage", x: 4, y: 4, w: 28, h: 14, label: "Stage" },
+        { id: makeId("zone"), type: "audience", x: 5, y: 22, w: 36, h: 22, label: "Audience" },
+        { id: makeId("zone"), type: "foh", x: 35, y: 8, w: 9, h: 6, label: "FOH" }
+      ];
+      state.devices = [
+        normalizeDevice({ id: makeId("dev"), type: "wall-outlet", x: 2, y: 2 }),
+        normalizeDevice({ id: makeId("dev"), type: "performer", x: 16, y: 10 })
+      ];
+    }
+
+    function init() {
+      buildToolButtons();
+      buildZoneButtons();
+      populateScenarioSelect();
+      seedInitialLayout();
+      bindEvents();
+      resizeCanvas();
+      updateAll();
+      setInterval(updateTimer, 500);
+    }
+
+    init();
+  </script>
+</body>
+</html>
