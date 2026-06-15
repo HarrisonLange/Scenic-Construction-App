@@ -430,6 +430,81 @@
   #tapeQuizTarget .tqt-list{margin-top:8px;border-top:1px solid var(--ui-dark3);padding-top:7px;
     font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text-light)}
   #tapeQuizTarget .tqt-list .done{color:var(--text-dim)}
+
+  /* ── Quiz picker menu ─────────────────────── */
+  #quizMenuBack .modal{width:560px;max-width:94vw}
+  .qm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+  .qm-opt{
+    text-align:left;background:var(--ui-dark);border:1px solid var(--ui-dark3);
+    border-radius:10px;padding:13px 14px;cursor:pointer;font-family:inherit;color:var(--text-light);
+    transition:border-color .12s,background .12s;display:flex;flex-direction:column;gap:4px;
+  }
+  .qm-opt:hover{border-color:var(--amber);background:#26262a}
+  .qm-opt .qm-t{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .qm-opt .qm-t .qm-ic{color:var(--amber);display:flex}
+  .qm-opt .qm-d{font-size:11px;color:var(--text-dim);line-height:1.45}
+
+  /* ── Fractional-inch quiz ─────────────────── */
+  #fracQuizBack .modal{width:440px;max-width:94vw}
+  .fq-top{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;
+    color:var(--text-dim);margin-bottom:14px}
+  .fq-top #fqScore{color:var(--tape)}
+  .fq-q{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text-light);
+    text-align:center;margin:6px 0 16px;letter-spacing:.5px}
+  .fq-inrow{display:flex;gap:8px}
+  #fqAnswer{flex:1;background:var(--ui-dark);color:var(--tape);border:1px solid var(--ui-dark3);
+    border-radius:6px;padding:9px 11px;font-family:var(--mono);font-size:16px;outline:none}
+  #fqAnswer:focus{border-color:var(--tape)}
+  #fqCheck{background:var(--amber);border:1px solid var(--amber);color:#1c1c1e;font-weight:600;
+    border-radius:6px;padding:0 16px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  #fqCheck:hover{background:#fcd34d}
+  .fq-feedback{min-height:20px;margin-top:12px;font-size:12.5px;line-height:1.5}
+  .fq-feedback.ok{color:#4ade80}
+  .fq-feedback.bad{color:#f87171}
+  .fq-feedback .fq-corr{font-family:var(--mono);color:var(--text-light)}
+  .fq-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .fq-actions button{border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;
+    font-family:inherit;border:1px solid var(--ui-dark3)}
+  #fqQuit{background:transparent;color:var(--text-dim)}
+  #fqQuit:hover{color:#fff;background:var(--ui-dark3)}
+  #fqNext{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+
+  /* ── Tape-measure quiz panel + read-only tape ─ */
+  #tapeQuizPanel{
+    position:absolute;top:14px;left:18px;z-index:97;display:none;width:300px;
+    background:rgba(28,28,30,.96);border:1px solid var(--amber);border-radius:10px;
+    padding:13px 15px;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  #tapeOverlay.tape-quiz #tapeQuizPanel{display:block}
+  #tapeQuizPanel .tq-head{font-size:10.5px;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase}
+  #tapeQuizPanel .tq-head b{color:var(--amber)}
+  #tapeQuizPanel .tq-target{font-family:var(--mono);font-size:13px;color:var(--text-dim);margin-top:8px}
+  #tapeQuizPanel .tq-target b{font-size:24px;color:var(--tape);display:block;margin-top:2px;letter-spacing:.5px}
+  #tapeQuizPanel .tq-feedback{min-height:18px;margin-top:10px;font-size:12px;line-height:1.4}
+  #tapeQuizPanel .tq-feedback.ok{color:#4ade80}
+  #tapeQuizPanel .tq-feedback.bad{color:#f87171}
+  #tqQuit{margin-top:12px;background:transparent;border:1px solid var(--ui-dark3);color:var(--text-dim);
+    border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit}
+  #tqQuit:hover{color:#fff;background:var(--ui-dark3)}
+  /* hide the type-box and the live readout while the student is being quizzed */
+  #tapeOverlay.tape-quiz #tapeNumWrap,
+  #tapeOverlay.tape-quiz #tapeValue,
+  #tapeOverlay.tape-quiz #tapeOrientWrap,
+  #tapeOverlay.tape-quiz #tapeOrientCaption,
+  #tapeOverlay.tape-quiz #tapeCancel,
+  #tapeOverlay.tape-quiz #tapeQuizTarget{display:none !important}
+
+  /* ── Practice-quiz results (fractional / tape) ─ */
+  #practiceResultsBack .modal{width:340px;text-align:center}
+  #practiceResultsBack h3{font-size:17px;margin-bottom:2px}
+  #practiceResultsBack .pr-sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-bottom:14px}
+  #prScore{font-family:var(--mono);font-size:40px;font-weight:700;color:var(--tape);margin:4px 0}
+  #prScoreLbl{font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:18px}
+  #practiceResultsBack .pr-actions{display:flex;gap:8px;justify-content:center}
+  #practiceResultsBack .pr-actions button{border-radius:6px;padding:8px 16px;font-size:12.5px;
+    cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
+  #prClose{background:transparent;color:var(--text-dim)}
+  #prRetry{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
 </style>
 </head>
 <body>
@@ -590,6 +665,12 @@
 <!-- Tape measure overlay -->
 <div id="tapeOverlay">
   <div id="tapeQuizTarget"></div>
+  <div id="tapeQuizPanel">
+    <div class="tq-head">TAPE QUIZ &middot; <b id="tqProgress">1 / 10</b></div>
+    <div class="tq-target">Find this length on the tape:<b id="tqTarget">—</b></div>
+    <div class="tq-feedback" id="tqFeedback"></div>
+    <button id="tqQuit">Quit quiz</button>
+  </div>
   <div id="tapeScrollHint"><span class="wheel"></span> Scroll to pull the tape out</div>
   <div id="tapeFirstTip">
     <b>Reading the tape, the real-shop way.</b><br>
@@ -661,6 +742,66 @@
     <div class="qr-actions">
       <button id="quizResultsClose">Close</button>
       <button id="quizShot">Download results PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quiz picker menu -->
+<div class="modal-back" id="quizMenuBack">
+  <div class="modal">
+    <h3>Choose a quiz</h3>
+    <div class="m-sub">Pick a practice mode to start.</div>
+    <div class="qm-grid">
+      <button class="qm-opt" data-q="normal">
+        <span class="qm-t"><span class="qm-ic"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 4v4l2.5 1.5"/></svg></span>Normal Quiz</span>
+        <span class="qm-d">Timed build challenge — draw each flat to spec, verified against the shop rules.</span>
+      </button>
+      <button class="qm-opt" data-q="easy">
+        <span class="qm-t"><span class="qm-ic"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h12M2 4h12M2 12h7"/></svg></span>Easy Mode Quiz</span>
+        <span class="qm-d">Same build challenge, with the cut list shown as a checklist to follow.</span>
+      </button>
+      <button class="qm-opt" data-q="frac">
+        <span class="qm-t"><span class="qm-ic"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 3L5 13M5 4.5h.01M11 11.5h.01"/></svg></span>Fractional Inch Quiz</span>
+        <span class="qm-d">20 add &amp; subtract problems in feet, inches &amp; fractions down to 1/16&Prime;.</span>
+      </button>
+      <button class="qm-opt" data-q="tape">
+        <span class="qm-t"><span class="qm-ic"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="5" width="14" height="6" rx="1"/><path d="M4 5v3M7 5v2M10 5v3M13 5v2"/></svg></span>Tape Measure Quiz</span>
+        <span class="qm-d">Read the tape — click the mark that matches the requested measurement.</span>
+      </button>
+    </div>
+    <div class="m-actions">
+      <button class="m-cancel" id="qmCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fractional-inch quiz -->
+<div class="modal-back" id="fracQuizBack">
+  <div class="modal">
+    <div class="fq-top"><span id="fqProgress">1 / 20</span><span id="fqScore">Score 0</span></div>
+    <div class="fq-q" id="fqQuestion">—</div>
+    <div class="fq-inrow">
+      <input id="fqAnswer" type="text" placeholder="answer, e.g. 3' 10 1/8&quot;" autocomplete="off">
+      <button id="fqCheck" type="button">Check &crarr;</button>
+    </div>
+    <div class="fq-feedback" id="fqFeedback"></div>
+    <div class="fq-actions">
+      <button id="fqQuit">Quit</button>
+      <button id="fqNext" style="display:none">Next &rsaquo;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Practice-quiz results (fractional / tape) -->
+<div class="modal-back" id="practiceResultsBack">
+  <div class="modal">
+    <h3 id="prTitle">Quiz complete 🎉</h3>
+    <div class="pr-sub" id="prSub"></div>
+    <div id="prScore">0 / 0</div>
+    <div id="prScoreLbl">Correct</div>
+    <div class="pr-actions">
+      <button id="prClose">Close</button>
+      <button id="prRetry">Try again</button>
     </div>
   </div>
 </div>
@@ -1821,7 +1962,8 @@ const tapeOverlay = document.getElementById('tapeOverlay');
 const tapeCv = document.getElementById('tapeCv');
 const tctx = tapeCv.getContext('2d');
 const T = { active:false, type:null, x:0, y:0, stage:'length',
-            values:{}, maxIn:192, offsetIn:-1.5, hoverSix:null, hoverX:null };
+            values:{}, maxIn:192, offsetIn:-1.5, hoverSix:null, hoverX:null,
+            quiz:false, revealSix:null };
 
 function tapeSizeCanvas(){
   tapeCv.width = window.innerWidth || 1280;
@@ -1830,6 +1972,8 @@ function tapeSizeCanvas(){
 function tapeOpen(type, wx, wy){
   const m = MATS[type];
   T.active = true; T.type = type; T.x = wx; T.y = wy;
+  T.quiz = false; T.revealSix = null;
+  tapeOverlay.classList.remove('tape-quiz');
   T.stage = 'length';
   T.values = {};
   T.maxIn = (m.kind==='sheet') ? 96 : 192;
@@ -1868,6 +2012,7 @@ function setTapeTitle(){
     (T.stage==='width' ? ` <span style="color:var(--text-dim);font-weight:400">(length ${fmtIn(T.values.lengthIn)})</span>` : '');
 }
 function tapeClose(cancelled){
+  if (T.quiz){ tapeQuizQuit(); return; }
   T.active = false;
   tapeOverlay.classList.remove('show');
   document.getElementById('tapeFirstTip').style.display='none';
@@ -1991,21 +2136,35 @@ function tapeDraw(){
     g.stroke();
     g.lineCap='butt';
 
-    // floating dimension label above the marking
-    const lbl = fmtSix(T.hoverSix);
-    g.font = 'bold 15px '+MONO;
-    const tw = g.measureText(lbl).width;
-    const lx = Math.max(6, Math.min(w-tw-22, hx-tw/2-8));
-    g.fillStyle = 'rgba(28,28,30,.95)';
-    g.strokeStyle = '#facc15'; g.lineWidth=1;
-    const ly = 6;
-    g.fillRect(lx, ly, tw+16, 24);
-    g.strokeRect(lx+.5, ly+.5, tw+15, 23);
-    g.fillStyle = '#facc15';
-    g.textAlign='left'; g.textBaseline='middle';
-    g.fillText(lbl, lx+8, ly+12);
+    // floating dimension label above the marking — suppressed in quiz mode
+    // (the whole point is that the student reads the tape themselves)
+    if (!T.quiz){
+      const lbl = fmtSix(T.hoverSix);
+      g.font = 'bold 15px '+MONO;
+      const tw = g.measureText(lbl).width;
+      const lx = Math.max(6, Math.min(w-tw-22, hx-tw/2-8));
+      g.fillStyle = 'rgba(28,28,30,.95)';
+      g.strokeStyle = '#facc15'; g.lineWidth=1;
+      const ly = 6;
+      g.fillRect(lx, ly, tw+16, 24);
+      g.strokeRect(lx+.5, ly+.5, tw+15, 23);
+      g.fillStyle = '#facc15';
+      g.textAlign='left'; g.textBaseline='middle';
+      g.fillText(lbl, lx+8, ly+12);
 
-    document.getElementById('tapeValue').textContent = lbl;
+      document.getElementById('tapeValue').textContent = lbl;
+    }
+  }
+
+  // quiz reveal: after a wrong answer, mark where the target actually was
+  if (T.quiz && T.revealSix != null){
+    const rx = tapeXAt(T.revealSix/16);
+    g.strokeStyle = '#4ade80'; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(rx, top-10); g.lineTo(rx, bot+10); g.stroke();
+    g.fillStyle = '#4ade80';
+    g.beginPath();
+    g.moveTo(rx, bot+8); g.lineTo(rx-6, bot+18); g.lineTo(rx+6, bot+18);
+    g.closePath(); g.fill();
   }
 }
 
@@ -2023,6 +2182,7 @@ tapeCv.addEventListener('mouseleave', ()=>{
 });
 tapeCv.addEventListener('click', e=>{
   if (T.hoverSix == null) return;
+  if (T.quiz){ tapeQuizAnswer(T.hoverSix); return; }
   tapeStageDone(T.hoverSix);
 });
 tapeOverlay.addEventListener('wheel', e=>{
@@ -3005,16 +3165,18 @@ function quizNewQuestion(){
 function quizTick(){
   document.getElementById('quizTimer').textContent = fmtClock(performance.now() - quiz.qStart);
 }
-function quizStart(){
+function quizStart(opts){
   if (quiz.active) return;
   if (typeof training !== 'undefined' && training.active){ toast('Exit Training first, then start the Quiz.', {warn:true}); return; }
   if (pieces.length || annots.length){
     if (!confirm('Starting the quiz will temporarily hide your current drawing — it’s restored when you exit the quiz. Continue?')) return;
   }
+  const wantEasy = (opts && typeof opts.easy === 'boolean') ? opts.easy : document.getElementById('quizEasy').checked;
+  document.getElementById('quizEasy').checked = wantEasy;
   quiz.backup = snapshot();              // preserve current drawing
   quiz.undoBackup = undoStack.slice();   // preserve pre-quiz undo history
   quiz.active = true; quiz.n = 0; quiz.times = [];
-  quiz.easy = document.getElementById('quizEasy').checked;
+  quiz.easy = wantEasy;
   quiz.easyUsed = quiz.easy;
   dimA=null; dimCursor=null;
   if (toolMode==='dimension') setTool('select');
@@ -3075,7 +3237,8 @@ function quizExit(restore){
   syncPropPanel(); updateCutList(); save(); fitView(); draw();
 }
 document.getElementById('quizBtn').addEventListener('click', ()=>{
-  if (quiz.active) quizExit(true); else quizStart();
+  if (quiz.active){ quizExit(true); return; }
+  openQuizMenu();
 });
 document.getElementById('quizEasy').addEventListener('change', e=>{
   quiz.easy = e.target.checked;
@@ -3115,6 +3278,220 @@ document.getElementById('quizShot').addEventListener('click', ()=>{
   a.href=c.toDataURL('image/png');
   a.download='quiz-results-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png';
   document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ============================================================
+   QUIZ PICKER MENU
+   Clicking the Quiz button opens a menu of practice modes:
+   Normal build, Easy build, Fractional-inch arithmetic, and the
+   tape-measure reading drill.
+   ============================================================ */
+const quizMenuBack = document.getElementById('quizMenuBack');
+function openQuizMenu(){
+  if (typeof training !== 'undefined' && training.active){
+    toast('Exit Training first, then open the Quiz menu.', {warn:true}); return;
+  }
+  quizMenuBack.classList.add('show');
+}
+function closeQuizMenu(){ quizMenuBack.classList.remove('show'); }
+document.getElementById('qmCancel').addEventListener('click', closeQuizMenu);
+quizMenuBack.addEventListener('click', e=>{ if (e.target===quizMenuBack) closeQuizMenu(); });
+quizMenuBack.querySelectorAll('.qm-opt').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const q = btn.dataset.q;
+    closeQuizMenu();
+    if (q==='normal')    quizStart({easy:false});
+    else if (q==='easy') quizStart({easy:true});
+    else if (q==='frac') fracQuizStart();
+    else if (q==='tape') tapeQuizStart();
+  });
+});
+
+/* shared RNG helpers ─────────────────────────── */
+function randInt(lo, hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
+/* A proper inch-fraction in sixteenths, denominator drawn from
+   {2,4,8,16} with an odd numerator so the chosen denominator is the
+   one that actually shows (1/2; 1/4,3/4; 5/8,7/8; 7/16,15/16; …). */
+function randFracSix(){
+  const d = [2,4,8,16][randInt(0,3)];
+  const odds = []; for (let n=1; n<d; n+=2) odds.push(n);
+  return odds[randInt(0, odds.length-1)] * (16/d);
+}
+
+/* ============================================================
+   FRACTIONAL-INCH QUIZ
+   20 add / subtract problems in feet-inch-sixteenth notation with
+   mixed denominators. The student types the answer; it's parsed
+   with the same length parser the tape uses and compared exactly.
+   ============================================================ */
+const FRAC_TOTAL = 20;
+const fracQuiz = { active:false, n:0, score:0, answerSix:0, answered:false };
+const fracBack = document.getElementById('fracQuizBack');
+
+/* one operand in total sixteenths: 0–4 ft, 0–11 in, optional fraction */
+function randOperandSix(withFrac){
+  const ft = randInt(0,4), inch = randInt(0,11);
+  return (ft*12 + inch)*16 + (withFrac ? randFracSix() : 0);
+}
+function makeFracQuestion(){
+  const sub = Math.random() < 0.5;
+  // at least one operand always carries a fraction so the drill stays fractional
+  let a = randOperandSix(true), b = randOperandSix(Math.random() < 0.5);
+  if (sub){
+    if (a < b){ const t=a; a=b; b=t; }
+    if (a === b) b = Math.max(16, b - 16);          // keep the result positive
+  }
+  const answerSix = sub ? a - b : a + b;
+  return { text: fmtSix(a) + (sub ? '  −  ' : '  +  ') + fmtSix(b), answerSix };
+}
+function fracQuizStart(){
+  fracQuiz.active = true; fracQuiz.n = 0; fracQuiz.score = 0;
+  fracBack.classList.add('show');
+  fracQuizNext();
+}
+function fracQuizNext(){
+  if (fracQuiz.n >= FRAC_TOTAL){ fracQuizFinish(); return; }
+  fracQuiz.n++;
+  fracQuiz.answered = false;
+  const qd = makeFracQuestion();
+  fracQuiz.answerSix = qd.answerSix;
+  document.getElementById('fqProgress').textContent = fracQuiz.n + ' / ' + FRAC_TOTAL;
+  document.getElementById('fqScore').textContent = 'Score ' + fracQuiz.score;
+  document.getElementById('fqQuestion').textContent = qd.text + '  =  ?';
+  const fb = document.getElementById('fqFeedback'); fb.className='fq-feedback'; fb.innerHTML='';
+  document.getElementById('fqNext').style.display='none';
+  document.getElementById('fqCheck').style.display='';
+  const inp = document.getElementById('fqAnswer');
+  inp.value=''; inp.disabled=false; setTimeout(()=>inp.focus(),0);
+}
+function fracQuizCheck(){
+  if (!fracQuiz.active || fracQuiz.answered) return;
+  const inp = document.getElementById('fqAnswer');
+  const six = parseLengthToSix(inp.value);
+  if (six == null){
+    toast('Couldn’t read that — try like <b>3\' 10 1/8"</b> or <b>22 1/2"</b>', {warn:true, ms:2600});
+    inp.focus(); return;
+  }
+  fracQuiz.answered = true; inp.disabled = true;
+  const fb = document.getElementById('fqFeedback');
+  if (six === fracQuiz.answerSix){
+    fracQuiz.score++;
+    fb.className = 'fq-feedback ok'; fb.innerHTML = '✓ Correct!';
+  } else {
+    fb.className = 'fq-feedback bad';
+    fb.innerHTML = '✗ Not quite — the answer is <span class="fq-corr">' + fmtSix(fracQuiz.answerSix) +
+                   '</span> (you said <span class="fq-corr">' + fmtSix(six) + '</span>).';
+  }
+  document.getElementById('fqScore').textContent = 'Score ' + fracQuiz.score;
+  document.getElementById('fqCheck').style.display='none';
+  const next = document.getElementById('fqNext');
+  next.style.display=''; next.textContent = (fracQuiz.n >= FRAC_TOTAL) ? 'See results ›' : 'Next ›';
+  setTimeout(()=>next.focus(),0);
+}
+function fracQuizFinish(){
+  fracQuiz.active = false;
+  fracBack.classList.remove('show');
+  showPracticeResults({ title:'Fractional-Inch Quiz', sub:FRAC_TOTAL+' add & subtract problems',
+                        score:fracQuiz.score, total:FRAC_TOTAL, retry:fracQuizStart });
+}
+function fracQuizQuit(){
+  fracQuiz.active = false;
+  fracBack.classList.remove('show');
+}
+document.getElementById('fqCheck').addEventListener('click', fracQuizCheck);
+document.getElementById('fqNext').addEventListener('click', fracQuizNext);
+document.getElementById('fqQuit').addEventListener('click', fracQuizQuit);
+document.getElementById('fqAnswer').addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if (e.key==='Enter'){ e.preventDefault(); fracQuiz.answered ? fracQuizNext() : fracQuizCheck(); }
+  else if (e.key==='Escape'){ e.preventDefault(); fracQuizQuit(); }
+});
+
+/* ============================================================
+   TAPE-MEASURE QUIZ
+   Reuses the shop tape (1/16" graduations, scroll-to-pull,
+   magnifier) but with the type-box and the live text readout
+   removed: the student is given a target and must click the
+   matching mark. Wrong answers reveal the correct mark in green.
+   ============================================================ */
+const TAPE_TOTAL = 10;
+const tapeQuiz = { active:false, n:0, score:0, target:0, locked:false };
+
+/* a random target in sixteenths, ~2"–47", usually landing on a fraction */
+function randTapeTargetSix(){
+  return randInt(2,46)*16 + (Math.random() < 0.8 ? randFracSix() : 0);
+}
+function tapeQuizStart(){
+  if (quiz.active){ toast('Finish the build quiz first.', {warn:true}); return; }
+  tapeQuiz.active = true; tapeQuiz.n = 0; tapeQuiz.score = 0;
+  // drive the tape canvas in read-only quiz mode
+  T.active = true; T.quiz = true; T.type = 'lum-1x3';
+  T.stage = 'length'; T.values = {};
+  T.maxIn = 60; T.offsetIn = -1.5; T.hoverSix = null; T.hoverX = null; T.revealSix = null;
+  tapeOverlay.classList.add('show','tape-quiz');
+  document.getElementById('tapeFirstTip').style.display='none';
+  document.getElementById('tapeTitle').innerHTML = 'Tape Quiz — click the <em>mark</em> that matches';
+  document.getElementById('tapeHint').textContent =
+    'SCROLL to pull the tape out · hover for the magnifier · CLICK the mark · Esc quits';
+  tapeSizeCanvas();
+  tapeQuizNext();
+}
+function tapeQuizNext(){
+  if (tapeQuiz.n >= TAPE_TOTAL){ tapeQuizFinish(); return; }
+  tapeQuiz.n++;
+  tapeQuiz.locked = false;
+  tapeQuiz.target = randTapeTargetSix();
+  T.offsetIn = -1.5; T.hoverSix = null; T.hoverX = null; T.revealSix = null;
+  document.getElementById('tqProgress').textContent = tapeQuiz.n + ' / ' + TAPE_TOTAL;
+  document.getElementById('tqTarget').textContent = fmtSix(tapeQuiz.target);
+  const fb = document.getElementById('tqFeedback'); fb.className='tq-feedback'; fb.innerHTML='';
+  tapeDraw();
+}
+function tapeQuizAnswer(six){
+  if (!tapeQuiz.active || tapeQuiz.locked) return;
+  tapeQuiz.locked = true;
+  const fb = document.getElementById('tqFeedback');
+  const correct = (six === tapeQuiz.target);
+  if (correct){
+    tapeQuiz.score++;
+    fb.className = 'tq-feedback ok'; fb.innerHTML = '✓ Correct!';
+  } else {
+    fb.className = 'tq-feedback bad';
+    fb.innerHTML = '✗ You clicked ' + fmtSix(six) + ' — the green mark is the answer.';
+    T.revealSix = tapeQuiz.target;
+  }
+  tapeDraw();
+  setTimeout(()=>{ if (tapeQuiz.active) tapeQuizNext(); }, correct ? 850 : 1900);
+}
+function tapeQuizFinish(){
+  tapeQuiz.active = false;
+  T.active = false; T.quiz = false; T.revealSix = null;
+  tapeOverlay.classList.remove('show','tape-quiz');
+  showPracticeResults({ title:'Tape-Measure Quiz', sub:TAPE_TOTAL+' measurements read',
+                        score:tapeQuiz.score, total:TAPE_TOTAL, retry:tapeQuizStart });
+}
+function tapeQuizQuit(){
+  tapeQuiz.active = false;
+  T.active = false; T.quiz = false; T.revealSix = null;
+  tapeOverlay.classList.remove('show','tape-quiz');
+}
+document.getElementById('tqQuit').addEventListener('click', tapeQuizQuit);
+
+/* ── Practice-quiz results (fractional / tape) ── */
+let practiceRetry = null;
+function showPracticeResults({title, sub, score, total, retry}){
+  practiceRetry = retry || null;
+  document.getElementById('prTitle').textContent = title + ' 🎉';
+  document.getElementById('prSub').textContent = sub;
+  document.getElementById('prScore').textContent = score + ' / ' + total;
+  document.getElementById('practiceResultsBack').classList.add('show');
+}
+document.getElementById('prClose').addEventListener('click', ()=>{
+  document.getElementById('practiceResultsBack').classList.remove('show');
+});
+document.getElementById('prRetry').addEventListener('click', ()=>{
+  document.getElementById('practiceResultsBack').classList.remove('show');
+  if (practiceRetry) practiceRetry();
 });
 
 /* ============================================================
