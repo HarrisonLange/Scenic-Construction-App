@@ -3,24 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Live Sound System Simulator</title>
+  <title>SDSCPA — Live Sound System Simulator</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
   <style>
     :root {
-      color-scheme: light;
-      --bg: #f4f6f8;
-      --panel: #ffffff;
-      --panel-2: #eef2f5;
-      --ink: #18212b;
-      --muted: #637083;
-      --line: #c7d0db;
-      --accent: #176f9f;
-      --accent-2: #247c5a;
-      --warn: #c68400;
-      --bad: #b33131;
-      --good: #247c5a;
-      --focus: #0b5cab;
-      --shadow: 0 8px 24px rgba(25, 33, 44, 0.14);
+      color-scheme: dark;
+      /* UI chrome — matched to SDSCPAinventory.com dark theme, shared with scenic lab
+         (bg #0a0a0a · card #1a1a1a · border #333 · text #f0f0f0 · muted #888) */
+      --bg: #0a0a0a;
+      --panel: #1a1a1a;
+      --panel-2: #26262b;
+      --ink: #f0f0f0;
+      --muted: #888888;
+      --line: #333333;
+      --accent: #3b82f6;     /* inventory primary blue */
+      --accent-2: #22c55e;   /* inventory success green */
+      --violet: #8b5cf6;
+      --warn: #fbbf24;       /* inventory warn / highlight */
+      --bad: #ef4444;        /* inventory error red */
+      --good: #22c55e;
+      --focus: #3b82f6;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
       --radius: 8px;
+      /* Graph-paper drawing surface kept light for legibility (drawing content, not chrome) */
+      --paper: #dfe6ed;
+      --mono: 'SF Mono', 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -63,7 +70,7 @@
     button:hover,
     select:hover,
     input:hover {
-      border-color: #94a3b8;
+      border-color: #4a4a52;
     }
 
     button:focus-visible,
@@ -76,9 +83,9 @@
 
     button.active,
     .tool-btn.active {
-      background: #dff1f7;
+      background: var(--accent);
       border-color: var(--accent);
-      color: #0f4e70;
+      color: #fff;
     }
 
     button.primary {
@@ -88,8 +95,9 @@
     }
 
     button.danger {
-      border-color: #dbb2b2;
-      color: var(--bad);
+      background: #2a1314;
+      border-color: #7f1d1d;
+      color: #fca5a5;
     }
 
     select,
@@ -97,7 +105,7 @@
     textarea {
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: #fff;
+      background: var(--panel-2);
       color: var(--ink);
       min-height: 44px;
       padding: 6px 8px;
@@ -109,46 +117,53 @@
     }
 
     .topbar {
+      position: relative;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
       gap: 12px;
       padding: 8px 12px;
-      background: #101820;
-      color: #fff;
-      border-bottom: 1px solid #263545;
+      background: var(--bg);
+      color: var(--ink);
+      border-bottom: 1px solid #000;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    }
+
+    /* SDSCPA rainbow brand strip echoing the logo gradient (shared with scenic lab) */
+    .topbar::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 2px;
+      background: linear-gradient(90deg, #7AC143, #F7941E, #ED1C45, #EC008C, #92278F, #2E3192, #00AEEF);
+      opacity: 0.9;
+      pointer-events: none;
     }
 
     .brand {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 260px;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1;
+      min-width: 200px;
     }
 
-    .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 6px;
-      background: #e7f4ed;
-      color: #176342;
-      font-weight: 800;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 17px;
-      line-height: 1.1;
-      letter-spacing: 0;
-    }
-
-    .brand small {
+    .brand-logo {
+      height: 22px;
+      width: auto;
       display: block;
-      margin-top: 2px;
-      color: #a9b8c7;
-      font-size: 12px;
+    }
+
+    .brand-tag {
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 1.6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .top-controls,
@@ -165,9 +180,9 @@
     }
 
     .top-actions #clearTopButton {
-      background: #fff1f1;
-      border-color: #d99a9a;
-      color: var(--bad);
+      background: #2a1314;
+      border-color: #7f1d1d;
+      color: #fca5a5;
       font-weight: 700;
     }
 
@@ -180,16 +195,16 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #d9e2ec;
+      color: var(--muted);
       white-space: nowrap;
       font-size: 13px;
     }
 
     .topbar select,
     .topbar input {
-      background: #1f2c39;
-      border-color: #3a4b5d;
-      color: #fff;
+      background: var(--panel);
+      border-color: var(--line);
+      color: var(--ink);
     }
 
     .app {
@@ -221,10 +236,11 @@
 
     .panel-section h2 {
       margin: 0 0 8px;
-      font-size: 13px;
-      color: #344256;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.1em;
     }
 
     .mode-grid,
@@ -272,7 +288,7 @@
       height: 22px;
       border-radius: 5px;
       background: var(--panel-2);
-      color: #263545;
+      color: var(--ink);
       font-size: 13px;
       font-weight: 800;
     }
@@ -290,7 +306,7 @@
       min-width: 0;
       min-height: 0;
       overflow: hidden;
-      background: #dfe6ed;
+      background: #0d0d10;
     }
 
     #floorCanvas {
@@ -314,13 +330,15 @@
 
     .hud-item {
       pointer-events: auto;
-      background: rgba(255, 255, 255, 0.94);
+      background: rgba(26, 26, 27, 0.92);
       border: 1px solid var(--line);
       border-radius: 6px;
       padding: 7px 9px;
-      box-shadow: 0 4px 14px rgba(24, 33, 43, 0.12);
-      font-size: 12px;
-      color: #344256;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink);
+      backdrop-filter: blur(4px);
     }
 
     .start-guide {
@@ -330,10 +348,12 @@
       transform: translate(-50%, -50%);
       width: min(520px, calc(100% - 32px));
       padding: 18px;
-      background: rgba(255, 255, 255, 0.96);
-      border: 2px solid #9fc7d8;
+      background: rgba(26, 26, 27, 0.94);
+      color: var(--ink);
+      border: 1px solid var(--accent);
       border-radius: 8px;
       box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
       pointer-events: none;
     }
 
@@ -358,19 +378,22 @@
       gap: 6px;
       min-width: 210px;
       padding: 10px;
-      background: rgba(255, 255, 255, 0.96);
+      background: rgba(26, 26, 27, 0.94);
+      color: var(--ink);
       border: 1px solid var(--line);
       border-radius: 8px;
-      box-shadow: 0 4px 14px rgba(24, 33, 43, 0.12);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(6px);
       font-size: 13px;
     }
 
     .basic-checklist h2 {
       margin: 0;
-      font-size: 13px;
-      color: #344256;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.1em;
     }
 
     .check-row {
@@ -387,7 +410,7 @@
       height: 22px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: #f8fafc;
+      background: var(--panel-2);
       font-size: 12px;
       font-weight: 800;
     }
@@ -405,9 +428,9 @@
     }
 
     .check-dot.warn {
-      color: #4f3500;
+      color: #1c1c1e;
       border-color: var(--warn);
-      background: #ffe6a3;
+      background: var(--warn);
     }
 
     .status-bar {
@@ -487,7 +510,7 @@
       padding: 7px 8px;
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: #fafbfc;
+      background: var(--panel-2);
       font-size: 12px;
     }
 
@@ -498,28 +521,29 @@
       padding: 2px 7px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      color: #344256;
-      background: #f8fafc;
+      color: var(--muted);
+      background: var(--panel-2);
+      font-family: var(--mono);
       font-size: 12px;
       white-space: nowrap;
     }
 
     .pill.good {
-      border-color: #9bcbb6;
-      color: var(--good);
-      background: #effaf4;
+      border-color: rgba(34, 197, 94, 0.5);
+      color: #4ade80;
+      background: rgba(34, 197, 94, 0.14);
     }
 
     .pill.warn {
-      border-color: #dfc182;
-      color: #805500;
-      background: #fff8e8;
+      border-color: rgba(251, 191, 36, 0.5);
+      color: var(--warn);
+      background: rgba(251, 191, 36, 0.14);
     }
 
     .pill.bad {
-      border-color: #dea7a7;
-      color: var(--bad);
-      background: #fff1f1;
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.14);
     }
 
     .port-popup,
@@ -554,7 +578,7 @@
     .port-btn {
       justify-content: space-between;
       min-height: 48px;
-      background: #f8fafc;
+      background: var(--panel-2);
     }
 
     .port-btn[disabled] {
@@ -609,7 +633,7 @@
       padding: 10px;
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: #f8fafc;
+      background: var(--panel-2);
     }
 
     .channel-strip h4 {
@@ -700,12 +724,23 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand" aria-label="Application title">
-      <div class="brand-mark">LS</div>
-      <div>
-        <h1>Live Sound System Simulator</h1>
-        <small>Theatre education sound design lab</small>
-      </div>
+    <div class="brand" title="SDSCPA — Live Sound System Simulator" aria-label="SDSCPA — Live Sound System Simulator">
+      <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
+        <defs>
+          <linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0"    stop-color="#7AC143"/>
+            <stop offset=".17"  stop-color="#F7941E"/>
+            <stop offset=".34"  stop-color="#ED1C45"/>
+            <stop offset=".50"  stop-color="#EC008C"/>
+            <stop offset=".66"  stop-color="#92278F"/>
+            <stop offset=".83"  stop-color="#2E3192"/>
+            <stop offset="1"    stop-color="#00AEEF"/>
+          </linearGradient>
+        </defs>
+        <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif"
+              font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
+      </svg>
+      <div class="brand-tag">Live Sound System Simulator</div>
     </div>
     <div class="top-controls">
       <label id="skillControl">Skill
@@ -2732,6 +2767,42 @@
       setStatus("Project loaded.", "good");
     }
 
+    const STORAGE_KEY = "sound-lab";
+    let storageTimer = null;
+
+    function saveToStorage() {
+      // Debounced autosave so the workspace survives a refresh (matches scenic/costume labs).
+      if (storageTimer) {
+        clearTimeout(storageTimer);
+      }
+      storageTimer = setTimeout(function persist() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject()));
+        } catch (error) {
+          /* storage full or unavailable — autosave is best-effort */
+        }
+      }, 400);
+    }
+
+    function restoreFromStorage() {
+      let raw = null;
+      try {
+        raw = localStorage.getItem(STORAGE_KEY);
+      } catch (error) {
+        return false;
+      }
+      if (!raw) {
+        return false;
+      }
+      try {
+        loadProject(JSON.parse(raw));
+        setStatus("Restored your last session.", "");
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
     function downloadJson(filename, data) {
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -3293,6 +3364,7 @@
       updateMetrics();
       updateScenarioProgress();
       render();
+      saveToStorage();
     }
 
     function drawGrid() {
@@ -4031,11 +4103,27 @@
           dom.modalBackdrop.classList.remove("open");
           render();
         }
+        // Ignore shortcuts while typing in a form field.
+        const tag = event.target && event.target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+          return;
+        }
         if (event.key === "Delete" || event.key === "Backspace") {
           const deleteButton = document.getElementById("deleteSelectionButton");
           if (deleteButton && state.selected) {
             deleteButton.click();
           }
+        }
+        if (event.ctrlKey || event.metaKey || event.altKey) {
+          return;
+        }
+        const key = event.key.toLowerCase();
+        if (key === "b") {
+          dom.buildModeButton.click();
+        } else if (key === "c") {
+          dom.cableModeButton.click();
+        } else if (key === "t") {
+          dom.testButton.click();
         }
       });
     }
@@ -4056,7 +4144,9 @@
       buildToolButtons();
       buildZoneButtons();
       populateScenarioSelect();
-      seedInitialLayout();
+      if (!restoreFromStorage()) {
+        seedInitialLayout();
+      }
       bindEvents();
       resizeCanvas();
       updateAll();
