@@ -33,13 +33,15 @@
 
   #main{flex:1;display:flex;min-height:0}
   #stageWrap{flex:1;position:relative;overflow:auto;background:radial-gradient(900px 500px at 50% 0%, rgba(139,92,246,.10), transparent 70%),var(--stage)}
-  #stage{display:block}
-  .char{cursor:grab}.char:active{cursor:grabbing}
+  #stage{display:block;cursor:grab}
+  #stage.panning{cursor:grabbing}
+  .char{cursor:move}
   .sel-ring{fill:rgba(236,0,140,.07);stroke:var(--pink);stroke-width:2;stroke-dasharray:7 6}
   .clbl{fill:var(--text-light);font-family:var(--mono);font-size:13px;font-weight:600}
   .cscene{fill:var(--text-dim);font-family:var(--mono);font-size:11px}
   #emptyHint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--text-dim);font-size:14px;pointer-events:none;text-align:center}
   #emptyHint b{color:var(--text-light)}
+  #panHint{position:absolute;left:12px;bottom:12px;color:var(--text-dim);font-size:10.5px;font-family:var(--mono);pointer-events:none;opacity:.7}
 
   #charPanel{position:absolute;top:12px;left:12px;width:230px;z-index:20;display:none;background:rgba(20,20,24,.96);border:1px solid var(--ui-dark3);border-radius:12px;padding:13px 14px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
   #charPanel.show{display:block}
@@ -59,17 +61,22 @@
   #sidebar{flex:0 0 330px;background:var(--ui-dark);border-left:1px solid var(--ui-dark3);display:flex;flex-direction:column;min-height:0}
   .pal-head{font-size:11px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;padding:12px 14px 8px;display:flex;align-items:center;justify-content:space-between}
   .pal-head .count{color:var(--violet);font-family:var(--mono)}
+  #catTabs{display:flex;flex-wrap:wrap;gap:4px;padding:0 10px 9px;border-bottom:1px solid var(--ui-dark3)}
+  .cat-tab{background:var(--ui-dark2);color:var(--text-dim);border:1px solid var(--ui-dark3);border-radius:999px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit}
+  .cat-tab:hover{color:#fff}
+  .cat-tab.on{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
   #grid{flex:1;overflow:auto;padding:10px;display:grid;grid-template-columns:repeat(2,1fr);gap:9px;align-content:start}
   .thumb{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:10px;cursor:pointer;padding:5px 5px 6px;transition:border-color .1s,transform .1s;display:flex;flex-direction:column}
   .thumb:hover{border-color:var(--pink);transform:translateY(-2px)}
   .thumb.on{border-color:var(--pink);box-shadow:0 0 0 1px var(--pink)}
-  .thumb svg{width:100%;height:128px;display:block}
+  .thumb svg{width:100%;height:118px;display:block}
   .thumb .tn{font-size:11px;color:var(--text-light);font-weight:600;text-align:center;margin-top:2px;line-height:1.2}
   .thumb .te{font-size:9px;color:var(--text-dim);text-align:center;font-family:var(--mono)}
+  .thumb.none{align-items:center;justify-content:center;color:var(--text-dim);font-size:11.5px;min-height:150px;text-align:center}
+  .thumb.none svg{display:none}
 
-  /* colour / pattern picker */
   #colorizer{border-top:1px solid var(--ui-dark3);padding:10px 14px 12px;background:#0d0d0f}
-  .cz-head{font-size:11px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
+  .cz-head{font-size:11px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px}
   .cz-head b{color:var(--pink)}
   #czHint{font-size:11.5px;color:var(--text-dim);font-style:italic}
   .cz-regions{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
@@ -137,8 +144,9 @@
     <svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
     <div id="emptyHint">
       <b>No characters yet</b>
-      <div>Click <b>Add Character</b> to place a figure, then dress it from the wardrobe.</div>
+      <div>Click <b>Add Character</b> to place a figure, then mix &amp; match pieces from the wardrobe.</div>
     </div>
+    <div id="panHint">Drag empty space to pan · drag a figure to move it</div>
     <div id="charPanel">
       <h4>Selected Character</h4>
       <div class="cp-field"><label>Character name</label><input id="cpName" type="text" placeholder="Character name" autocomplete="off"></div>
@@ -146,18 +154,19 @@
       <div class="cp-field"><label>Body type</label><select id="cpPose"></select></div>
       <div class="cp-field"><label>Skin tone</label><div class="swatches" id="cpSkin"></div></div>
       <div class="cp-actions">
-        <button id="cpStrip">Remove outfit</button>
+        <button id="cpStrip">Strip all</button>
         <button id="cpRemove" class="danger">Delete model</button>
       </div>
     </div>
   </div>
 
   <div id="sidebar">
-    <div class="pal-head">Wardrobe — Silhouettes <span class="count">20</span></div>
+    <div class="pal-head">Wardrobe <span class="count" id="catCount"></span></div>
+    <div id="catTabs"></div>
     <div id="grid"></div>
     <div id="colorizer">
       <div class="cz-head">Colour &amp; Pattern <b id="czOutfit"></b></div>
-      <div id="czHint">Put an outfit on a selected model to colour it.</div>
+      <div id="czHint">Put a piece on a selected model to colour it.</div>
       <div class="cz-regions" id="czRegions"></div>
       <div class="cz-colors" id="czColors"></div>
       <div class="cz-pats" id="czPats"></div>
@@ -165,7 +174,6 @@
   </div>
 </div>
 
-<!-- Add character modal -->
 <div class="modal-back" id="addModal">
   <div class="modal">
     <h3>Choose a body</h3>
@@ -181,7 +189,6 @@
   </div>
 </div>
 
-<!-- Export modal -->
 <div class="modal-back" id="exportModal">
   <div class="modal">
     <h3>Costume Plot</h3>
@@ -200,36 +207,35 @@
 'use strict';
 /* ============================================================
    COSTUME DESIGN STUDIO
-   Place numbered body types on a stage, dress each in one of 20
-   recognisable historical garment silhouettes, then colour the
-   "blanks" with a per-region colour + pattern picker. Label each
-   model with a name + scene and export the costume plot as a PNG.
+   Numbered body types on a pannable stage. The wardrobe is split
+   into slots (headwear, tops, bottoms, dresses, outerwear, shoes,
+   accessories) so a designer can mix period pieces freely; each
+   piece is a recognisable historical silhouette placed as a blank
+   and coloured with a per-region colour + pattern picker.
    ============================================================ */
 
-const SKIN_TONES = ['#ffe0bd','#f1c27d','#e0ac69','#c68642','#a56b3f','#8d5524','#6b4423','#523120'];
-const COLORS = ['#7a1f1f','#b5302a','#e8505b','#f07b3f','#f4a261','#ffd166','#fff3b0','#6a994e',
-                '#386641','#2a9d8f','#118ab2','#1d3557','#3a86ff','#5b5fef','#7b4ddb','#b5179e',
-                '#ff6fb5','#ffafcc','#7f5539','#b08968','#d9c5a0','#efe9dc','#ffffff','#c9c4bd',
-                '#8a8580','#4a4a4e','#1c1c1e','#0b3d2e','#5e0b15','#264653'];
-const PATTERNS = ['solid','stripes','dots','check','gradient'];
+const SKIN_TONES=['#ffe0bd','#f1c27d','#e0ac69','#c68642','#a56b3f','#8d5524','#6b4423','#523120'];
+const COLORS=['#7a1f1f','#b5302a','#e8505b','#f07b3f','#f4a261','#ffd166','#fff3b0','#6a994e',
+              '#386641','#2a9d8f','#118ab2','#1d3557','#3a86ff','#5b5fef','#7b4ddb','#b5179e',
+              '#ff6fb5','#ffafcc','#7f5539','#b08968','#d9c5a0','#efe9dc','#ffffff','#c9c4bd',
+              '#8a8580','#4a4a4e','#1c1c1e','#0b3d2e','#5e0b15','#264653'];
+const PATTERNS=['solid','stripes','dots','check','gradient'];
 
 function shade(hex,pct){ const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; const t=pct<0?0:255,p=Math.abs(pct)/100; r=Math.round((t-r)*p)+r; g=Math.round((t-g)*p)+g; b=Math.round((t-b)*p)+b; return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 function isLight(hex){ const n=parseInt(hex.slice(1),16); return (0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))>150; }
-
 let _uid=0;
-function fillFor(rv){
-  const c1=rv.color, pat=rv.pattern||'solid', c2=shade(c1, isLight(c1)?-24:30);
+function fillFor(rv){ const c1=rv.color,pat=rv.pattern||'solid',c2=shade(c1,isLight(c1)?-24:30);
   if(pat==='solid') return {fill:c1,def:''};
   const id='p'+(_uid++);
-  if(pat==='stripes') return {fill:`url(#${id})`, def:`<pattern id="${id}" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="11" height="11" fill="${c1}"/><rect width="5.5" height="11" fill="${c2}"/></pattern>`};
-  if(pat==='dots') return {fill:`url(#${id})`, def:`<pattern id="${id}" width="13" height="13" patternUnits="userSpaceOnUse"><rect width="13" height="13" fill="${c1}"/><circle cx="6.5" cy="6.5" r="2.7" fill="${c2}"/></pattern>`};
-  if(pat==='check') return {fill:`url(#${id})`, def:`<pattern id="${id}" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${c1}"/><rect width="7" height="7" fill="${c2}"/><rect x="7" y="7" width="7" height="7" fill="${c2}"/></pattern>`};
-  if(pat==='gradient') return {fill:`url(#${id})`, def:`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(c1,20)}"/><stop offset="1" stop-color="${shade(c1,-20)}"/></linearGradient>`};
+  if(pat==='stripes') return {fill:`url(#${id})`,def:`<pattern id="${id}" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="11" height="11" fill="${c1}"/><rect width="5.5" height="11" fill="${c2}"/></pattern>`};
+  if(pat==='dots') return {fill:`url(#${id})`,def:`<pattern id="${id}" width="13" height="13" patternUnits="userSpaceOnUse"><rect width="13" height="13" fill="${c1}"/><circle cx="6.5" cy="6.5" r="2.7" fill="${c2}"/></pattern>`};
+  if(pat==='check') return {fill:`url(#${id})`,def:`<pattern id="${id}" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${c1}"/><rect width="7" height="7" fill="${c2}"/><rect x="7" y="7" width="7" height="7" fill="${c2}"/></pattern>`};
+  if(pat==='gradient') return {fill:`url(#${id})`,def:`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(c1,20)}"/><stop offset="1" stop-color="${shade(c1,-20)}"/></linearGradient>`};
   return {fill:c1,def:''};
 }
 
-/* ── Numbered, strongly-differentiated body types ── */
-const BODY_PRESETS = {
+/* numbered, strongly-differentiated body types */
+const BODY_PRESETS={
   '1':{head:1,   shoulder:1,    torso:1,    waist:1,   hip:1,    legs:1,    arm:1,   leg:1,    stance:1.5},
   '2':{head:.88, shoulder:.95,  torso:1.14, waist:.84, hip:.9,   legs:1.34, arm:1.14,leg:.84,  stance:1.0},
   '3':{head:1.14,shoulder:.9,   torso:.84,  waist:1,   hip:1,    legs:.72,  arm:.9,  leg:1,    stance:1.4},
@@ -238,437 +244,399 @@ const BODY_PRESETS = {
   '6':{head:1.34,shoulder:.78,  torso:.78,  waist:.96, hip:.9,   legs:.62,  arm:.8,  leg:.88,  stance:1.7}
 };
 function anchors(key){
-  const p=BODY_PRESETS[key]||BODY_PRESETS['1'], cx=100;
-  const headR=27*p.head, headCy=30+headR, neckTop=headCy+headR-5, neckBot=neckTop+13, neckHalf=9;
-  const shoulderY=neckBot+3, shoulderHalf=44*p.shoulder;
-  const waistY=shoulderY+94*p.torso, waistHalf=27*p.waist;
-  const hipY=waistY+24, hipHalf=37*p.hip;
-  const ankleY=hipY+128*p.legs, footY=ankleY+10;
-  const kneeY=hipY+(ankleY-hipY)*0.52;
-  const armHalf=8.5*p.arm, armCx=shoulderHalf-armHalf-1, armTopY=shoulderY+2, armBotY=waistY+8;
-  const legHalf=15*p.leg, legGap=5*p.stance, legCx=legGap+legHalf;
+  const p=BODY_PRESETS[key]||BODY_PRESETS['1'],cx=100;
+  const headR=27*p.head,headCy=30+headR,neckTop=headCy+headR-5,neckBot=neckTop+13,neckHalf=9;
+  const shoulderY=neckBot+3,shoulderHalf=44*p.shoulder;
+  const waistY=shoulderY+94*p.torso,waistHalf=27*p.waist;
+  const hipY=waistY+24,hipHalf=37*p.hip;
+  const ankleY=hipY+128*p.legs,footY=ankleY+10,kneeY=hipY+(ankleY-hipY)*0.52;
+  const armHalf=8.5*p.arm,armCx=shoulderHalf-armHalf-1,armTopY=shoulderY+2,armBotY=waistY+8;
+  const legHalf=15*p.leg,legGap=5*p.stance,legCx=legGap+legHalf;
   return {cx,headR,headCy,neckTop,neckBot,neckHalf,shoulderY,shoulderHalf,waistY,waistHalf,hipY,hipHalf,kneeY,ankleY,footY,armHalf,armCx,armTopY,armBotY,legHalf,legGap,legCx,totalH:footY+52};
 }
-
-function drawBody(A, skin){
-  const ol=shade(skin,-30), s=[];
-  [-1,1].forEach(side=>{ const x=A.cx+side*A.legCx; s.push(`<rect x="${x-A.legHalf}" y="${A.hipY-6}" width="${A.legHalf*2}" height="${A.ankleY-A.hipY+6}" rx="${A.legHalf}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`); });
-  [-1,1].forEach(side=>{ const x=A.cx+side*A.armCx; s.push(`<rect x="${x-A.armHalf}" y="${A.armTopY}" width="${A.armHalf*2}" height="${A.armBotY-A.armTopY}" rx="${A.armHalf}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`); });
+function drawBody(A,skin){
+  const ol=shade(skin,-30),s=[];
+  [-1,1].forEach(d=>{ const x=A.cx+d*A.legCx; s.push(`<rect x="${x-A.legHalf}" y="${A.hipY-6}" width="${A.legHalf*2}" height="${A.ankleY-A.hipY+6}" rx="${A.legHalf}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`); });
+  [-1,1].forEach(d=>{ const x=A.cx+d*A.armCx; s.push(`<rect x="${x-A.armHalf}" y="${A.armTopY}" width="${A.armHalf*2}" height="${A.armBotY-A.armTopY}" rx="${A.armHalf}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`); });
   s.push(`<path d="M ${A.cx-A.shoulderHalf} ${A.shoulderY} L ${A.cx+A.shoulderHalf} ${A.shoulderY} L ${A.cx+A.waistHalf} ${A.waistY} L ${A.cx+A.hipHalf} ${A.hipY} L ${A.cx-A.hipHalf} ${A.hipY} L ${A.cx-A.waistHalf} ${A.waistY} Z" fill="${skin}" stroke="${ol}" stroke-width="2"/>`);
   s.push(`<rect x="${A.cx-A.neckHalf}" y="${A.neckTop}" width="${A.neckHalf*2}" height="${A.neckBot-A.neckTop+2}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`);
   s.push(`<circle cx="${A.cx}" cy="${A.headCy}" r="${A.headR}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`);
-  const ey=A.headCy+3, ex=A.headR*0.42;
-  s.push(`<circle cx="${A.cx-ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/><circle cx="${A.cx+ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/>`);
-  s.push(`<path d="M ${A.cx-6} ${ey+9} Q ${A.cx} ${ey+14} ${A.cx+6} ${ey+9}" fill="none" stroke="#2a2a2a" stroke-width="2" stroke-linecap="round"/>`);
+  const ey=A.headCy+3,ex=A.headR*0.42;
+  s.push(`<circle cx="${A.cx-ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/><circle cx="${A.cx+ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/><path d="M ${A.cx-6} ${ey+9} Q ${A.cx} ${ey+14} ${A.cx+6} ${ey+9}" fill="none" stroke="#2a2a2a" stroke-width="2" stroke-linecap="round"/>`);
   return s.join('');
 }
-
-/* small drawing helpers for outfits */
-function sleeves(A,fill,ol,len,extra){ let s=''; [-1,1].forEach(side=>{ const x=A.cx+side*A.armCx; s+=`<rect x="${x-A.armHalf-extra}" y="${A.shoulderY}" width="${(A.armHalf+extra)*2}" height="${len}" rx="${A.armHalf+extra}" fill="${fill}" stroke="${ol}" stroke-width="2"/>`; }); return s; }
+function sleeves(A,fill,ol,len,extra){ let s=''; [-1,1].forEach(d=>{ const x=A.cx+d*A.armCx; s+=`<rect x="${x-A.armHalf-extra}" y="${A.shoulderY}" width="${(A.armHalf+extra)*2}" height="${len}" rx="${A.armHalf+extra}" fill="${fill}" stroke="${ol}" stroke-width="2"/>`; }); return s; }
 function neckSkin(A,skin,w,d){ return `<path d="M ${A.cx-w} ${A.shoulderY} Q ${A.cx} ${A.shoulderY+d} ${A.cx+w} ${A.shoulderY} Z" fill="${skin}"/>`; }
 
 /* ============================================================
-   20 GARMENT SILHOUETTES  (recognisable by outline, through history)
-   each draw(A, F, skin) where F.<region> = fill, F.<region>_c = raw colour
+   WARDROBE — individual mix-and-match pieces by slot
+   Render order (back→front): bottom, dress, top, outer, shoes, head, accessory
    ============================================================ */
-const OUTFITS = [
-{id:'greek', name:'Greek Chiton', era:'c. 500 BC', regions:[{key:'main',label:'Robe'},{key:'accent',label:'Drape & belt'}],
- def:{main:{color:'#efe9dc',pattern:'solid'},accent:{color:'#d4af37',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY-2, hem=A.ankleY-4, s=[];
+const F1='Fabric', F2='Trim';
+const PIECES=[
+
+/* ── HEADWEAR ─────────────────────────────── */
+{id:'h_laurel',slot:'head',name:'Laurel',era:'Greek',regions:[{key:'main',label:'Leaves'}],def:{main:{color:'#6a994e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx; return `<path d="M ${cx-A.headR-2} ${A.headCy-2} Q ${cx} ${A.headCy-A.headR-9} ${cx+A.headR+2} ${A.headCy-2}" fill="none" stroke="${F.main}" stroke-width="4"/>`; }},
+{id:'h_nemes',slot:'head',name:'Nemes',era:'Egyptian',regions:[{key:'main',label:'Headcloth'},{key:'accent',label:'Stripes'}],def:{main:{color:'#1d6fb8',pattern:'stripes'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30); return `<path d="M ${cx-A.headR-4} ${A.headCy-A.headR+2} Q ${cx} ${A.headCy-A.headR-9} ${cx+A.headR+4} ${A.headCy-A.headR+2} L ${cx+A.headR+6} ${A.headCy-2} L ${cx+A.headR-2} ${A.headCy-4} Q ${cx} ${A.headCy-A.headR} ${cx-A.headR+2} ${A.headCy-4} L ${cx-A.headR-6} ${A.headCy-2} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`+
+   [-1,1].map(d=>`<path d="M ${cx+d*(A.headR-1)} ${A.headCy-4} L ${cx+d*(A.headR+7)} ${A.headCy-2} L ${cx+d*(A.headR+6)} ${A.headCy+A.headR+8} L ${cx+d*(A.headR-2)} ${A.headCy+A.headR+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`).join('')+
+   `<rect x="${cx-A.headR-6}" y="${A.headCy-A.headR-2}" width="${(A.headR+6)*2}" height="5" fill="${F.accent}"/>`; }},
+{id:'h_crown',slot:'head',name:'Crown',era:'Royal',regions:[{key:'main',label:'Crown'}],def:{main:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR; return `<path d="M ${cx-20} ${cy-r+2} L ${cx-20} ${cy-r-15} L ${cx-10} ${cy-r-3} L ${cx} ${cy-r-19} L ${cx+10} ${cy-r-3} L ${cx+20} ${cy-r-15} L ${cx+20} ${cy-r+2} Z" fill="${F.main}" stroke="${shade(F.main_c,-30)}" stroke-width="2"/>`; }},
+{id:'h_pompadour',slot:'head',name:'Pompadour',era:'1900s',regions:[{key:'main',label:'Hair'}],def:{main:{color:'#3a2a1d',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR; return `<path d="M ${cx-r-3} ${cy-2} Q ${cx} ${cy-r-16} ${cx+r+3} ${cy-2} Q ${cx} ${cy-r+4} ${cx-r-3} ${cy-2} Z" fill="${F.main}"/><circle cx="${cx}" cy="${cy-r-2}" r="7" fill="${F.main}"/>`; }},
+{id:'h_wig',slot:'head',name:'Powdered Wig',era:'Rococo',regions:[{key:'main',label:'Wig'}],def:{main:{color:'#eceff3',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR; return `<ellipse cx="${cx}" cy="${cy-r+2}" rx="${r+4}" ry="15" fill="${F.main}" stroke="${shade(F.main_c,-15)}" stroke-width="2"/><circle cx="${cx-r}" cy="${cy+4}" r="6" fill="${F.main}"/><circle cx="${cx+r}" cy="${cy+4}" r="6" fill="${F.main}"/>`; }},
+{id:'h_bonnet',slot:'head',name:'Bonnet',era:'Victorian',regions:[{key:'main',label:'Bonnet'}],def:{main:{color:'#efe9dc',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR; return `<path d="M ${cx-r-2} ${cy-4} Q ${cx} ${cy-r-12} ${cx+r+2} ${cy-4} L ${cx+r-2} ${cy+2} L ${cx-r+2} ${cy+2} Z" fill="${F.main}" stroke="${shade(F.main_c,-30)}" stroke-width="2"/>`; }},
+{id:'h_cloche',slot:'head',name:'Cloche',era:'1920s',regions:[{key:'main',label:'Hat'}],def:{main:{color:'#7b4ddb',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR,ol=shade(F.main_c,-30); return `<path d="M ${cx-r-2} ${cy+2} Q ${cx-r-2} ${cy-r-8} ${cx} ${cy-r-8} Q ${cx+r+2} ${cy-r-8} ${cx+r+2} ${cy+2} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/><path d="M ${cx+r-6} ${cy+2} q 14 0 18 5 q -10 3 -18 0 Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'h_tophat',slot:'head',name:'Top Hat',era:'1890s',regions:[{key:'main',label:'Hat'}],def:{main:{color:'#1c1c1e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR,ol=shade(F.main_c,-20); return `<rect x="${cx-15}" y="${cy-r-30}" width="30" height="34" rx="2" fill="${F.main}" stroke="${ol}" stroke-width="2"/><rect x="${cx-24}" y="${cy-r+1}" width="48" height="6" rx="3" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'h_tricorn',slot:'head',name:'Tricorn',era:'1700s',regions:[{key:'main',label:'Hat'}],def:{main:{color:'#4a2c12',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR; return `<path d="M ${cx-r-9} ${cy-4} Q ${cx} ${cy-r-16} ${cx+r+9} ${cy-4} Q ${cx} ${cy-2} ${cx-r-9} ${cy-4} Z" fill="${F.main}" stroke="${shade(F.main_c,-28)}" stroke-width="2"/>`; }},
+{id:'h_wizard',slot:'head',name:'Wizard Hat',era:'Theatrical',regions:[{key:'main',label:'Hat'},{key:'accent',label:'Band'}],def:{main:{color:'#3a0ca3',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR,ol=shade(F.main_c,-30); return `<path d="M ${cx-r-8} ${cy-r+4} L ${cx+r+8} ${cy-r+4} L ${cx+5} ${cy-r-46} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/><ellipse cx="${cx}" cy="${cy-r+5}" rx="${r+12}" ry="6" fill="${F.main}" stroke="${ol}" stroke-width="2"/><rect x="${cx-r-2}" y="${cy-r-4}" width="${(r+2)*2-6}" height="6" fill="${F.accent}"/>`; }},
+{id:'h_sunhat',slot:'head',name:'Sun Hat',era:'Edwardian',regions:[{key:'main',label:'Hat'}],def:{main:{color:'#e9c46a',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR,ol=shade(F.main_c,-30); return `<ellipse cx="${cx}" cy="${cy-r+3}" rx="${r+22}" ry="9" fill="${F.main}" stroke="${ol}" stroke-width="2"/><path d="M ${cx-r+4} ${cy-r+3} Q ${cx} ${cy-r-18} ${cx+r-4} ${cy-r+3} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'h_bob',slot:'head',name:'Mod Bob',era:'1960s',regions:[{key:'main',label:'Hair'}],def:{main:{color:'#1b1b1b',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,cy=A.headCy,r=A.headR; return `<path d="M ${cx-r-3} ${cy+8} Q ${cx-r-3} ${cy-r-7} ${cx} ${cy-r-7} Q ${cx+r+3} ${cy-r-7} ${cx+r+3} ${cy+8} L ${cx+r-3} ${cy+10} Q ${cx} ${cy-r+4} ${cx-r+3} ${cy+10} Z" fill="${F.main}"/>`; }},
+
+/* ── TOPS ─────────────────────────────────── */
+{id:'t_doublet',slot:'top',name:'Doublet',era:'Renaissance',regions:[{key:'main',label:F1},{key:'accent',label:'Buttons'}],def:{main:{color:'#1d3557',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-32),top=A.shoulderY-2,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+2} ${A.waistY} L ${cx} ${A.waistY+12} L ${cx-A.waistHalf-2} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(sleeves(A,F.main,ol,A.armBotY-top-2,3));
+   for(let i=1;i<5;i++) s.push(`<circle cx="${cx}" cy="${top+10+i*12}" r="1.8" fill="${F.accent}"/>`);
+   s.push(neckSkin(A,skin,9,8)); return s.join(''); }},
+{id:'t_elizbod',slot:'top',name:'Court Bodice',era:'Elizabethan',regions:[{key:'main',label:F1}],def:{main:{color:'#5e0b15',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-32),top=A.shoulderY,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf} ${A.waistY-4} L ${cx} ${A.waistY+12} L ${cx-A.waistHalf} ${A.waistY-4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   [-1,1].forEach(d=>{ const x=cx+d*A.armCx; s.push(`<ellipse cx="${x}" cy="${top+16}" rx="${A.armHalf+8}" ry="18" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.armHalf-2}" y="${top+26}" width="${(A.armHalf+2)*2}" height="${A.armBotY-top-22}" rx="4" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(neckSkin(A,skin,9,8)); return s.join(''); }},
+{id:'t_gibson',slot:'top',name:'Gibson Blouse',era:'1900s',regions:[{key:'main',label:F1}],def:{main:{color:'#efe9dc',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} Q ${cx} ${top+8} ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+3} ${A.waistY+4} Q ${cx} ${A.waistY+14} ${cx-A.waistHalf-3} ${A.waistY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   [-1,1].forEach(d=>{ const x=cx+d*A.armCx; s.push(`<ellipse cx="${x}" cy="${top+18}" rx="${A.armHalf+11}" ry="20" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.armHalf}" y="${top+30}" width="${A.armHalf*2}" height="${A.armBotY-top-26}" rx="4" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(`<rect x="${cx-A.neckHalf-1}" y="${A.neckTop+2}" width="${(A.neckHalf+1)*2}" height="10" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`);
+   return s.join(''); }},
+{id:'t_disco',slot:'top',name:'Disco Shirt',era:'1970s',regions:[{key:'main',label:F1}],def:{main:{color:'#fff3b0',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY-2,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf+2} ${top} L ${cx+A.shoulderHalf-2} ${top} L ${cx+A.waistHalf+2} ${A.waistY+6} L ${cx-A.waistHalf-2} ${A.waistY+6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(sleeves(A,F.main,ol,A.armBotY-top-2,3));
+   s.push(`<path d="M ${cx} ${top+2} L ${cx-18} ${top+1} L ${cx-7} ${top+18} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(`<path d="M ${cx} ${top+2} L ${cx+18} ${top+1} L ${cx+7} ${top+18} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(`<path d="M ${cx-7} ${top+2} L ${cx} ${A.waistY-6} L ${cx+7} ${top+2} Z" fill="${skin}"/>`);
+   return s.join(''); }},
+{id:'t_blazer',slot:'top',name:'Power Blazer',era:'1980s',regions:[{key:'main',label:F1},{key:'accent',label:'Blouse'}],def:{main:{color:'#7b1fa2',pattern:'solid'},accent:{color:'#efe9dc',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),olA=shade(F.accent_c,-30),top=A.shoulderY-4,s=[];
+   s.push(`<path d="M ${cx-16} ${top+2} L ${cx+16} ${top+2} L ${cx} ${A.waistY} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
+   s.push(`<path d="M ${cx-A.shoulderHalf-14} ${top} L ${cx+A.shoulderHalf+14} ${top} L ${cx+A.waistHalf+4} ${A.waistY+4} L ${cx+8} ${A.waistY+4} L ${cx+12} ${top+14} L ${cx-12} ${top+14} L ${cx-8} ${A.waistY+4} L ${cx-A.waistHalf-4} ${A.waistY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   [-1,1].forEach(d=>{ const x=cx+d*(A.armCx+6); s.push(`<path d="M ${x-A.armHalf-6} ${top} L ${x+A.armHalf+6} ${top} L ${x+A.armHalf} ${A.armBotY} L ${x-A.armHalf} ${A.armBotY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(`<path d="M ${cx-14} ${top+2} L ${cx-4} ${top+20} L ${cx} ${top+8} L ${cx+4} ${top+20} L ${cx+14} ${top+2}" fill="none" stroke="${ol}" stroke-width="2.5"/>`);
+   return s.join(''); }},
+{id:'t_poet',slot:'top',name:'Poet Shirt',era:'Pirate',regions:[{key:'main',label:F1}],def:{main:{color:'#efe9dc',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-26),top=A.shoulderY-2,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+4} ${A.waistY+4} L ${cx-A.waistHalf-4} ${A.waistY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   [-1,1].forEach(d=>{ const x=cx+d*A.armCx; s.push(`<path d="M ${x-A.armHalf-2} ${top} Q ${x+d*16} ${A.waistY-10} ${x-A.armHalf} ${A.armBotY} L ${x+A.armHalf} ${A.armBotY} Q ${x+d*9} ${A.waistY-10} ${x+A.armHalf+2} ${top} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(`<path d="M ${cx-9} ${top+1} L ${cx} ${A.shoulderY+22} L ${cx+9} ${top+1} Z" fill="${skin}"/>`);
+   return s.join(''); }},
+{id:'t_swingbod',slot:'top',name:'Fitted Bodice',era:'1950s',regions:[{key:'main',label:F1},{key:'accent',label:'Collar'}],def:{main:{color:'#e8505b',pattern:'dots'},accent:{color:'#efe9dc',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf+2} ${top} L ${cx+A.shoulderHalf-2} ${top} L ${cx+A.waistHalf} ${A.waistY} L ${cx-A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(sleeves(A,F.main,ol,20,3));
+   s.push(`<path d="M ${cx-13} ${top} L ${cx} ${top+13} L ${cx+13} ${top}" fill="none" stroke="${F.accent}" stroke-width="3"/>`);
+   s.push(neckSkin(A,skin,9,9)); return s.join(''); }},
+{id:'t_choli',slot:'top',name:'Choli',era:'India',regions:[{key:'main',label:F1}],def:{main:{color:'#d4af37',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf+2} ${top} L ${cx+A.shoulderHalf-2} ${top} L ${cx+A.waistHalf} ${A.waistY-12} L ${cx-A.waistHalf} ${A.waistY-12} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(sleeves(A,F.main,ol,16,2));
+   s.push(neckSkin(A,skin,9,8)); return s.join(''); }},
+{id:'t_tee',slot:'top',name:'T-Shirt',era:'Modern',regions:[{key:'main',label:F1}],def:{main:{color:'#3a86ff',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY-2,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+3} ${A.waistY+10} L ${cx-A.waistHalf-3} ${A.waistY+10} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(sleeves(A,F.main,ol,24,3));
+   s.push(neckSkin(A,skin,10,10)); return s.join(''); }},
+
+/* ── BOTTOMS ──────────────────────────────── */
+{id:'b_farthingale',slot:'bottom',name:'Farthingale',era:'Elizabethan',regions:[{key:'main',label:F1}],def:{main:{color:'#5e0b15',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-32),skTop=A.waistY+2,skW=A.hipHalf+56,hem=A.footY-2,s=[];
+   s.push(`<path d="M ${cx-skW} ${skTop} L ${cx+skW} ${skTop} L ${cx+skW-6} ${hem} L ${cx-skW+6} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(`<ellipse cx="${cx}" cy="${skTop}" rx="${skW}" ry="9" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); return s.join(''); }},
+{id:'b_panniers',slot:'bottom',name:'Panniers Skirt',era:'Rococo',regions:[{key:'main',label:F1}],def:{main:{color:'#ffafcc',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-32),skTop=A.waistY,skW=A.hipHalf+70,hem=A.footY-4,s=[];
+   s.push(`<path d="M ${cx-A.waistHalf} ${skTop} Q ${cx-skW} ${skTop+30} ${cx-skW+6} ${hem} L ${cx+skW-6} ${hem} Q ${cx+skW} ${skTop+30} ${cx+A.waistHalf} ${skTop} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   for(let i=-3;i<=3;i++) s.push(`<line x1="${cx+i*22}" y1="${skTop+24}" x2="${cx+i*26}" y2="${hem-2}" stroke="${ol}" stroke-width="1" opacity=".3"/>`); return s.join(''); }},
+{id:'b_crinoline',slot:'bottom',name:'Crinoline Skirt',era:'1860s',regions:[{key:'main',label:F1},{key:'accent',label:'Flounces'}],def:{main:{color:'#3a86ff',pattern:'solid'},accent:{color:'#efe9dc',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-32),skTop=A.waistY,skW=A.hipHalf+60,hem=A.footY-2,s=[];
+   s.push(`<path d="M ${cx-A.waistHalf} ${skTop} Q ${cx-skW} ${hem-40} ${cx-skW} ${hem} L ${cx+skW} ${hem} Q ${cx+skW} ${hem-40} ${cx+A.waistHalf} ${skTop} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   for(let i=1;i<=3;i++) s.push(`<path d="M ${cx-skW*i/3.3} ${hem-6} Q ${cx} ${hem-22} ${cx+skW*i/3.3} ${hem-6}" fill="none" stroke="${F.accent}" stroke-width="3" opacity=".85"/>`); return s.join(''); }},
+{id:'b_bustle',slot:'bottom',name:'Bustle Skirt',era:'1885',regions:[{key:'main',label:F1},{key:'accent',label:'Overskirt'}],def:{main:{color:'#7a1f1f',pattern:'solid'},accent:{color:'#d4af37',pattern:'stripes'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-32),olA=shade(F.accent_c,-32),skTop=A.waistY,hem=A.footY-2,s=[];
+   s.push(`<path d="M ${cx-A.waistHalf} ${skTop} L ${cx+A.waistHalf} ${skTop} L ${cx+A.hipHalf+10} ${hem} L ${cx-A.hipHalf-6} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(`<path d="M ${cx+A.waistHalf-4} ${skTop+2} Q ${cx+A.hipHalf+54} ${skTop+8} ${cx+A.hipHalf+44} ${A.kneeY} Q ${cx+A.hipHalf+60} ${hem} ${cx+A.hipHalf+8} ${hem} Q ${cx+A.hipHalf+10} ${A.kneeY} ${cx+A.waistHalf-2} ${skTop+30} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`); return s.join(''); }},
+{id:'b_goredskirt',slot:'bottom',name:'Gored Skirt',era:'Edwardian',regions:[{key:'main',label:F1}],def:{main:{color:'#264653',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-32),skTop=A.waistY,hem=A.footY-2;
+   return `<path d="M ${cx-A.waistHalf} ${skTop} L ${cx+A.waistHalf} ${skTop} L ${cx+A.hipHalf+26} ${hem} L ${cx-A.hipHalf-26} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'b_pumpkin',slot:'bottom',name:'Pumpkin Breeches',era:'Renaissance',regions:[{key:'main',label:F1},{key:'accent',label:'Hose'}],def:{main:{color:'#7b4ddb',pattern:'solid'},accent:{color:'#d9c5a0',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-32),olA=shade(F.accent_c,-32),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx; s.push(`<rect x="${x-A.legHalf+1}" y="${A.hipY+18}" width="${A.legHalf*2-2}" height="${A.ankleY-A.hipY-18}" rx="${A.legHalf}" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`); });
+   s.push(`<ellipse cx="${cx}" cy="${A.hipY+8}" rx="${A.hipHalf+16}" ry="26" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   for(let i=-3;i<=3;i++) s.push(`<path d="M ${cx+i*9} ${A.hipY-16} Q ${cx+i*12} ${A.hipY+8} ${cx+i*9} ${A.hipY+30}" fill="none" stroke="${olA}" stroke-width="1" opacity=".5"/>`); return s.join(''); }},
+{id:'b_bell',slot:'bottom',name:'Bell-Bottoms',era:'1970s',regions:[{key:'main',label:F1}],def:{main:{color:'#5b5fef',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx; s.push(`<path d="M ${x-A.legHalf-2} ${A.waistY+2} L ${x+A.legHalf+2} ${A.waistY+2} L ${x+A.legHalf+16} ${A.footY-2} L ${x-A.legHalf-16} ${A.footY-2} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(`<path d="M ${cx-A.hipHalf-2} ${A.waistY+2} L ${cx+A.hipHalf+2} ${A.waistY+2} L ${cx+A.hipHalf-2} ${A.hipY+18} L ${cx-A.hipHalf+2} ${A.hipY+18} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); return s.join(''); }},
+{id:'b_pencil',slot:'bottom',name:'Pencil Skirt',era:'1980s',regions:[{key:'main',label:F1}],def:{main:{color:'#7b1fa2',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30);
+   return `<path d="M ${cx-A.hipHalf-2} ${A.waistY+2} L ${cx+A.hipHalf+2} ${A.waistY+2} L ${cx+A.hipHalf-4} ${A.kneeY+6} L ${cx-A.hipHalf+4} ${A.kneeY+6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'b_trousers',slot:'bottom',name:'Trousers',era:'Formal',regions:[{key:'main',label:F1}],def:{main:{color:'#1c1c1e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-20),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx; s.push(`<rect x="${x-A.legHalf-1}" y="${A.hipY+2}" width="${(A.legHalf+1)*2}" height="${A.ankleY-A.hipY}" rx="3" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(`<path d="M ${cx-A.hipHalf-1} ${A.waistY+2} L ${cx+A.hipHalf+1} ${A.waistY+2} L ${cx+A.hipHalf-2} ${A.hipY+6} L ${cx-A.hipHalf+2} ${A.hipY+6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); return s.join(''); }},
+{id:'b_breeches',slot:'bottom',name:'Breeches',era:'Pirate',regions:[{key:'main',label:F1}],def:{main:{color:'#4a2c12',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-28),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx; s.push(`<rect x="${x-A.legHalf-2}" y="${A.waistY}" width="${(A.legHalf+2)*2}" height="${A.kneeY-A.waistY+4}" rx="5" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); }); return s.join(''); }},
+{id:'b_circle',slot:'bottom',name:'Circle Skirt',era:'1950s',regions:[{key:'main',label:F1}],def:{main:{color:'#e8505b',pattern:'dots'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),hem=A.kneeY+14;
+   return `<path d="M ${cx-A.waistHalf} ${A.waistY} Q ${cx-A.hipHalf-44} ${hem-24} ${cx-A.hipHalf-40} ${hem} L ${cx+A.hipHalf+40} ${hem} Q ${cx+A.hipHalf+44} ${hem-24} ${cx+A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'b_sariskirt',slot:'bottom',name:'Sari Wrap',era:'India',regions:[{key:'main',label:F1},{key:'accent',label:'Border'}],def:{main:{color:'#e8505b',pattern:'solid'},accent:{color:'#d4af37',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),hem=A.footY-2,s=[];
+   s.push(`<path d="M ${cx-A.waistHalf-2} ${A.waistY-6} L ${cx+A.waistHalf+2} ${A.waistY-6} L ${cx+A.hipHalf+14} ${hem} L ${cx-A.hipHalf-14} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   for(let i=-2;i<=2;i++) s.push(`<line x1="${cx+i*12}" y1="${A.hipY}" x2="${cx+i*15}" y2="${hem-2}" stroke="${ol}" stroke-width="1" opacity=".35"/>`);
+   s.push(`<rect x="${cx-A.hipHalf-14}" y="${hem-8}" width="${(A.hipHalf+14)*2}" height="7" fill="${F.accent}"/>`); return s.join(''); }},
+{id:'b_pants',slot:'bottom',name:'Jeans',era:'Modern',regions:[{key:'main',label:F1}],def:{main:{color:'#3a5a8c',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx; s.push(`<rect x="${x-A.legHalf-1}" y="${A.waistY+2}" width="${(A.legHalf+1)*2}" height="${A.ankleY-A.waistY}" rx="4" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(`<path d="M ${cx-A.hipHalf-1} ${A.waistY+2} L ${cx+A.hipHalf+1} ${A.waistY+2} L ${cx+A.hipHalf-2} ${A.hipY+8} L ${cx-A.hipHalf+2} ${A.hipY+8} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); return s.join(''); }},
+
+/* ── DRESSES (full-body; clear top+bottom) ── */
+{id:'d_chiton',slot:'dress',name:'Greek Chiton',era:'c.500 BC',regions:[{key:'main',label:F1},{key:'accent',label:'Drape & belt'}],def:{main:{color:'#efe9dc',pattern:'solid'},accent:{color:'#d4af37',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-32),olA=shade(F.accent_c,-32),top=A.shoulderY-2,hem=A.ankleY-4,s=[];
    s.push(`<path d="M ${cx-A.shoulderHalf+3} ${top} L ${cx+A.shoulderHalf-2} ${top+8} L ${cx+A.hipHalf+8} ${hem} L ${cx-A.hipHalf-8} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
    for(let i=-2;i<=2;i++) s.push(`<line x1="${cx+i*15}" y1="${A.waistY+4}" x2="${cx+i*18}" y2="${hem-2}" stroke="${ol}" stroke-width="1" opacity=".35"/>`);
    s.push(`<path d="M ${cx-A.shoulderHalf+1} ${top-2} L ${cx-4} ${top+6} L ${cx+10} ${A.waistY+2} L ${cx-A.shoulderHalf-4} ${A.waistY-8} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   s.push(`<rect x="${cx-A.waistHalf-4}" y="${A.waistY-3}" width="${(A.waistHalf+4)*2}" height="6" fill="${F.accent}" stroke="${olA}" stroke-width="1.5"/>`);
-   s.push(`<path d="M ${cx-A.headR} ${A.headCy-3} Q ${cx} ${A.headCy-A.headR-7} ${cx+A.headR} ${A.headCy-3}" fill="none" stroke="${F.accent}" stroke-width="3"/>`);
-   return s.join(''); }},
-
-{id:'egypt', name:'Egyptian Sheath', era:'c. 1300 BC', regions:[{key:'main',label:'Sheath'},{key:'accent',label:'Collar & headdress'}],
- def:{main:{color:'#efe9dc',pattern:'solid'},accent:{color:'#1d6fb8',pattern:'stripes'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY+16, hem=A.ankleY-2, s=[];
+   s.push(`<rect x="${cx-A.waistHalf-4}" y="${A.waistY-3}" width="${(A.waistHalf+4)*2}" height="6" fill="${F.accent}" stroke="${olA}" stroke-width="1.5"/>`); return s.join(''); }},
+{id:'d_sheath',slot:'dress',name:'Egyptian Sheath',era:'c.1300 BC',regions:[{key:'main',label:F1},{key:'accent',label:'Collar'}],def:{main:{color:'#efe9dc',pattern:'solid'},accent:{color:'#1d6fb8',pattern:'stripes'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-32),olA=shade(F.accent_c,-32),top=A.shoulderY+16,hem=A.ankleY-2,s=[];
    s.push(`<path d="M ${cx-A.waistHalf-2} ${top} L ${cx+A.waistHalf+2} ${top} L ${cx+A.hipHalf-4} ${hem} L ${cx-A.hipHalf+4} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   [-1,1].forEach(sd=>s.push(`<rect x="${cx+sd*16-2}" y="${A.shoulderY}" width="4" height="${top-A.shoulderY+2}" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`));
-   s.push(`<path d="M ${cx-A.shoulderHalf-2} ${A.shoulderY+2} Q ${cx} ${A.shoulderY+34} ${cx+A.shoulderHalf+2} ${A.shoulderY+2} Q ${cx} ${A.shoulderY+18} ${cx-A.shoulderHalf-2} ${A.shoulderY+2} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   // nemes headdress
-   s.push(`<path d="M ${cx-A.headR-3} ${A.headCy-2} Q ${cx} ${A.headCy-A.headR-9} ${cx+A.headR+3} ${A.headCy-2} L ${cx+A.headR+5} ${A.headCy+A.headR+6} L ${cx+A.headR-3} ${A.headCy+A.headR} L ${cx-A.headR+3} ${A.headCy+A.headR} L ${cx-A.headR-5} ${A.headCy+A.headR+6} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   s.push(`<circle cx="${cx}" cy="${A.headCy}" r="${A.headR}" fill="${skin}" stroke="${shade(skin,-30)}" stroke-width="2"/>`);
-   const ey=A.headCy+3,ex=A.headR*0.42; s.push(`<circle cx="${cx-ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/><circle cx="${cx+ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/><path d="M ${cx-6} ${ey+9} Q ${cx} ${ey+14} ${cx+6} ${ey+9}" fill="none" stroke="#2a2a2a" stroke-width="2"/>`);
-   return s.join(''); }},
-
-{id:'medieval', name:'Medieval Gown', era:'c. 1400', regions:[{key:'main',label:'Houppelande'},{key:'accent',label:'Belt & lining'}],
- def:{main:{color:'#6a994e',pattern:'solid'},accent:{color:'#b5302a',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY-2, hem=A.footY-2, s=[];
+   [-1,1].forEach(d=>s.push(`<rect x="${cx+d*16-2}" y="${A.shoulderY}" width="4" height="${top-A.shoulderY+2}" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`));
+   s.push(`<path d="M ${cx-A.shoulderHalf-2} ${A.shoulderY+2} Q ${cx} ${A.shoulderY+34} ${cx+A.shoulderHalf+2} ${A.shoulderY+2} Q ${cx} ${A.shoulderY+18} ${cx-A.shoulderHalf-2} ${A.shoulderY+2} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`); return s.join(''); }},
+{id:'d_medieval',slot:'dress',name:'Medieval Gown',era:'c.1400',regions:[{key:'main',label:F1},{key:'accent',label:'Sleeves & belt'}],def:{main:{color:'#6a994e',pattern:'solid'},accent:{color:'#b5302a',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-32),olA=shade(F.accent_c,-32),top=A.shoulderY-2,hem=A.footY-2,s=[];
    s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.hipHalf+34} ${hem} L ${cx-A.hipHalf-34} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // huge bell/funnel sleeves
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.armCx; s.push(`<path d="M ${x-A.armHalf-2} ${top} L ${x+A.armHalf+2} ${top} L ${x+sd*4+22} ${A.kneeY} L ${x+sd*4-22} ${A.kneeY} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`); });
+   [-1,1].forEach(d=>{ const x=cx+d*A.armCx; s.push(`<path d="M ${x-A.armHalf-2} ${top} L ${x+A.armHalf+2} ${top} L ${x+d*4+22} ${A.kneeY} L ${x+d*4-22} ${A.kneeY} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`); });
    s.push(`<rect x="${cx-A.waistHalf-3}" y="${A.shoulderY+40}" width="${(A.waistHalf+3)*2}" height="7" fill="${F.accent}" stroke="${olA}" stroke-width="1.5"/>`);
-   s.push(neckSkin(A,skin,10,12));
-   return s.join(''); }},
-
-{id:'eliz', name:'Elizabethan Gown', era:'c. 1580', regions:[{key:'main',label:'Gown'},{key:'accent',label:'Ruff & cuffs'}],
- def:{main:{color:'#5e0b15',pattern:'solid'},accent:{color:'#efe9dc',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY, s=[];
-   // drum farthingale: flat-topped wide skirt
-   const skTop=A.waistY+4, skW=A.hipHalf+58, hem=A.footY-2;
-   s.push(`<path d="M ${cx-skW} ${skTop} L ${cx+skW} ${skTop} L ${cx+skW-6} ${hem} L ${cx-skW+6} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(`<ellipse cx="${cx}" cy="${skTop}" rx="${skW}" ry="9" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // pointed bodice
-   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf} ${A.waistY-6} L ${cx} ${A.waistY+10} L ${cx-A.waistHalf} ${A.waistY-6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // puffed sleeves
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.armCx; s.push(`<ellipse cx="${x}" cy="${top+16}" rx="${A.armHalf+8}" ry="18" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.armHalf-2}" y="${top+26}" width="${(A.armHalf+2)*2}" height="${A.armBotY-top-22}" rx="4" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   // ruff
-   s.push(`<ellipse cx="${cx}" cy="${A.neckBot+1}" rx="26" ry="9" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   for(let a=0;a<16;a++){ const an=Math.PI*(a/15); s.push(`<line x1="${cx+Math.cos(an)*-26}" y1="${A.neckBot+1+Math.sin(an)*0}" x2="${cx-26+a*52/15}" y2="${A.neckBot+1}" stroke="${olA}" stroke-width=".5" opacity=".4"/>`);}
-   return s.join(''); }},
-
-{id:'doublet', name:'Doublet & Hose', era:'c. 1560', regions:[{key:'main',label:'Doublet'},{key:'accent',label:'Breeches & hose'}],
- def:{main:{color:'#1d3557',pattern:'solid'},accent:{color:'#7b4ddb',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY-2, s=[];
-   // stockings (legs)
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.legCx; s.push(`<rect x="${x-A.legHalf+1}" y="${A.hipY+18}" width="${A.legHalf*2-2}" height="${A.ankleY-A.hipY-18}" rx="${A.legHalf}" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`); });
-   // pumpkin breeches (round puff at hips)
-   s.push(`<ellipse cx="${cx}" cy="${A.hipY+8}" rx="${A.hipHalf+16}" ry="26" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   for(let i=-3;i<=3;i++) s.push(`<path d="M ${cx+i*9} ${A.hipY-16} Q ${cx+i*12} ${A.hipY+8} ${cx+i*9} ${A.hipY+30}" fill="none" stroke="${olA}" stroke-width="1" opacity=".5"/>`);
-   // doublet
-   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+2} ${A.waistY} L ${cx} ${A.waistY+12} L ${cx-A.waistHalf-2} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(sleeves(A,F.main,ol,A.armBotY-top-2,3));
-   for(let i=1;i<5;i++) s.push(`<circle cx="${cx}" cy="${top+10+i*12}" r="1.6" fill="${shade(F.main_c,40)}"/>`);
-   s.push(`<ellipse cx="${cx}" cy="${A.neckBot}" rx="13" ry="5" fill="#efe9dc" stroke="#bbb" stroke-width="1.5"/>`);
-   return s.join(''); }},
-
-{id:'rococo', name:'Rococo Panniers', era:'c. 1760', regions:[{key:'main',label:'Gown'},{key:'accent',label:'Stomacher & bows'}],
- def:{main:{color:'#ffafcc',pattern:'solid'},accent:{color:'#386641',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY, s=[];
-   // extremely wide side panniers skirt
-   const skTop=A.waistY, skW=A.hipHalf+72, hem=A.footY-4;
-   s.push(`<path d="M ${cx-A.waistHalf} ${skTop} Q ${cx-skW} ${skTop+30} ${cx-skW+6} ${hem} L ${cx+skW-6} ${hem} Q ${cx+skW} ${skTop+30} ${cx+A.waistHalf} ${skTop} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   for(let i=-3;i<=3;i++) s.push(`<line x1="${cx+i*22}" y1="${skTop+24}" x2="${cx+i*26}" y2="${hem-2}" stroke="${ol}" stroke-width="1" opacity=".3"/>`);
-   // fitted bodice + stomacher triangle
-   s.push(`<path d="M ${cx-A.shoulderHalf+2} ${top} L ${cx+A.shoulderHalf-2} ${top} L ${cx+A.waistHalf} ${A.waistY} L ${cx-A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(`<path d="M ${cx-15} ${top+4} L ${cx+15} ${top+4} L ${cx} ${A.waistY-2} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   for(let i=0;i<3;i++) s.push(`<path d="M ${cx-8} ${top+12+i*12} L ${cx+8} ${top+12+i*12}" stroke="${olA}" stroke-width="2.5"/>`);
-   s.push(sleeves(A,F.main,ol,30,4));
-   s.push(neckSkin(A,skin,12,12));
-   // powdered wig
-   s.push(`<ellipse cx="${cx}" cy="${A.headCy-A.headR+2}" rx="${A.headR+4}" ry="14" fill="#eceff3" stroke="#c9ccd2" stroke-width="2"/>`);
-   return s.join(''); }},
-
-{id:'crinoline', name:'Crinoline Gown', era:'c. 1860', regions:[{key:'main',label:'Gown'},{key:'accent',label:'Trim & bonnet'}],
- def:{main:{color:'#3a86ff',pattern:'solid'},accent:{color:'#efe9dc',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY, s=[];
-   // huge bell dome skirt
-   const skTop=A.waistY, skW=A.hipHalf+62, hem=A.footY-2;
-   s.push(`<path d="M ${cx-A.waistHalf} ${skTop} Q ${cx-skW} ${hem-40} ${cx-skW} ${hem} L ${cx+skW} ${hem} Q ${cx+skW} ${hem-40} ${cx+A.waistHalf} ${skTop} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   for(let i=1;i<=3;i++) s.push(`<path d="M ${cx-skW*i/3.3} ${hem-6} Q ${cx} ${hem-22} ${cx+skW*i/3.3} ${hem-6}" fill="none" stroke="${F.accent}" stroke-width="3" opacity=".8"/>`);
-   // fitted bodice + bell sleeves
-   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf} ${A.waistY} L ${cx} ${A.waistY+8} L ${cx-A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.armCx; s.push(`<path d="M ${x-A.armHalf-1} ${top} L ${x+A.armHalf+1} ${top} L ${x+sd*2+13} ${A.waistY} L ${x+sd*2-13} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   s.push(neckSkin(A,skin,9,10));
-   // bonnet
-   s.push(`<path d="M ${cx-A.headR-2} ${A.headCy-4} Q ${cx} ${A.headCy-A.headR-12} ${cx+A.headR+2} ${A.headCy-4} L ${cx+A.headR-2} ${A.headCy+2} L ${cx-A.headR+2} ${A.headCy+2} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   return s.join(''); }},
-
-{id:'bustle', name:'Bustle Gown', era:'c. 1885', regions:[{key:'main',label:'Gown'},{key:'accent',label:'Overskirt'}],
- def:{main:{color:'#7a1f1f',pattern:'solid'},accent:{color:'#d4af37',pattern:'stripes'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY, s=[];
-   const skTop=A.waistY, hem=A.footY-2;
-   // slim front skirt
-   s.push(`<path d="M ${cx-A.waistHalf} ${skTop} L ${cx+A.waistHalf} ${skTop} L ${cx+A.hipHalf+10} ${hem} L ${cx-A.hipHalf-6} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // exaggerated back bustle pouf + train (to the right)
-   s.push(`<path d="M ${cx+A.waistHalf-4} ${skTop+2} Q ${cx+A.hipHalf+54} ${skTop+8} ${cx+A.hipHalf+44} ${A.kneeY} Q ${cx+A.hipHalf+60} ${hem} ${cx+A.hipHalf+8} ${hem} Q ${cx+A.hipHalf+10} ${A.kneeY} ${cx+A.waistHalf-2} ${skTop+30} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   for(let i=0;i<3;i++) s.push(`<path d="M ${cx+A.waistHalf} ${skTop+8+i*14} Q ${cx+A.hipHalf+30} ${skTop+12+i*16} ${cx+A.hipHalf+40} ${A.kneeY-10+i*12}" fill="none" stroke="${olA}" stroke-width="1" opacity=".5"/>`);
-   // fitted bodice
-   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf} ${A.waistY} L ${cx} ${A.waistY+8} L ${cx-A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(sleeves(A,F.main,ol,A.armBotY-top-2,2));
-   s.push(neckSkin(A,skin,8,9));
-   s.push(`<ellipse cx="${cx}" cy="${A.headCy-A.headR+1}" rx="${A.headR}" ry="9" fill="${shade(skin,-40)}"/>`);
-   return s.join(''); }},
-
-{id:'gibson', name:'Gibson Girl', era:'c. 1900', regions:[{key:'main',label:'Blouse & skirt'},{key:'accent',label:'Sash'}],
- def:{main:{color:'#efe9dc',pattern:'solid'},accent:{color:'#118ab2',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-32), olA=shade(F.accent_c,-32), top=A.shoulderY, s=[];
-   // long gored A-line skirt
-   const skTop=A.waistY, hem=A.footY-2;
-   s.push(`<path d="M ${cx-A.waistHalf} ${skTop} L ${cx+A.waistHalf} ${skTop} L ${cx+A.hipHalf+26} ${hem} L ${cx-A.hipHalf-26} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // pouter-pigeon blouse
-   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} Q ${cx} ${top+8} ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+3} ${A.waistY+4} Q ${cx} ${A.waistY+14} ${cx-A.waistHalf-3} ${A.waistY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // leg-of-mutton sleeves: big puff at top, narrow forearm
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.armCx; s.push(`<ellipse cx="${x}" cy="${top+18}" rx="${A.armHalf+11}" ry="20" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.armHalf}" y="${top+30}" width="${A.armHalf*2}" height="${A.armBotY-top-26}" rx="4" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   s.push(`<rect x="${cx-A.waistHalf-3}" y="${A.waistY-2}" width="${(A.waistHalf+3)*2}" height="8" fill="${F.accent}" stroke="${olA}" stroke-width="1.5"/>`);
-   // high collar
-   s.push(`<rect x="${cx-A.neckHalf-1}" y="${A.neckTop+2}" width="${(A.neckHalf+1)*2}" height="10" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`);
-   // pompadour hair
-   s.push(`<path d="M ${cx-A.headR-3} ${A.headCy-2} Q ${cx} ${A.headCy-A.headR-16} ${cx+A.headR+3} ${A.headCy-2} Q ${cx} ${A.headCy-A.headR+4} ${cx-A.headR-3} ${A.headCy-2} Z" fill="${shade(skin,-42)}"/>`);
-   s.push(`<circle cx="${cx}" cy="${A.headCy-A.headR-2}" r="7" fill="${shade(skin,-42)}"/>`);
-   return s.join(''); }},
-
-{id:'flapper', name:'1920s Flapper', era:'c. 1925', regions:[{key:'main',label:'Dress'},{key:'accent',label:'Fringe & beads'}],
- def:{main:{color:'#1c1c1e',pattern:'solid'},accent:{color:'#d4af37',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY+2, s=[];
-   // straight drop-waist shift to knee
-   const hem=A.kneeY+10, half=A.shoulderHalf-6;
+   s.push(neckSkin(A,skin,10,12)); return s.join(''); }},
+{id:'d_flapper',slot:'dress',name:'Flapper Dress',era:'1920s',regions:[{key:'main',label:F1},{key:'accent',label:'Fringe & beads'}],def:{main:{color:'#1c1c1e',pattern:'solid'},accent:{color:'#d4af37',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-26),olA=shade(F.accent_c,-26),top=A.shoulderY+2,hem=A.kneeY+10,half=A.shoulderHalf-6,s=[];
    s.push(`<path d="M ${cx-half} ${top} L ${cx+half} ${top} L ${cx+half+2} ${hem} L ${cx-half-2} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // dropped waistband
    s.push(`<rect x="${cx-half-2}" y="${A.hipY+4}" width="${(half+2)*2}" height="6" fill="${F.accent}" stroke="${olA}" stroke-width="1.5"/>`);
-   // fringe hem
    for(let i=0;i<14;i++){ const x=cx-half+i*(half*2)/13; s.push(`<line x1="${x}" y1="${hem-2}" x2="${x}" y2="${hem+16}" stroke="${F.accent}" stroke-width="2.4"/>`);}
-   // thin straps + long beads
-   [-1,1].forEach(sd=>s.push(`<line x1="${cx+sd*14}" y1="${A.neckBot}" x2="${cx+sd*14}" y2="${top}" stroke="${F.main}" stroke-width="3"/>`));
-   s.push(`<path d="M ${cx} ${A.neckBot+2} L ${cx} ${A.hipY}" stroke="${F.accent}" stroke-width="2" stroke-dasharray="1.5 3"/>`);
-   // cloche hat
-   s.push(`<path d="M ${cx-A.headR-2} ${A.headCy+2} Q ${cx-A.headR-2} ${A.headCy-A.headR-8} ${cx} ${A.headCy-A.headR-8} Q ${cx+A.headR+2} ${A.headCy-A.headR-8} ${cx+A.headR+2} ${A.headCy+2} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   s.push(`<path d="M ${cx+A.headR-6} ${A.headCy+2} q 14 0 18 5 q -10 3 -18 0 Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   return s.join(''); }},
-
-{id:'swing50', name:'1950s Swing Dress', era:'c. 1955', regions:[{key:'main',label:'Dress'},{key:'accent',label:'Belt & collar'}],
- def:{main:{color:'#e8505b',pattern:'dots'},accent:{color:'#efe9dc',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY, s=[];
-   // fitted bodice
-   s.push(`<path d="M ${cx-A.shoulderHalf+2} ${top} L ${cx+A.shoulderHalf-2} ${top} L ${cx+A.waistHalf} ${A.waistY} L ${cx-A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // full circle skirt to knee
-   const hem=A.kneeY+14;
-   s.push(`<path d="M ${cx-A.waistHalf} ${A.waistY} Q ${cx-A.hipHalf-44} ${hem-24} ${cx-A.hipHalf-40} ${hem} L ${cx+A.hipHalf+40} ${hem} Q ${cx+A.hipHalf+44} ${hem-24} ${cx+A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // short sleeves
-   s.push(sleeves(A,F.main,ol,20,3));
-   // belt + collar
-   s.push(`<rect x="${cx-A.waistHalf-2}" y="${A.waistY-4}" width="${(A.waistHalf+2)*2}" height="8" fill="${F.accent}" stroke="${olA}" stroke-width="1.5"/>`);
-   s.push(`<path d="M ${cx-13} ${top} L ${cx} ${top+13} L ${cx+13} ${top}" fill="none" stroke="${F.accent}" stroke-width="3"/>`);
-   s.push(neckSkin(A,skin,9,9));
-   s.push(`<path d="M ${cx-A.headR-2} ${A.headCy} Q ${cx} ${A.headCy-A.headR-9} ${cx+A.headR+2} ${A.headCy} Q ${cx+A.headR-6} ${A.headCy+10} ${cx} ${A.headCy-A.headR+5} Q ${cx-A.headR+6} ${A.headCy+10} ${cx-A.headR-2} ${A.headCy} Z" fill="${shade(skin,-42)}"/>`);
-   return s.join(''); }},
-
-{id:'mod60', name:'1960s Mod Shift', era:'c. 1966', regions:[{key:'main',label:'Shift dress'},{key:'accent',label:'Trim'}],
- def:{main:{color:'#ffd166',pattern:'solid'},accent:{color:'#1c1c1e',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY+2, s=[];
-   // short straight trapeze mini shift, sleeveless
-   const hem=A.hipY+44, half=A.shoulderHalf-4;
+   [-1,1].forEach(d=>s.push(`<line x1="${cx+d*14}" y1="${A.neckBot}" x2="${cx+d*14}" y2="${top}" stroke="${F.main}" stroke-width="3"/>`));
+   s.push(`<path d="M ${cx} ${A.neckBot+2} L ${cx} ${A.hipY}" stroke="${F.accent}" stroke-width="2" stroke-dasharray="1.5 3"/>`); return s.join(''); }},
+{id:'d_shift',slot:'dress',name:'Mod Shift',era:'1960s',regions:[{key:'main',label:F1},{key:'accent',label:'Trim'}],def:{main:{color:'#ffd166',pattern:'solid'},accent:{color:'#1c1c1e',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY+2,hem=A.hipY+44,half=A.shoulderHalf-4,s=[];
    s.push(`<path d="M ${cx-half} ${top} L ${cx+half} ${top} L ${cx+half+12} ${hem} L ${cx-half-12} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
    s.push(`<rect x="${cx-half-12}" y="${hem-6}" width="${(half+12)*2}" height="6" fill="${F.accent}"/>`);
    s.push(`<path d="M ${cx-14} ${top} Q ${cx} ${top+15} ${cx+14} ${top} Z" fill="${skin}"/>`);
-   s.push(`<path d="M ${cx-14} ${top} Q ${cx} ${top+15} ${cx+14} ${top}" fill="none" stroke="${F.accent}" stroke-width="3"/>`);
-   // sharp bob
-   s.push(`<path d="M ${cx-A.headR-3} ${A.headCy+8} Q ${cx-A.headR-3} ${A.headCy-A.headR-7} ${cx} ${A.headCy-A.headR-7} Q ${cx+A.headR+3} ${A.headCy-A.headR-7} ${cx+A.headR+3} ${A.headCy+8} L ${cx+A.headR-3} ${A.headCy+10} Q ${cx} ${A.headCy-A.headR+4} ${cx-A.headR+3} ${A.headCy+10} Z" fill="${shade(skin,-44)}"/>`);
-   return s.join(''); }},
-
-{id:'disco70', name:'1970s Disco', era:'c. 1976', regions:[{key:'main',label:'Bell-bottoms'},{key:'accent',label:'Shirt'}],
- def:{main:{color:'#5b5fef',pattern:'solid'},accent:{color:'#fff3b0',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY-2, s=[];
-   // flared bell-bottom trousers
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.legCx; s.push(`<path d="M ${x-A.legHalf-2} ${A.waistY+2} L ${x+A.legHalf+2} ${A.waistY+2} L ${x+A.legHalf+16} ${A.footY-2} L ${x-A.legHalf-16} ${A.footY-2} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   s.push(`<path d="M ${cx-A.hipHalf-2} ${A.waistY+2} L ${cx+A.hipHalf+2} ${A.waistY+2} L ${cx+A.hipHalf-2} ${A.hipY+18} L ${cx-A.hipHalf+2} ${A.hipY+18} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // fitted shirt, big pointy collar, open neck
-   s.push(`<path d="M ${cx-A.shoulderHalf+2} ${top} L ${cx+A.shoulderHalf-2} ${top} L ${cx+A.waistHalf+2} ${A.waistY+6} L ${cx-A.waistHalf-2} ${A.waistY+6} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   s.push(sleeves(A,F.accent,olA,A.armBotY-top-2,3));
-   s.push(`<path d="M ${cx} ${top+2} L ${cx-18} ${top+1} L ${cx-7} ${top+18} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   s.push(`<path d="M ${cx} ${top+2} L ${cx+18} ${top+1} L ${cx+7} ${top+18} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   s.push(`<path d="M ${cx-7} ${top+2} L ${cx} ${A.waistY-6} L ${cx+7} ${top+2} Z" fill="${skin}"/>`);
-   // afro / big hair
-   s.push(`<circle cx="${cx}" cy="${A.headCy-A.headR+4}" r="${A.headR+5}" fill="${shade(skin,-44)}"/>`);
-   s.push(`<circle cx="${cx}" cy="${A.headCy}" r="${A.headR}" fill="${skin}" stroke="${shade(skin,-30)}" stroke-width="2"/>`);
-   const ey=A.headCy+3,ex=A.headR*0.42; s.push(`<circle cx="${cx-ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/><circle cx="${cx+ex}" cy="${ey}" r="2.5" fill="#2a2a2a"/><path d="M ${cx-6} ${ey+9} Q ${cx} ${ey+14} ${cx+6} ${ey+9}" fill="none" stroke="#2a2a2a" stroke-width="2"/>`);
-   return s.join(''); }},
-
-{id:'power80', name:'1980s Power Suit', era:'c. 1987', regions:[{key:'main',label:'Blazer & skirt'},{key:'accent',label:'Blouse'}],
- def:{main:{color:'#7b1fa2',pattern:'solid'},accent:{color:'#efe9dc',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY-4, s=[];
-   // pencil skirt
-   s.push(`<path d="M ${cx-A.hipHalf-2} ${A.waistY+2} L ${cx+A.hipHalf+2} ${A.waistY+2} L ${cx+A.hipHalf-4} ${A.kneeY+6} L ${cx-A.hipHalf+4} ${A.kneeY+6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // blouse triangle at chest
-   s.push(`<path d="M ${cx-16} ${top+2} L ${cx+16} ${top+2} L ${cx} ${A.waistY} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   // blazer with HUGE padded shoulders
-   s.push(`<path d="M ${cx-A.shoulderHalf-14} ${top} L ${cx+A.shoulderHalf+14} ${top} L ${cx+A.waistHalf+4} ${A.waistY+4} L ${cx+8} ${A.waistY+4} L ${cx+12} ${top+14} L ${cx-12} ${top+14} L ${cx-8} ${A.waistY+4} L ${cx-A.waistHalf-4} ${A.waistY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   [-1,1].forEach(sd=>{ const x=cx+sd*(A.armCx+6); s.push(`<path d="M ${x-A.armHalf-6} ${top} L ${x+A.armHalf+6} ${top} L ${x+A.armHalf} ${A.armBotY} L ${x-A.armHalf} ${A.armBotY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   s.push(`<path d="M ${cx-14} ${top+2} L ${cx-4} ${top+20} L ${cx} ${top+8} L ${cx+4} ${top+20} L ${cx+14} ${top+2}" fill="none" stroke="${ol}" stroke-width="2.5"/>`);
-   // big hair
-   s.push(`<path d="M ${cx-A.headR-7} ${A.headCy+4} Q ${cx-A.headR-9} ${A.headCy-A.headR-12} ${cx} ${A.headCy-A.headR-12} Q ${cx+A.headR+9} ${A.headCy-A.headR-12} ${cx+A.headR+7} ${A.headCy+4} Q ${cx} ${A.headCy-A.headR+2} ${cx-A.headR-7} ${A.headCy+4} Z" fill="${shade(skin,-42)}"/>`);
-   return s.join(''); }},
-
-{id:'tux', name:'Tailcoat', era:'c. 1890', regions:[{key:'main',label:'Tailcoat'},{key:'accent',label:'Shirt & tie'}],
- def:{main:{color:'#1c1c1e',pattern:'solid'},accent:{color:'#ffffff',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-20), olA=shade(F.accent_c,-25), top=A.shoulderY-2, s=[];
-   // trousers
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.legCx; s.push(`<rect x="${x-A.legHalf-1}" y="${A.hipY+2}" width="${(A.legHalf+1)*2}" height="${A.ankleY-A.hipY}" rx="3" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   // shirt front + bow tie
-   s.push(`<path d="M ${cx-10} ${top+2} L ${cx+10} ${top+2} L ${cx+8} ${A.waistY} L ${cx-8} ${A.waistY} Z" fill="${F.accent}" stroke="${olA}" stroke-width="1.5"/>`);
-   s.push(`<path d="M ${cx} ${A.neckBot+2} L ${cx-9} ${A.neckBot-2} L ${cx-9} ${A.neckBot+8} Z" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`);
-   s.push(`<path d="M ${cx} ${A.neckBot+2} L ${cx+9} ${A.neckBot-2} L ${cx+9} ${A.neckBot+8} Z" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`);
-   // tailcoat: cropped front, long tails at back
-   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+2} ${A.waistY+4} L ${cx+13} ${A.waistY+4} L ${cx+18} ${A.kneeY+14} L ${cx+4} ${A.kneeY+14} L ${cx} ${A.waistY+8} L ${cx-4} ${A.kneeY+14} L ${cx-18} ${A.kneeY+14} L ${cx-13} ${A.waistY+4} L ${cx-A.waistHalf-2} ${A.waistY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(sleeves(A,F.main,ol,A.armBotY-top-2,3));
-   s.push(`<path d="M ${cx-13} ${top} L ${cx-3} ${A.waistY-6} M ${cx+13} ${top} L ${cx+3} ${A.waistY-6}" stroke="${ol}" stroke-width="2.5" fill="none"/>`);
-   // top hat
-   s.push(`<rect x="${cx-15}" y="${A.headCy-A.headR-30}" width="30" height="34" rx="2" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(`<rect x="${cx-24}" y="${A.headCy-A.headR+1}" width="48" height="6" rx="3" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   return s.join(''); }},
-
-{id:'kimono', name:'Kimono', era:'Japan', regions:[{key:'main',label:'Kimono'},{key:'accent',label:'Obi sash'}],
- def:{main:{color:'#b5179e',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY-2, s=[];
-   const hem=A.footY-2, half=A.shoulderHalf+2;
-   // body T-shape, ankle length
+   s.push(`<path d="M ${cx-14} ${top} Q ${cx} ${top+15} ${cx+14} ${top}" fill="none" stroke="${F.accent}" stroke-width="3"/>`); return s.join(''); }},
+{id:'d_kimono',slot:'dress',name:'Kimono',era:'Japan',regions:[{key:'main',label:F1},{key:'accent',label:'Obi sash'}],def:{main:{color:'#b5179e',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),olA=shade(F.accent_c,-30),top=A.shoulderY-2,hem=A.footY-2,half=A.shoulderHalf+2,s=[];
    s.push(`<path d="M ${cx-half} ${top} L ${cx+half} ${top} L ${cx+A.hipHalf+8} ${hem} L ${cx-A.hipHalf-8} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // big rectangular hanging sleeves
-   [-1,1].forEach(sd=>{ const x=cx+sd*(half-4); s.push(`<path d="M ${x} ${top} L ${x+sd*30} ${top+2} L ${x+sd*30} ${A.waistY+6} L ${x} ${A.waistY+6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   // crossed front (V) showing inner
+   [-1,1].forEach(d=>{ const x=cx+d*(half-4); s.push(`<path d="M ${x} ${top} L ${x+d*30} ${top+2} L ${x+d*30} ${A.waistY+6} L ${x} ${A.waistY+6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
    s.push(`<path d="M ${cx-half+4} ${top+2} L ${cx} ${A.hipY} L ${cx+half-4} ${top+2} L ${cx+8} ${top+2} L ${cx} ${A.waistY-10} L ${cx-8} ${top+2} Z" fill="${shade(F.main_c,18)}" stroke="${ol}" stroke-width="1.5"/>`);
-   // wide obi sash
    s.push(`<rect x="${cx-A.waistHalf-4}" y="${A.waistY-8}" width="${(A.waistHalf+4)*2}" height="20" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   s.push(neckSkin(A,skin,9,8));
-   // bun
-   s.push(`<path d="M ${cx-A.headR-2} ${A.headCy} Q ${cx} ${A.headCy-A.headR-8} ${cx+A.headR+2} ${A.headCy} Z" fill="${shade(skin,-46)}"/>`);
-   s.push(`<circle cx="${cx}" cy="${A.headCy-A.headR-2}" r="7" fill="${shade(skin,-46)}"/>`);
-   return s.join(''); }},
-
-{id:'sari', name:'Sari', era:'India', regions:[{key:'main',label:'Sari'},{key:'accent',label:'Border & blouse'}],
- def:{main:{color:'#e8505b',pattern:'solid'},accent:{color:'#d4af37',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY, s=[];
-   const hem=A.footY-2;
-   // fitted blouse (choli)
+   s.push(neckSkin(A,skin,9,8)); return s.join(''); }},
+{id:'d_qipao',slot:'dress',name:'Cheongsam',era:'China',regions:[{key:'main',label:F1},{key:'accent',label:'Trim & frogs'}],def:{main:{color:'#b5302a',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY,hem=A.footY-2,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf+4} ${top} L ${cx+A.shoulderHalf-4} ${top} L ${cx+A.waistHalf} ${A.waistY} L ${cx+A.hipHalf-2} ${A.hipY} L ${cx+A.hipHalf-4} ${hem} L ${cx+3} ${hem} L ${cx+3} ${A.kneeY} L ${cx-3} ${A.kneeY} L ${cx-3} ${hem} L ${cx-A.hipHalf+4} ${hem} L ${cx-A.hipHalf+2} ${A.hipY} L ${cx-A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(sleeves(A,F.main,ol,12,2));
+   s.push(`<path d="M ${cx-11} ${A.neckBot+2} L ${cx-9} ${A.neckTop+3} L ${cx+9} ${A.neckTop+3} L ${cx+11} ${A.neckBot+2} Z" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`);
+   s.push(`<path d="M ${cx-9} ${A.neckBot+2} Q ${cx+14} ${A.shoulderY+12} ${cx+A.waistHalf-2} ${A.waistY-4}" fill="none" stroke="${F.accent}" stroke-width="2.5"/>`);
+   for(let i=0;i<3;i++) s.push(`<circle cx="${cx+6+i*8}" cy="${A.shoulderY+8+i*9}" r="2" fill="${F.accent}"/>`); return s.join(''); }},
+{id:'d_sari',slot:'dress',name:'Sari',era:'India',regions:[{key:'main',label:F1},{key:'accent',label:'Border & blouse'}],def:{main:{color:'#e8505b',pattern:'solid'},accent:{color:'#d4af37',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),olA=shade(F.accent_c,-30),top=A.shoulderY,hem=A.footY-2,s=[];
    s.push(`<path d="M ${cx-A.shoulderHalf+2} ${top} L ${cx+A.shoulderHalf-2} ${top} L ${cx+A.waistHalf} ${A.waistY-10} L ${cx-A.waistHalf} ${A.waistY-10} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   // wrapped pleated skirt
    s.push(`<path d="M ${cx-A.waistHalf-2} ${A.waistY-6} L ${cx+A.waistHalf+2} ${A.waistY-6} L ${cx+A.hipHalf+14} ${hem} L ${cx-A.hipHalf-14} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
    for(let i=-2;i<=2;i++) s.push(`<line x1="${cx+i*12}" y1="${A.hipY}" x2="${cx+i*15}" y2="${hem-2}" stroke="${ol}" stroke-width="1" opacity=".35"/>`);
    s.push(`<rect x="${cx-A.hipHalf-14}" y="${hem-8}" width="${(A.hipHalf+14)*2}" height="7" fill="${F.accent}"/>`);
-   // pallu draped diagonally over left shoulder
    s.push(`<path d="M ${cx-A.shoulderHalf-2} ${top-2} L ${cx+A.waistHalf} ${A.waistY-8} L ${cx+A.waistHalf-6} ${A.hipY+30} L ${cx-A.shoulderHalf-10} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2" opacity=".92"/>`);
    s.push(`<path d="M ${cx-A.shoulderHalf-2} ${top-2} L ${cx+A.waistHalf} ${A.waistY-8}" stroke="${F.accent}" stroke-width="3"/>`);
-   s.push(neckSkin(A,skin,9,8));
-   s.push(`<ellipse cx="${cx}" cy="${A.headCy-A.headR+2}" rx="${A.headR}" ry="8" fill="${shade(skin,-48)}"/>`);
-   return s.join(''); }},
-
-{id:'qipao', name:'Cheongsam', era:'China', regions:[{key:'main',label:'Qipao'},{key:'accent',label:'Trim & frogs'}],
- def:{main:{color:'#b5302a',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY, s=[];
-   const hem=A.footY-2;
-   // slim fitted column with side slit
-   s.push(`<path d="M ${cx-A.shoulderHalf+4} ${top} L ${cx+A.shoulderHalf-4} ${top} L ${cx+A.waistHalf} ${A.waistY} L ${cx+A.hipHalf-2} ${A.hipY} L ${cx+A.hipHalf-4} ${hem} L ${cx+3} ${hem} L ${cx+3} ${A.kneeY} L ${cx-3} ${A.kneeY} L ${cx-3} ${hem} L ${cx-A.hipHalf+4} ${hem} L ${cx-A.hipHalf+2} ${A.hipY} L ${cx-A.waistHalf} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // cap sleeves
-   s.push(sleeves(A,F.main,ol,12,2));
-   // mandarin collar
-   s.push(`<path d="M ${cx-11} ${A.neckBot+2} L ${cx-9} ${A.neckTop+3} L ${cx+9} ${A.neckTop+3} L ${cx+11} ${A.neckBot+2} Z" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`);
-   // diagonal closure + frog buttons
-   s.push(`<path d="M ${cx-9} ${A.neckBot+2} Q ${cx+14} ${A.shoulderY+12} ${cx+A.waistHalf-2} ${A.waistY-4}" fill="none" stroke="${F.accent}" stroke-width="2.5"/>`);
-   for(let i=0;i<3;i++) s.push(`<circle cx="${cx+6+i*8}" cy="${A.shoulderY+8+i*9}" r="2" fill="${F.accent}"/>`);
-   s.push(`<rect x="${cx-A.hipHalf+2}" y="${hem-6}" width="${(A.hipHalf-2)*2}" height="6" fill="${F.accent}" opacity=".9"/>`);
-   s.push(neckSkin(A,skin,7,6));
-   s.push(`<path d="M ${cx-A.headR-2} ${A.headCy} Q ${cx} ${A.headCy-A.headR-8} ${cx+A.headR+2} ${A.headCy} Z" fill="${shade(skin,-48)}"/>`);
-   return s.join(''); }},
-
-{id:'pirate', name:'Pirate', era:'Golden Age', regions:[{key:'main',label:'Coat & breeches'},{key:'accent',label:'Shirt & sash'}],
- def:{main:{color:'#4a2c12',pattern:'solid'},accent:{color:'#e8505b',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-28), olA=shade(F.accent_c,-30), top=A.shoulderY-2, s=[];
-   // tall cuffed boots
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.legCx; s.push(`<rect x="${x-A.legHalf-1}" y="${A.kneeY}" width="${(A.legHalf+1)*2}" height="${A.ankleY-A.kneeY+8}" rx="4" fill="#2a1a0e" stroke="#140c06" stroke-width="2"/>`); s.push(`<path d="M ${x-A.legHalf-5} ${A.kneeY} L ${x+A.legHalf+5} ${A.kneeY} L ${x+A.legHalf+1} ${A.kneeY+12} L ${x-A.legHalf-1} ${A.kneeY+12} Z" fill="#2a1a0e" stroke="#140c06" stroke-width="2"/>`); });
-   // breeches
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.legCx; s.push(`<rect x="${x-A.legHalf-2}" y="${A.waistY}" width="${(A.legHalf+2)*2}" height="${A.kneeY-A.waistY+4}" rx="5" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   // billowy poet shirt
-   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+4} ${A.waistY+4} L ${cx-A.waistHalf-4} ${A.waistY+4} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`);
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.armCx; s.push(`<path d="M ${x-A.armHalf-2} ${top} Q ${x+sd*16} ${A.waistY-10} ${x-A.armHalf} ${A.armBotY} L ${x+A.armHalf} ${A.armBotY} Q ${x+sd*9} ${A.waistY-10} ${x+A.armHalf+2} ${top} Z" fill="${F.accent}" stroke="${olA}" stroke-width="2"/>`); });
-   s.push(`<path d="M ${cx-9} ${top+1} L ${cx} ${A.shoulderY+22} L ${cx+9} ${top+1} Z" fill="${skin}"/>`);
-   // waist sash
-   s.push(`<path d="M ${cx-A.waistHalf-4} ${A.waistY-6} L ${cx+A.waistHalf+4} ${A.waistY-6} L ${cx+A.waistHalf} ${A.waistY+12} L ${cx-A.waistHalf} ${A.waistY+12} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(`<rect x="${cx-A.waistHalf-6}" y="${A.waistY-3}" width="${(A.waistHalf+6)*2}" height="7" fill="${shade(F.accent_c,-10)}"/>`);
-   // tricorn hat
-   s.push(`<path d="M ${cx-A.headR-9} ${A.headCy-4} Q ${cx} ${A.headCy-A.headR-16} ${cx+A.headR+9} ${A.headCy-4} Q ${cx} ${A.headCy-2} ${cx-A.headR-9} ${A.headCy-4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   return s.join(''); }},
-
-{id:'wizard', name:'Wizard Robe', era:'Theatrical', regions:[{key:'main',label:'Robe'},{key:'accent',label:'Trim & hat band'}],
- def:{main:{color:'#3a0ca3',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
- draw(A,F,skin){ const cx=A.cx, ol=shade(F.main_c,-30), olA=shade(F.accent_c,-30), top=A.shoulderY-2, s=[];
-   const hem=A.footY-2;
-   // long flowing A-line robe
+   s.push(neckSkin(A,skin,9,8)); return s.join(''); }},
+{id:'d_wizard',slot:'dress',name:'Wizard Robe',era:'Theatrical',regions:[{key:'main',label:F1},{key:'accent',label:'Trim & stars'}],def:{main:{color:'#3a0ca3',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F,skin){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY-2,hem=A.footY-2,s=[];
    s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.hipHalf+30} ${hem} L ${cx-A.hipHalf-30} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   // wide hanging sleeves
-   [-1,1].forEach(sd=>{ const x=cx+sd*A.armCx; s.push(`<path d="M ${x-A.armHalf-2} ${top} L ${x+A.armHalf+2} ${top} L ${x+sd*6+18} ${A.hipY} L ${x+sd*6-12} ${A.hipY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
-   // robe opening + trim
+   [-1,1].forEach(d=>{ const x=cx+d*A.armCx; s.push(`<path d="M ${x-A.armHalf-2} ${top} L ${x+A.armHalf+2} ${top} L ${x+d*6+18} ${A.hipY} L ${x+d*6-12} ${A.hipY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
    s.push(`<path d="M ${cx} ${A.neckBot+2} L ${cx} ${hem-2}" stroke="${F.accent}" stroke-width="3"/>`);
-   s.push(`<path d="M ${cx-A.hipHalf-30} ${hem-6} L ${cx+A.hipHalf+30} ${hem-6}" stroke="${F.accent}" stroke-width="4" opacity=".8"/>`);
-   // stars
    [[cx-18,A.waistY+20],[cx+22,A.hipY+34],[cx-10,A.kneeY]].forEach(([sx,sy])=>s.push(`<path d="M ${sx} ${sy-5} L ${sx+1.5} ${sy-1} L ${sx+5} ${sy-1} L ${sx+2} ${sy+2} L ${sx+3} ${sy+6} L ${sx} ${sy+3} L ${sx-3} ${sy+6} L ${sx-2} ${sy+2} L ${sx-5} ${sy-1} L ${sx-1.5} ${sy-1} Z" fill="${F.accent}"/>`));
-   s.push(neckSkin(A,skin,8,8));
-   // tall pointed hat with brim
-   s.push(`<path d="M ${cx-A.headR-8} ${A.headCy-A.headR+4} L ${cx+A.headR+8} ${A.headCy-A.headR+4} L ${cx+5} ${A.headCy-A.headR-46} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(`<ellipse cx="${cx}" cy="${A.headCy-A.headR+5}" rx="${A.headR+12}" ry="6" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
-   s.push(`<rect x="${cx-A.headR-2}" y="${A.headCy-A.headR-4}" width="${(A.headR+2)*2-6}" height="6" fill="${F.accent}"/>`);
-   return s.join(''); }}
-];
-const OUTFIT_BY_ID={}; OUTFITS.forEach(o=>OUTFIT_BY_ID[o.id]=o);
-const THUMB_REG={main:{color:'#c4bfb6',pattern:'solid'},accent:{color:'#8f8a82',pattern:'solid'},trim:{color:'#726d66',pattern:'solid'}};
+   s.push(neckSkin(A,skin,8,8)); return s.join(''); }},
 
-function drawOutfit(A, outfit, reg, skin, D){
+/* ── OUTERWEAR ────────────────────────────── */
+{id:'o_tailcoat',slot:'outer',name:'Tailcoat',era:'1890s',regions:[{key:'main',label:F1}],def:{main:{color:'#1c1c1e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-20),top=A.shoulderY-2,s=[];
+   s.push(`<path d="M ${cx-A.shoulderHalf} ${top} L ${cx+A.shoulderHalf} ${top} L ${cx+A.waistHalf+2} ${A.waistY+4} L ${cx+13} ${A.waistY+4} L ${cx+18} ${A.kneeY+14} L ${cx+4} ${A.kneeY+14} L ${cx} ${A.waistY+8} L ${cx-4} ${A.kneeY+14} L ${cx-18} ${A.kneeY+14} L ${cx-13} ${A.waistY+4} L ${cx-A.waistHalf-2} ${A.waistY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(sleeves(A,F.main,ol,A.armBotY-top-2,3));
+   s.push(`<path d="M ${cx-13} ${top} L ${cx-3} ${A.waistY-6} M ${cx+13} ${top} L ${cx+3} ${A.waistY-6}" stroke="${ol}" stroke-width="2.5" fill="none"/>`); return s.join(''); }},
+{id:'o_cape',slot:'outer',name:'Cape',era:'Classic',regions:[{key:'main',label:F1}],def:{main:{color:'#5e0b15',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY-3,sh=A.shoulderHalf+5,hem=A.hipY+92;
+   return `<path d="M ${cx-sh} ${top} L ${cx+sh} ${top} L ${cx+sh+26} ${hem} L ${cx-sh-26} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/><path d="M ${cx-16} ${top} Q ${cx} ${top+12} ${cx+16} ${top}" fill="none" stroke="${ol}" stroke-width="3"/>`; }},
+{id:'o_frock',slot:'outer',name:'Frock Coat',era:'Victorian',regions:[{key:'main',label:F1}],def:{main:{color:'#264653',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-26),top=A.shoulderY-2,hem=A.kneeY,s=[];
+   s.push(sleeves(A,F.main,ol,A.armBotY-top+8,4));
+   [-1,1].forEach(d=>{ const outer=cx+d*(A.shoulderHalf+2),inner=cx+d*7; s.push(`<path d="M ${outer} ${top} L ${inner} ${top} L ${inner} ${hem} L ${cx+d*(A.hipHalf+2)} ${hem} L ${cx+d*(A.waistHalf+2)} ${A.waistY} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   s.push(`<path d="M ${cx-14} ${top} L ${cx} ${top+16} L ${cx+14} ${top}" fill="none" stroke="${ol}" stroke-width="2.5"/>`); return s.join(''); }},
+{id:'o_vest',slot:'outer',name:'Waistcoat',era:'Classic',regions:[{key:'main',label:F1},{key:'accent',label:'Buttons'}],def:{main:{color:'#7f5539',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY,s=[];
+   [-1,1].forEach(d=>{ const outer=cx+d*(A.shoulderHalf-4),inner=cx+d*6; s.push(`<path d="M ${outer} ${top} L ${inner} ${top+6} L ${inner} ${A.waistY+8} L ${cx+d*(A.waistHalf)} ${A.waistY+6} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); });
+   for(let i=0;i<4;i++) s.push(`<circle cx="${cx}" cy="${top+14+i*11}" r="1.8" fill="${F.accent}"/>`); return s.join(''); }},
+{id:'o_cloak',slot:'outer',name:'Hooded Cloak',era:'Medieval',regions:[{key:'main',label:F1}],def:{main:{color:'#386641',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),top=A.shoulderY-3,sh=A.shoulderHalf+6,hem=A.kneeY+20,s=[];
+   s.push(`<path d="M ${cx-sh} ${top} L ${cx+sh} ${top} L ${cx+sh+20} ${hem} L ${cx-sh-20} ${hem} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`);
+   s.push(`<path d="M ${cx-A.headR-3} ${A.headCy} Q ${cx} ${A.headCy-A.headR-12} ${cx+A.headR+3} ${A.headCy} L ${cx+A.headR} ${A.shoulderY+4} L ${cx-A.headR} ${A.shoulderY+4} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); return s.join(''); }},
+
+/* ── SHOES ────────────────────────────────── */
+{id:'s_boots',slot:'shoes',name:'Tall Boots',era:'Pirate',regions:[{key:'main',label:F1}],def:{main:{color:'#2a1a0e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx; s.push(`<rect x="${x-A.legHalf-1}" y="${A.kneeY}" width="${(A.legHalf+1)*2}" height="${A.ankleY-A.kneeY+10}" rx="4" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<path d="M ${x-A.legHalf-5} ${A.kneeY} L ${x+A.legHalf+5} ${A.kneeY} L ${x+A.legHalf+1} ${A.kneeY+12} L ${x-A.legHalf-1} ${A.kneeY+12} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); }); return s.join(''); }},
+{id:'s_heels',slot:'shoes',name:'Heels',era:'Modern',regions:[{key:'main',label:F1}],def:{main:{color:'#b5302a',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx,y=A.ankleY; s.push(`<path d="M ${x-A.legHalf} ${y} L ${x+A.legHalf+9} ${y} L ${x+A.legHalf+11} ${y+8} L ${x-A.legHalf} ${y+10} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.legHalf}" y="${y+10}" width="4" height="15" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`); }); return s.join(''); }},
+{id:'s_flats',slot:'shoes',name:'Flats',era:'Classic',regions:[{key:'main',label:F1}],def:{main:{color:'#1c1c1e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-25),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx,y=A.ankleY; s.push(`<ellipse cx="${x+4}" cy="${y+6}" rx="${A.legHalf+9}" ry="7" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); }); return s.join(''); }},
+{id:'s_sandals',slot:'shoes',name:'Sandals',era:'Antiquity',regions:[{key:'main',label:F1}],def:{main:{color:'#7f5539',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx,y=A.ankleY; s.push(`<rect x="${x-A.legHalf}" y="${y+6}" width="${A.legHalf*2+11}" height="6" rx="3" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`); s.push(`<path d="M ${x-A.legHalf} ${y} L ${x+A.legHalf+8} ${y+6} M ${x} ${y} L ${x+A.legHalf+4} ${y+6}" stroke="${F.main}" stroke-width="2.5"/>`); }); return s.join(''); }},
+{id:'s_sneakers',slot:'shoes',name:'Sneakers',era:'Modern',regions:[{key:'main',label:F1}],def:{main:{color:'#e8505b',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx,y=A.ankleY; s.push(`<path d="M ${x-A.legHalf-2} ${y-6} L ${x+A.legHalf+2} ${y-6} L ${x+A.legHalf+13} ${y+8} L ${x-A.legHalf-2} ${y+10} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.legHalf-3}" y="${y+8}" width="${(A.legHalf+9)*1.5}" height="6" rx="3" fill="#fff" stroke="${ol}" stroke-width="1"/>`); }); return s.join(''); }},
+{id:'s_vboots',slot:'shoes',name:'Button Boots',era:'Victorian',regions:[{key:'main',label:F1}],def:{main:{color:'#3a2a1d',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-28),s=[];
+   [-1,1].forEach(d=>{ const x=cx+d*A.legCx,y=A.ankleY; s.push(`<rect x="${x-A.legHalf-1}" y="${y-22}" width="${(A.legHalf+1)*2}" height="26" rx="4" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); s.push(`<path d="M ${x-A.legHalf-1} ${y+2} q ${A.legHalf+8} 4 ${(A.legHalf+8)} 0 l 0 4 q -${A.legHalf+8} 4 -${(A.legHalf+8)} 0 Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`); for(let i=0;i<3;i++) s.push(`<circle cx="${x+d*2}" cy="${y-16+i*7}" r="1.3" fill="${shade(F.main_c,40)}"/>`); }); return s.join(''); }},
+
+/* ── ACCESSORIES ──────────────────────────── */
+{id:'a_ruff',slot:'accessory',name:'Ruff',era:'Elizabethan',regions:[{key:'main',label:'Ruff'}],def:{main:{color:'#efe9dc',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-22); return `<ellipse cx="${cx}" cy="${A.neckBot+1}" rx="26" ry="9" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'a_usekh',slot:'accessory',name:'Usekh Collar',era:'Egyptian',regions:[{key:'main',label:'Collar'}],def:{main:{color:'#1d6fb8',pattern:'stripes'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30); return `<path d="M ${cx-A.shoulderHalf-2} ${A.shoulderY+2} Q ${cx} ${A.shoulderY+30} ${cx+A.shoulderHalf+2} ${A.shoulderY+2} Q ${cx} ${A.shoulderY+16} ${cx-A.shoulderHalf-2} ${A.shoulderY+2} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }},
+{id:'a_sash',slot:'accessory',name:'Sash',era:'Pirate',regions:[{key:'main',label:'Sash'}],def:{main:{color:'#b5302a',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30); return `<path d="M ${cx-A.waistHalf-4} ${A.waistY-6} L ${cx+A.waistHalf+4} ${A.waistY-6} L ${cx+A.waistHalf} ${A.waistY+12} L ${cx-A.waistHalf} ${A.waistY+12} Z" fill="${F.main}" stroke="${ol}" stroke-width="2"/><rect x="${cx+A.waistHalf-8}" y="${A.waistY-4}" width="10" height="26" rx="3" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`; }},
+{id:'a_belt',slot:'accessory',name:'Belt',era:'Classic',regions:[{key:'main',label:'Belt'},{key:'accent',label:'Buckle'}],def:{main:{color:'#3a2a1d',pattern:'solid'},accent:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30); return `<rect x="${cx-A.waistHalf-3}" y="${A.waistY-3}" width="${(A.waistHalf+3)*2}" height="9" fill="${F.main}" stroke="${ol}" stroke-width="2"/><rect x="${cx-5}" y="${A.waistY-3}" width="10" height="9" fill="${F.accent}" stroke="${ol}" stroke-width="1.5"/>`; }},
+{id:'a_beads',slot:'accessory',name:'Long Beads',era:'1920s',regions:[{key:'main',label:'Beads'}],def:{main:{color:'#d4af37',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx; return `<path d="M ${cx-12} ${A.neckBot} Q ${cx} ${A.hipY} ${cx+12} ${A.neckBot}" fill="none" stroke="${F.main}" stroke-width="2.5" stroke-dasharray="2 2.5"/>`; }},
+{id:'a_glasses',slot:'accessory',name:'Glasses',era:'Modern',regions:[{key:'main',label:'Frames'}],def:{main:{color:'#1c1c1e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ey=A.headCy+3,ex=A.headR*0.42,rad=8,ol=F.main; return `<circle cx="${cx-ex}" cy="${ey}" r="${rad}" fill="none" stroke="${ol}" stroke-width="2.5"/><circle cx="${cx+ex}" cy="${ey}" r="${rad}" fill="none" stroke="${ol}" stroke-width="2.5"/><line x1="${cx-ex+rad}" y1="${ey}" x2="${cx+ex-rad}" y2="${ey}" stroke="${ol}" stroke-width="2.5"/>`; }},
+{id:'a_sunglasses',slot:'accessory',name:'Sunglasses',era:'Modern',regions:[{key:'main',label:'Lenses'}],def:{main:{color:'#1c1c1e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ey=A.headCy+3,ex=A.headR*0.42,rad=8,ol=shade(F.main_c,-30); return `<circle cx="${cx-ex}" cy="${ey}" r="${rad}" fill="${F.main}" stroke="${ol}" stroke-width="2.5"/><circle cx="${cx+ex}" cy="${ey}" r="${rad}" fill="${F.main}" stroke="${ol}" stroke-width="2.5"/><line x1="${cx-ex+rad}" y1="${ey}" x2="${cx+ex-rad}" y2="${ey}" stroke="${ol}" stroke-width="2.5"/>`; }},
+{id:'a_necklace',slot:'accessory',name:'Necklace',era:'Classic',regions:[{key:'main',label:'Jewel'}],def:{main:{color:'#b5179e',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30); return `<path d="M ${cx-14} ${A.neckBot} Q ${cx} ${A.neckBot+18} ${cx+14} ${A.neckBot}" fill="none" stroke="${F.main}" stroke-width="3"/><circle cx="${cx}" cy="${A.neckBot+15}" r="4.5" fill="${F.main}" stroke="${ol}" stroke-width="1.5"/>`; }},
+{id:'a_medallion',slot:'accessory',name:'Medallion',era:'1970s',regions:[{key:'main',label:'Medallion'}],def:{main:{color:'#ffd166',pattern:'solid'}},
+ draw(A,F){ const cx=A.cx,ol=shade(F.main_c,-30); return `<path d="M ${cx-10} ${A.neckBot} Q ${cx} ${A.neckBot+10} ${cx+10} ${A.neckBot}" fill="none" stroke="${shade(F.main_c,-10)}" stroke-width="2"/><circle cx="${cx}" cy="${A.neckBot+16}" r="6" fill="${F.main}" stroke="${ol}" stroke-width="2"/>`; }}
+];
+
+const PIECE_BY_ID={}; PIECES.forEach(p=>PIECE_BY_ID[p.id]=p);
+const CATS=[
+  {slot:'head',label:'Headwear'},{slot:'top',label:'Tops'},{slot:'bottom',label:'Bottoms'},
+  {slot:'dress',label:'Dresses'},{slot:'outer',label:'Outerwear'},{slot:'shoes',label:'Shoes'},{slot:'accessory',label:'Accessories'}
+];
+const SLOT_RENDER_ORDER=['bottom','dress','top','outer','shoes','head','accessory'];
+const THUMB_REG={main:{color:'#c4bfb6',pattern:'solid'},accent:{color:'#8f8a82',pattern:'solid'}};
+
+function drawPiece(A,piece,reg,skin,D){
   const F={};
-  outfit.regions.forEach(r=>{ const rv=(reg&&reg[r.key])||outfit.def[r.key]; const f=fillFor(rv); if(f.def)D.push(f.def); F[r.key]=f.fill; F[r.key+'_c']=rv.color; });
-  return outfit.draw(A,F,skin);
+  piece.regions.forEach(r=>{ const rv=(reg&&reg[r.key])||piece.def[r.key]; const f=fillFor(rv); if(f.def)D.push(f.def); F[r.key]=f.fill; F[r.key+'_c']=rv.color; });
+  return piece.draw(A,F,skin);
 }
 
 /* ── State ────────────────────────────────── */
 let chars=[], selId=null, seq=0;
 const stage=document.getElementById('stage'), stageWrap=document.getElementById('stageWrap');
-const STAGE_W=1700, STAGE_H=1100;
+const STAGE_W=2000, STAGE_H=1300;
 stage.setAttribute('viewBox',`0 0 ${STAGE_W} ${STAGE_H}`); stage.setAttribute('width',STAGE_W); stage.setAttribute('height',STAGE_H);
 function selChar(){ return chars.find(c=>c.id===selId)||null; }
 function toast(msg,opts={}){ const t=document.getElementById('toast'); t.innerHTML=msg; t.className=opts.warn?'warn':''; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',opts.ms||1900); }
 function esc(s){ return (s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
 
-/* ── Render character ─────────────────────── */
 function renderCharInner(ch){
-  const A=anchors(ch.bodyPreset), D=[], parts=[drawBody(A,ch.skin)];
-  if (ch.outfit && OUTFIT_BY_ID[ch.outfit.id]) parts.push(drawOutfit(A,OUTFIT_BY_ID[ch.outfit.id],ch.outfit.reg,ch.skin,D));
+  const A=anchors(ch.bodyPreset),D=[],parts=[drawBody(A,ch.skin)];
+  SLOT_RENDER_ORDER.forEach(slot=>{ const w=ch.slots[slot]; if(w&&PIECE_BY_ID[w.id]) parts.push(drawPiece(A,PIECE_BY_ID[w.id],w.reg,ch.skin,D)); });
   const defs=D.length?`<defs>${D.join('')}</defs>`:'';
-  return {svg:defs+parts.join(''), A};
+  return {svg:defs+parts.join(''),A};
 }
 function renderChar(ch){
   const {svg,A}=renderCharInner(ch);
   const sel=ch.id===selId?`<rect class="sel-ring" x="-34" y="6" width="268" height="${A.footY+44}" rx="14"/>`:'';
-  const name=esc(ch.name||('Character '+ch.seq)), ly=A.footY+26;
+  const name=esc(ch.name||('Character '+ch.seq)),ly=A.footY+26;
   const scene=ch.scene?`<text class="cscene" x="100" y="${ly+17}" text-anchor="middle">${esc(ch.scene)}</text>`:'';
   return `<g class="char" data-id="${ch.id}" transform="translate(${ch.x},${ch.y})">${sel}${svg}<text class="clbl" x="100" y="${ly}" text-anchor="middle">${name}</text>${scene}</g>`;
 }
 function renderStage(){ stage.innerHTML=chars.map(renderChar).join(''); document.getElementById('emptyHint').style.display=chars.length?'none':'flex'; }
 
 /* ── Wardrobe ─────────────────────────────── */
-function thumbSVG(outfit){
-  const A=anchors('1'), D=[];
+let activeSlot='top';
+function thumbBox(slot,A){
+  if(slot==='head') return `${A.cx-72} ${A.headCy-A.headR-46} 144 116`;
+  if(slot==='shoes') return `${A.cx-72} ${A.ankleY-52} 144 94`;
+  if(slot==='accessory') return `${A.cx-84} ${A.shoulderY-34} 168 150`;
+  return `-30 8 260 ${A.footY+2}`;
+}
+function thumbSVG(piece){
+  const A=anchors('1'),D=[];
   const body=`<g opacity=".85">${drawBody(A,'#d7d7dd')}</g>`;
-  const g=drawOutfit(A,outfit,THUMB_REG,'#d7d7dd',D);
+  const g=drawPiece(A,piece,THUMB_REG,'#d7d7dd',D);
   const defs=D.length?`<defs>${D.join('')}</defs>`:'';
-  return `<svg viewBox="-30 8 260 ${A.footY+2}" preserveAspectRatio="xMidYMid meet">${defs}${body}${g}</svg>`;
+  return `<svg viewBox="${thumbBox(piece.slot,A)}" preserveAspectRatio="xMidYMid meet">${defs}${body}${g}</svg>`;
+}
+function renderTabs(){
+  document.getElementById('catTabs').innerHTML=CATS.map(c=>`<button class="cat-tab${c.slot===activeSlot?' on':''}" data-slot="${c.slot}">${c.label}</button>`).join('');
 }
 function renderPalette(){
-  const sel=selChar(), wornId=sel&&sel.outfit?sel.outfit.id:null;
-  document.getElementById('grid').innerHTML=OUTFITS.map(o=>
-    `<div class="thumb${o.id===wornId?' on':''}" data-id="${o.id}">${thumbSVG(o)}<div class="tn">${o.name}</div><div class="te">${o.era}</div></div>`).join('');
+  const cat=CATS.find(c=>c.slot===activeSlot);
+  const items=PIECES.filter(p=>p.slot===activeSlot);
+  document.getElementById('catCount').textContent=cat.label+' · '+items.length;
+  const sel=selChar(), wornId=sel&&sel.slots[activeSlot]?sel.slots[activeSlot].id:null;
+  const cells=[`<div class="thumb none" data-none="1">✕<br>None</div>`];
+  items.forEach(p=>cells.push(`<div class="thumb${p.id===wornId?' on':''}" data-id="${p.id}">${thumbSVG(p)}<div class="tn">${p.name}</div><div class="te">${p.era}</div></div>`));
+  document.getElementById('grid').innerHTML=cells.join('');
 }
-document.getElementById('grid').addEventListener('click', e=>{
-  const cell=e.target.closest('.thumb'); if(!cell) return;
-  const sel=selChar(); if(!sel){ toast('Select a character first — or click <b>Add Character</b>.', {warn:true}); return; }
-  equip(sel, cell.dataset.id);
+document.getElementById('catTabs').addEventListener('click',e=>{ const b=e.target.closest('.cat-tab'); if(!b)return; activeSlot=b.dataset.slot; renderTabs(); renderPalette(); renderColorizer(); });
+document.getElementById('grid').addEventListener('click',e=>{
+  const cell=e.target.closest('.thumb'); if(!cell)return;
+  const sel=selChar(); if(!sel){ toast('Select a character first — or click <b>Add Character</b>.',{warn:true}); return; }
+  if(cell.dataset.none) clearSlot(sel,activeSlot); else equip(sel,cell.dataset.id);
 });
 
 /* ── Equip + colourise ────────────────────── */
 let activeRegion='main';
-function equip(ch, outfitId){
-  const o=OUTFIT_BY_ID[outfitId]; if(!o) return;
-  const reg={}; o.regions.forEach(r=>reg[r.key]={color:o.def[r.key].color, pattern:o.def[r.key].pattern});
-  ch.outfit={id:outfitId, reg};
-  activeRegion=o.regions[0].key;
+function equip(ch,pieceId){
+  const p=PIECE_BY_ID[pieceId]; if(!p)return;
+  const reg={}; p.regions.forEach(r=>reg[r.key]={color:p.def[r.key].color,pattern:p.def[r.key].pattern});
+  ch.slots[p.slot]={id:pieceId,reg};
+  if(p.slot==='dress'){ ch.slots.top=null; ch.slots.bottom=null; }
+  else if(p.slot==='top'||p.slot==='bottom'){ ch.slots.dress=null; }
+  activeRegion=p.regions[0].key;
   save(); renderStage(); renderPalette(); renderColorizer();
 }
+function clearSlot(ch,slot){ ch.slots[slot]=null; save(); renderStage(); renderPalette(); renderColorizer(); }
 function renderColorizer(){
-  const sel=selChar(), out=sel&&sel.outfit?OUTFIT_BY_ID[sel.outfit.id]:null;
-  const hint=document.getElementById('czHint'), regEl=document.getElementById('czRegions'),
-        colEl=document.getElementById('czColors'), patEl=document.getElementById('czPats'),
-        nameEl=document.getElementById('czOutfit');
-  if(!out){ nameEl.textContent=''; hint.style.display='block'; regEl.innerHTML=''; colEl.innerHTML=''; patEl.innerHTML=''; return; }
-  hint.style.display='none'; nameEl.textContent='· '+out.name;
-  if(!out.regions.some(r=>r.key===activeRegion)) activeRegion=out.regions[0].key;
-  const rv=sel.outfit.reg[activeRegion];
-  regEl.innerHTML=out.regions.map(r=>`<button class="cz-reg${r.key===activeRegion?' on':''}" data-reg="${r.key}">${r.label}</button>`).join('');
+  const sel=selChar(), worn=sel&&sel.slots[activeSlot]?sel.slots[activeSlot]:null;
+  const piece=worn?PIECE_BY_ID[worn.id]:null;
+  const hint=document.getElementById('czHint'),regEl=document.getElementById('czRegions'),colEl=document.getElementById('czColors'),patEl=document.getElementById('czPats'),nameEl=document.getElementById('czOutfit');
+  const catLabel=CATS.find(c=>c.slot===activeSlot).label;
+  if(!piece){ nameEl.textContent=''; hint.textContent = sel?('Put a '+catLabel.toLowerCase()+' piece on to colour it.'):'Select a model, then add a piece to colour it.'; hint.style.display='block'; regEl.innerHTML=''; colEl.innerHTML=''; patEl.innerHTML=''; return; }
+  hint.style.display='none'; nameEl.textContent='· '+piece.name;
+  if(!piece.regions.some(r=>r.key===activeRegion)) activeRegion=piece.regions[0].key;
+  const rv=worn.reg[activeRegion];
+  regEl.innerHTML=piece.regions.map(r=>`<button class="cz-reg${r.key===activeRegion?' on':''}" data-reg="${r.key}">${r.label}</button>`).join('');
   colEl.innerHTML=COLORS.map(c=>`<div class="cz-col${c===rv.color?' on':''}" data-col="${c}" style="background:${c}${c==='#ffffff'?';border-color:#555':''}"></div>`).join('');
   patEl.innerHTML=PATTERNS.map(p=>`<button class="cz-pat${p===rv.pattern?' on':''}" data-pat="${p}">${p[0].toUpperCase()+p.slice(1)}</button>`).join('');
 }
-document.getElementById('czRegions').addEventListener('click', e=>{ const b=e.target.closest('.cz-reg'); if(!b)return; activeRegion=b.dataset.reg; renderColorizer(); });
-document.getElementById('czColors').addEventListener('click', e=>{ const b=e.target.closest('.cz-col'); if(!b)return; const c=selChar(); if(!c||!c.outfit)return; c.outfit.reg[activeRegion].color=b.dataset.col; save(); renderStage(); renderColorizer(); });
-document.getElementById('czPats').addEventListener('click', e=>{ const b=e.target.closest('.cz-pat'); if(!b)return; const c=selChar(); if(!c||!c.outfit)return; c.outfit.reg[activeRegion].pattern=b.dataset.pat; save(); renderStage(); renderColorizer(); });
+document.getElementById('czRegions').addEventListener('click',e=>{ const b=e.target.closest('.cz-reg'); if(!b)return; activeRegion=b.dataset.reg; renderColorizer(); });
+document.getElementById('czColors').addEventListener('click',e=>{ const b=e.target.closest('.cz-col'); if(!b)return; const c=selChar(),w=c&&c.slots[activeSlot]; if(!w)return; w.reg[activeRegion].color=b.dataset.col; save(); renderStage(); renderColorizer(); });
+document.getElementById('czPats').addEventListener('click',e=>{ const b=e.target.closest('.cz-pat'); if(!b)return; const c=selChar(),w=c&&c.slots[activeSlot]; if(!w)return; w.reg[activeRegion].pattern=b.dataset.pat; save(); renderStage(); renderColorizer(); });
 
 /* ── Character panel ──────────────────────── */
 const charPanel=document.getElementById('charPanel');
@@ -681,33 +649,39 @@ function renderCharPanel(){
   document.getElementById('cpPose').innerHTML=Object.keys(BODY_PRESETS).map(k=>`<option value="${k}"${k===ch.bodyPreset?' selected':''}>Body ${k}</option>`).join('');
   document.getElementById('cpSkin').innerHTML=SKIN_TONES.map(c=>`<span class="swatch${c===ch.skin?' on':''}" data-skin="${c}" style="background:${c}"></span>`).join('');
 }
-document.getElementById('cpName').addEventListener('input', e=>{ const c=selChar(); if(c){ c.name=e.target.value; save(); renderStage(); } });
-document.getElementById('cpScene').addEventListener('input', e=>{ const c=selChar(); if(c){ c.scene=e.target.value; save(); renderStage(); } });
-document.getElementById('cpPose').addEventListener('change', e=>{ const c=selChar(); if(c){ c.bodyPreset=e.target.value; save(); renderStage(); } });
-document.getElementById('cpSkin').addEventListener('click', e=>{ const sw=e.target.closest('.swatch'); if(!sw)return; const c=selChar(); if(c){ c.skin=sw.dataset.skin; save(); renderStage(); renderCharPanel(); } });
-document.getElementById('cpStrip').addEventListener('click', ()=>{ const c=selChar(); if(!c)return; c.outfit=null; save(); renderStage(); renderPalette(); renderColorizer(); });
-document.getElementById('cpRemove').addEventListener('click', ()=>removeChar(selId));
+document.getElementById('cpName').addEventListener('input',e=>{ const c=selChar(); if(c){ c.name=e.target.value; save(); renderStage(); } });
+document.getElementById('cpScene').addEventListener('input',e=>{ const c=selChar(); if(c){ c.scene=e.target.value; save(); renderStage(); } });
+document.getElementById('cpPose').addEventListener('change',e=>{ const c=selChar(); if(c){ c.bodyPreset=e.target.value; save(); renderStage(); } });
+document.getElementById('cpSkin').addEventListener('click',e=>{ const sw=e.target.closest('.swatch'); if(!sw)return; const c=selChar(); if(c){ c.skin=sw.dataset.skin; save(); renderStage(); renderCharPanel(); } });
+document.getElementById('cpStrip').addEventListener('click',()=>{ const c=selChar(); if(!c)return; c.slots={head:null,top:null,bottom:null,dress:null,outer:null,shoes:null,accessory:null}; save(); renderStage(); renderPalette(); renderColorizer(); });
+document.getElementById('cpRemove').addEventListener('click',()=>removeChar(selId));
 
 function select(id){ selId=id; renderStage(); renderCharPanel(); renderPalette(); renderColorizer(); }
 function removeChar(id){ chars=chars.filter(c=>c.id!==id); if(selId===id)selId=null; save(); renderStage(); renderCharPanel(); renderPalette(); renderColorizer(); }
 
-/* ── Drag ─────────────────────────────────── */
-let drag=null;
+/* ── Drag figures + pan the stage ─────────── */
+let drag=null, pan=null;
 function svgScale(){ const r=stage.getBoundingClientRect(); return STAGE_W/(r.width||STAGE_W); }
-stage.addEventListener('pointerdown', e=>{
-  const g=e.target.closest('.char'); if(!g){ if(selId!==null)select(null); return; }
-  const id=+g.dataset.id; if(id!==selId)select(id);
-  const ch=selChar(); if(!ch)return;
-  drag={id,sx:e.clientX,sy:e.clientY,ox:ch.x,oy:ch.y,k:svgScale(),moved:false};
-  stage.setPointerCapture(e.pointerId);
+stage.addEventListener('pointerdown',e=>{
+  const g=e.target.closest('.char');
+  if(g){ const id=+g.dataset.id; if(id!==selId)select(id); const ch=selChar(); if(!ch)return;
+    drag={id,sx:e.clientX,sy:e.clientY,ox:ch.x,oy:ch.y,k:svgScale(),moved:false}; stage.setPointerCapture(e.pointerId); return; }
+  // empty space → pan
+  pan={sx:e.clientX,sy:e.clientY,sl:stageWrap.scrollLeft,st:stageWrap.scrollTop,moved:false};
+  stage.classList.add('panning'); stage.setPointerCapture(e.pointerId);
 });
-stage.addEventListener('pointermove', e=>{
-  if(!drag)return; const ch=chars.find(c=>c.id===drag.id); if(!ch)return;
-  ch.x=Math.max(-60,Math.min(STAGE_W-160,drag.ox+(e.clientX-drag.sx)*drag.k));
-  ch.y=Math.max(-10,Math.min(STAGE_H-120,drag.oy+(e.clientY-drag.sy)*drag.k));
-  drag.moved=true; const el=stage.querySelector(`.char[data-id="${drag.id}"]`); if(el)el.setAttribute('transform',`translate(${ch.x},${ch.y})`);
+stage.addEventListener('pointermove',e=>{
+  if(drag){ const ch=chars.find(c=>c.id===drag.id); if(!ch)return;
+    ch.x=Math.max(-60,Math.min(STAGE_W-160,drag.ox+(e.clientX-drag.sx)*drag.k));
+    ch.y=Math.max(-10,Math.min(STAGE_H-120,drag.oy+(e.clientY-drag.sy)*drag.k));
+    drag.moved=true; const el=stage.querySelector(`.char[data-id="${drag.id}"]`); if(el)el.setAttribute('transform',`translate(${ch.x},${ch.y})`); return; }
+  if(pan){ stageWrap.scrollLeft=pan.sl-(e.clientX-pan.sx); stageWrap.scrollTop=pan.st-(e.clientY-pan.sy); if(Math.abs(e.clientX-pan.sx)+Math.abs(e.clientY-pan.sy)>3)pan.moved=true; }
 });
-stage.addEventListener('pointerup', e=>{ if(drag){ if(drag.moved)save(); drag=null; try{stage.releasePointerCapture(e.pointerId);}catch(_){} } });
+stage.addEventListener('pointerup',e=>{
+  if(drag){ if(drag.moved)save(); drag=null; }
+  else if(pan){ if(!pan.moved && selId!==null)select(null); pan=null; stage.classList.remove('panning'); }
+  try{stage.releasePointerCapture(e.pointerId);}catch(_){}
+});
 
 /* ── Add character ────────────────────────── */
 const addModal=document.getElementById('addModal');
@@ -719,39 +693,39 @@ function openAdd(){
   document.getElementById('addSkin').innerHTML=SKIN_TONES.map(c=>`<span class="swatch${c===addSkin?' on':''}" data-skin="${c}" style="background:${c}"></span>`).join('');
   addModal.classList.add('show');
 }
-document.getElementById('addBtn').addEventListener('click', openAdd);
-document.getElementById('addCancel').addEventListener('click', ()=>addModal.classList.remove('show'));
-addModal.addEventListener('click', e=>{ if(e.target===addModal)addModal.classList.remove('show'); });
-document.getElementById('poseGrid').addEventListener('click', e=>{ const o=e.target.closest('.pose-opt'); if(!o)return; addPose=o.dataset.pose; document.querySelectorAll('#poseGrid .pose-opt').forEach(x=>x.classList.toggle('on',x===o)); });
-document.getElementById('addSkin').addEventListener('click', e=>{ const sw=e.target.closest('.swatch'); if(!sw)return; addSkin=sw.dataset.skin; document.querySelectorAll('#addSkin .swatch').forEach(x=>x.classList.toggle('on',x===sw)); });
-document.getElementById('addConfirm').addEventListener('click', ()=>{
+document.getElementById('addBtn').addEventListener('click',openAdd);
+document.getElementById('addCancel').addEventListener('click',()=>addModal.classList.remove('show'));
+addModal.addEventListener('click',e=>{ if(e.target===addModal)addModal.classList.remove('show'); });
+document.getElementById('poseGrid').addEventListener('click',e=>{ const o=e.target.closest('.pose-opt'); if(!o)return; addPose=o.dataset.pose; document.querySelectorAll('#poseGrid .pose-opt').forEach(x=>x.classList.toggle('on',x===o)); });
+document.getElementById('addSkin').addEventListener('click',e=>{ const sw=e.target.closest('.swatch'); if(!sw)return; addSkin=sw.dataset.skin; document.querySelectorAll('#addSkin .swatch').forEach(x=>x.classList.toggle('on',x===sw)); });
+document.getElementById('addConfirm').addEventListener('click',()=>{
   seq++; const n=chars.length;
   const ch={ id:Date.now()+Math.floor(Math.random()*999), seq, name:'', scene:'', bodyPreset:addPose, skin:addSkin,
-             x:330+(n%4)*310, y:24+Math.floor(n/4)*490, outfit:null };
+             x:330+(n%4)*330, y:30+Math.floor(n/4)*500,
+             slots:{head:null,top:null,bottom:null,dress:null,outer:null,shoes:null,accessory:null} };
   chars.push(ch); addModal.classList.remove('show'); select(ch.id);
 });
 
-/* ── Clear ────────────────────────────────── */
-document.getElementById('clearBtn').addEventListener('click', ()=>{
+document.getElementById('clearBtn').addEventListener('click',()=>{
   if(!chars.length){ toast('Stage is already empty.'); return; }
   if(confirm('Clear all characters from the stage?')){ chars=[]; selId=null; save(); renderStage(); renderCharPanel(); renderPalette(); renderColorizer(); }
 });
 
-/* ── Export PNG ───────────────────────────── */
+/* ── Export ───────────────────────────────── */
 function exportPNG(){
-  if(!chars.length){ toast('Add a character before exporting.', {warn:true}); return; }
+  if(!chars.length){ toast('Add a character before exporting.',{warn:true}); return; }
   let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
   chars.forEach(ch=>{ const A=anchors(ch.bodyPreset); minX=Math.min(minX,ch.x-40); minY=Math.min(minY,ch.y); maxX=Math.max(maxX,ch.x+240); maxY=Math.max(maxY,ch.y+A.footY+50); });
-  const pad=36, x=minX-pad, y=minY-pad, w=(maxX-minX)+pad*2, h=(maxY-minY)+pad*2;
+  const pad=36,x=minX-pad,y=minY-pad,w=(maxX-minX)+pad*2,h=(maxY-minY)+pad*2;
   const clone=stage.cloneNode(true);
   clone.querySelectorAll('.sel-ring').forEach(n=>n.remove());
   clone.setAttribute('viewBox',`${x} ${y} ${w} ${h}`); clone.setAttribute('width',w); clone.setAttribute('height',h);
-  clone.insertAdjacentHTML('afterbegin', `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#15151a"/>`);
+  clone.insertAdjacentHTML('afterbegin',`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#15151a"/>`);
   const xml=new XMLSerializer().serializeToString(clone);
   const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
   const img=new Image();
   img.onload=()=>{
-    const sc=2, cv=document.createElement('canvas'); cv.width=w*sc; cv.height=h*sc;
+    const sc=2,cv=document.createElement('canvas'); cv.width=w*sc; cv.height=h*sc;
     const g=cv.getContext('2d'); g.scale(sc,sc); g.drawImage(img,0,0,w,h);
     const png=cv.toDataURL('image/png');
     const fn='costume-plot-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png';
@@ -760,24 +734,25 @@ function exportPNG(){
     document.getElementById('exDownload').onclick=()=>{ const a=document.createElement('a'); a.href=png; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); };
     document.getElementById('exportModal').classList.add('show');
   };
-  img.onerror=()=>toast('Sorry — export failed to render.', {warn:true});
+  img.onerror=()=>toast('Sorry — export failed to render.',{warn:true});
   img.src=url;
 }
-document.getElementById('captureBtn').addEventListener('click', exportPNG);
-document.getElementById('exClose').addEventListener('click', ()=>document.getElementById('exportModal').classList.remove('show'));
-document.getElementById('exportModal').addEventListener('click', e=>{ if(e.target.id==='exportModal')e.currentTarget.classList.remove('show'); });
+document.getElementById('captureBtn').addEventListener('click',exportPNG);
+document.getElementById('exClose').addEventListener('click',()=>document.getElementById('exportModal').classList.remove('show'));
+document.getElementById('exportModal').addEventListener('click',e=>{ if(e.target.id==='exportModal')e.currentTarget.classList.remove('show'); });
 
 /* ── Persistence ──────────────────────────── */
-function save(){ try{ localStorage.setItem('costume-stage2', JSON.stringify({chars,seq})); }catch(_){} }
+function save(){ try{ localStorage.setItem('costume-stage3',JSON.stringify({chars,seq})); }catch(_){} }
 function load(){
-  try{ const raw=localStorage.getItem('costume-stage2'); if(!raw)return; const d=JSON.parse(raw); if(!d||!Array.isArray(d.chars))return;
-    d.chars.forEach(ch=>{ if(ch.outfit && !OUTFIT_BY_ID[ch.outfit.id]) ch.outfit=null; });
+  try{ const raw=localStorage.getItem('costume-stage3'); if(!raw)return; const d=JSON.parse(raw); if(!d||!Array.isArray(d.chars))return;
+    d.chars.forEach(ch=>{ const base={head:null,top:null,bottom:null,dress:null,outer:null,shoes:null,accessory:null}; ch.slots=Object.assign(base,ch.slots||{});
+      Object.keys(ch.slots).forEach(s=>{ const w=ch.slots[s]; if(w&&!PIECE_BY_ID[w.id])ch.slots[s]=null; }); });
     chars=d.chars; seq=d.seq||chars.length;
   }catch(_){}
 }
 
 /* ── Keyboard ─────────────────────────────── */
-window.addEventListener('keydown', e=>{
+window.addEventListener('keydown',e=>{
   const tag=(document.activeElement||{}).tagName;
   if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA'){ if(e.key==='Escape')document.activeElement.blur(); return; }
   if(e.key==='Escape'){ if(addModal.classList.contains('show'))addModal.classList.remove('show'); else if(document.getElementById('exportModal').classList.contains('show'))document.getElementById('exportModal').classList.remove('show'); else select(null); }
@@ -785,7 +760,7 @@ window.addEventListener('keydown', e=>{
 });
 
 /* ── Init ─────────────────────────────────── */
-renderPalette(); load(); renderStage(); renderCharPanel(); renderColorizer();
+renderTabs(); renderPalette(); load(); renderStage(); renderCharPanel(); renderColorizer();
 </script>
 </body>
 </html>
