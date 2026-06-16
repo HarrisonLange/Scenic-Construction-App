@@ -1,0 +1,2450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDSCPA - Lighting Cue Trainer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
+<style>
+  :root{
+    --ui-dark:#0a0a0a;
+    --ui-dark2:#1a1a1a;
+    --ui-dark3:#333333;
+    --accent:#3b82f6;
+    --violet:#8b5cf6;
+    --amber:#fbbf24;
+    --pink:#EC008C;
+    --ok:#22c55e;
+    --bad:#ef4444;
+    --text-light:#f0f0f0;
+    --text-dim:#888888;
+    --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
+    --rainbow:linear-gradient(90deg,#7AC143,#F7941E,#ED1C45,#EC008C,#92278F,#2E3192,#00AEEF);
+    --stage:#101014;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    background:var(--ui-dark);color:var(--text-light);display:flex;flex-direction:column;
+  }
+  button,input,select{font:inherit}
+  button{user-select:none}
+  #topbar{
+    height:54px;flex:0 0 54px;display:flex;align-items:center;gap:8px;
+    padding:0 12px;background:var(--ui-dark);border-bottom:1px solid #000;position:relative;z-index:30;
+  }
+  #topbar::after{
+    content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--rainbow);opacity:.9;
+  }
+  .back{
+    color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);
+    border-radius:6px;padding:6px 9px;font-size:11px;white-space:nowrap;
+  }
+  .back:hover{color:#fff;border-color:var(--accent)}
+  .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;line-height:1;margin-right:8px}
+  .brand-logo{height:22px;width:auto;display:block}
+  .brand-tag{font-size:8.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .spacer{flex:1}
+  .tbtn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--ui-dark2);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:7px;padding:7px 10px;font-size:12.5px;line-height:1;min-height:34px;cursor:pointer;
+  }
+  .tbtn:hover{border-color:var(--accent);background:#202027}
+  .tbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .tbtn.primary:hover{background:#5a96f7}
+  .tbtn.warn{background:var(--amber);border-color:var(--amber);color:#18181b;font-weight:700}
+  .tbtn.danger:hover{background:#351719;border-color:var(--bad);color:#fecaca}
+  .tbtn.icon{width:34px;padding:0}
+  .tbtn svg{display:block;flex:0 0 auto}
+  .transport{display:flex;align-items:center;gap:6px;min-width:0}
+  .pill{
+    display:inline-flex;align-items:center;gap:5px;border:1px solid var(--ui-dark3);border-radius:999px;
+    padding:5px 8px;color:var(--text-dim);font-size:11px;background:#050505;white-space:nowrap;
+  }
+  .pill b{color:var(--text-light);font-weight:700}
+  .toggle{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);font-size:12px;white-space:nowrap;cursor:pointer}
+  .toggle input{accent-color:var(--accent)}
+
+  #main{
+    flex:1;display:grid;grid-template-columns:292px minmax(0,1fr) 344px;min-height:0;background:var(--ui-dark);
+  }
+  .side{
+    min-height:0;overflow:auto;background:var(--ui-dark);border-color:#000;
+  }
+  #left{border-right:1px solid #000}
+  #right{border-left:1px solid #000}
+  .panel-section{border-bottom:1px solid var(--ui-dark3);padding:11px 12px 13px}
+  .panel-section h2{
+    font-size:11px;color:var(--text-dim);text-transform:uppercase;margin-bottom:9px;font-weight:800;
+  }
+  .section-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .section-row + .section-row{margin-top:8px}
+  .field{display:grid;gap:5px;color:var(--text-dim);font-size:11px;min-width:0}
+  .field strong{color:var(--text-light);font-size:12px}
+  .field.full{width:100%}
+  input[type="text"],input[type="number"],select{
+    width:100%;background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:6px;
+    color:var(--text-light);padding:7px 8px;min-height:34px;outline:none;
+  }
+  input[type="text"]:focus,input[type="number"]:focus,select:focus{border-color:var(--accent)}
+  input[type="range"]{width:100%;accent-color:var(--accent)}
+  input[type="color"]{
+    width:42px;height:34px;border:1px solid var(--ui-dark3);border-radius:6px;background:var(--ui-dark2);padding:2px;
+  }
+
+  #cmdDisplay{
+    min-height:42px;border:1px solid var(--ui-dark3);border-radius:7px;background:#050505;
+    display:flex;align-items:center;padding:0 10px;font-family:var(--mono);font-size:13px;color:#dbeafe;
+    box-shadow:inset 0 0 0 1px rgba(59,130,246,.08);
+  }
+  #cmdDisplay .prompt{color:var(--accent);margin-right:8px}
+  #cmdText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .keypad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+  .keypad button{
+    border:1px solid var(--ui-dark3);border-radius:6px;background:var(--ui-dark2);color:var(--text-light);
+    min-height:32px;font-size:12px;cursor:pointer;
+  }
+  .keypad button:hover{border-color:var(--accent);background:#202027}
+  .keypad button.op{color:#bfdbfe;border-color:#334155}
+  .keypad button.enter{grid-column:span 2;background:var(--accent);border-color:var(--accent);font-weight:700}
+  .keypad button.clear{color:#fca5a5;border-color:#5f2527}
+
+  .swatches{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;width:100%;margin-top:7px}
+  .swatch{
+    height:22px;border-radius:5px;border:2px solid transparent;cursor:pointer;position:relative;
+  }
+  .swatch:hover,.swatch.on{border-color:#fff}
+  .swatch::after{
+    content:attr(data-label);position:absolute;left:50%;top:100%;transform:translateX(-50%);
+    margin-top:4px;background:#050505;border:1px solid var(--ui-dark3);border-radius:4px;color:var(--text-light);
+    font-size:10px;padding:3px 5px;opacity:0;pointer-events:none;white-space:nowrap;z-index:5;
+  }
+  .swatch:hover::after{opacity:1}
+
+  .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  .channel-list,.performer-list,.cue-list{display:grid;gap:6px}
+  .channel-row,.performer-row,.cue-row{
+    display:grid;gap:5px;border:1px solid var(--ui-dark3);border-radius:7px;background:var(--ui-dark2);
+    padding:8px;cursor:pointer;
+  }
+  .channel-row:hover,.performer-row:hover,.cue-row:hover{border-color:#4b5563}
+  .channel-row.on,.performer-row.on,.cue-row.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .row-main{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+  .row-main b{font-weight:800}
+  .row-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--text-dim);font-size:10.5px;font-family:var(--mono)}
+  .level-track{height:5px;background:#050505;border-radius:999px;overflow:hidden}
+  .level-fill{height:100%;background:var(--accent);border-radius:999px}
+  .cue-row{grid-template-columns:42px minmax(0,1fr) auto;align-items:center}
+  .cue-num{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--amber)}
+  .cue-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cue-meta{font-family:var(--mono);font-size:10.5px;color:var(--text-dim)}
+  .cue-trigger{font-size:10px;border:1px solid var(--ui-dark3);border-radius:999px;padding:3px 6px;color:var(--text-dim)}
+  .cue-trigger.auto{color:#bbf7d0;border-color:#166534;background:#0f2416}
+
+  #stagePanel{position:relative;min-width:0;min-height:0;overflow:hidden;background:#050506}
+  #stageCanvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;background:var(--stage)}
+  #stageCanvas.dragging{cursor:grabbing}
+  .stage-hud{
+    position:absolute;left:12px;bottom:12px;display:flex;gap:7px;flex-wrap:wrap;max-width:calc(100% - 24px);
+    pointer-events:none;
+  }
+  .hud-item{
+    pointer-events:auto;background:rgba(10,10,10,.78);border:1px solid var(--ui-dark3);border-radius:7px;
+    padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--text-dim);backdrop-filter:blur(5px);
+  }
+  .hud-item b{color:var(--text-light)}
+  #focusPanel{
+    position:absolute;right:12px;bottom:12px;width:210px;background:rgba(10,10,10,.82);
+    border:1px solid var(--ui-dark3);border-radius:8px;padding:10px;backdrop-filter:blur(5px);
+  }
+  #focusPanel h3{font-size:11px;color:var(--text-dim);text-transform:uppercase;margin-bottom:7px}
+
+  .performer-row{grid-template-columns:1fr auto}
+  .performer-chip{width:18px;height:18px;border-radius:50%;border:2px solid #fff}
+  .color-pair{display:flex;align-items:center;gap:6px}
+  .color-pair input{flex:0 0 auto}
+  .small-note{color:var(--text-dim);font-size:10.5px;font-family:var(--mono);line-height:1.4}
+  #shortcutHelp{
+    flex:0 0 auto;min-height:38px;display:flex;align-items:center;gap:8px;overflow-x:auto;
+    border-top:1px solid #000;background:#070707;padding:7px 12px;color:var(--text-dim);
+    font-size:11px;white-space:nowrap;scrollbar-width:thin;
+  }
+  .shortcut-title{
+    flex:0 0 auto;color:var(--text-light);font-size:10px;font-weight:900;letter-spacing:0;
+    text-transform:uppercase;margin-right:2px;
+  }
+  .hint{
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--ui-dark3);
+    border-radius:999px;background:#101014;padding:4px 7px;
+  }
+  .kbd{
+    display:inline-flex;align-items:center;justify-content:center;min-width:20px;min-height:18px;
+    padding:1px 5px;border:1px solid #3f3f46;border-bottom-color:#27272a;border-radius:4px;
+    background:#18181b;color:#f4f4f5;font-family:var(--mono);font-size:10px;font-weight:800;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .hint span:last-child{color:#a1a1aa}
+
+  .modal-back{
+    position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100;display:none;align-items:center;justify-content:center;
+    padding:20px;
+  }
+  .modal-back.show{display:flex}
+  .modal{
+    width:520px;max-width:100%;background:var(--ui-dark2);border:1px solid var(--ui-dark3);
+    border-radius:8px;padding:18px;box-shadow:0 18px 54px rgba(0,0,0,.65);
+  }
+  .modal h3{font-size:15px;margin-bottom:5px}
+  .modal .m-sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-bottom:14px}
+  .export-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .export-card{
+    border:1px solid var(--ui-dark3);border-radius:8px;background:#101014;color:var(--text-light);
+    padding:14px;cursor:pointer;text-align:left;min-height:116px;
+  }
+  .export-card:hover{border-color:var(--accent)}
+  .export-card b{display:block;font-size:14px;margin-bottom:7px}
+  .export-card span{display:block;font-size:12px;line-height:1.45;color:var(--text-dim)}
+  .m-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+  #toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:130;display:none;
+    background:rgba(28,28,30,.97);border:1px solid var(--ui-dark3);border-radius:8px;color:var(--text-light);
+    padding:9px 13px;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:min(520px,calc(100vw - 28px));
+  }
+  #toast.good{border-color:var(--ok);color:#bbf7d0}
+  #toast.warn{border-color:var(--amber);color:var(--amber)}
+  #toast.bad{border-color:var(--bad);color:#fecaca}
+
+  @media (max-width:1120px){
+    #main{grid-template-columns:260px minmax(0,1fr) 300px}
+    .tbtn .txt{display:none}
+  }
+  @media (max-width:860px){
+    html,body{overflow:auto}
+    body{min-height:100%}
+    #topbar{height:auto;min-height:54px;flex:0 0 auto;flex-wrap:wrap;padding:8px 10px}
+    #topbar .spacer{display:none}
+    #topbar .back{order:0}
+    #topbar .brand{order:1;flex:1;min-width:132px}
+    #topbar #resetBtn{order:2}
+    #topbar #addPerformerBtn{order:2}
+    #topbar #exportBtn{order:2}
+    #topbar .transport{order:3;width:100%;justify-content:center;flex-wrap:wrap}
+    #main{display:flex;flex-direction:column;overflow:visible}
+    #shortcutHelp{align-items:flex-start}
+    .side{max-height:none;overflow:visible}
+    #stagePanel{height:62vh;min-height:430px}
+    #left,#right{border:0;border-top:1px solid #000}
+    #focusPanel{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a class="back" href="../" title="Back to all trainers">&lsaquo; Trainers</a>
+  <div class="brand">
+    <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
+      <defs><linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#7AC143"/><stop offset=".17" stop-color="#F7941E"/><stop offset=".34" stop-color="#ED1C45"/>
+        <stop offset=".50" stop-color="#EC008C"/><stop offset=".66" stop-color="#92278F"/><stop offset=".83" stop-color="#2E3192"/><stop offset="1" stop-color="#00AEEF"/>
+      </linearGradient></defs>
+      <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="0" fill="url(#sdscpaGrad)">SDSCPA</text>
+    </svg>
+    <div class="brand-tag">Lighting Cue Trainer</div>
+  </div>
+  <div class="transport">
+    <button class="tbtn icon" id="prevBtn" title="Previous cue">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.5 3L5.5 8l5 5"/><path d="M5.5 8h8"/></svg>
+    </button>
+    <button class="tbtn primary" id="goBtn" title="Go">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.7v10.6L13 8 4 2.7z"/></svg>
+      <span class="txt">Go</span>
+    </button>
+    <button class="tbtn icon" id="stopBtn" title="Stop playback">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1"/></svg>
+    </button>
+    <button class="tbtn icon" id="nextBtn" title="Next cue">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5.5 3l5 5-5 5"/><path d="M2.5 8h8"/></svg>
+    </button>
+    <label class="toggle" title="Continue through the cue stack after each hold time"><input id="autoRun" type="checkbox">Auto</label>
+    <span class="pill" id="liveCuePill">Cue <b>-</b></span>
+  </div>
+  <div class="spacer"></div>
+  <button class="tbtn" id="resetBtn" title="Reset trainer">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5a5 5 0 1 0 1 3"/><path d="M13 2v3h-3"/></svg>
+    <span class="txt">Reset</span>
+  </button>
+  <button class="tbtn" id="addPerformerBtn" title="Add performer">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="4.5" r="2.5"/><path d="M3 14c.7-3.4 2.6-5.2 5-5.2s4.3 1.8 5 5.2"/><path d="M13 2v4M11 4h4"/></svg>
+    <span class="txt">Performer</span>
+  </button>
+  <button class="tbtn warn" id="exportBtn" title="Export scene or sequence">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8"/><path d="M5 7l3 3 3-3"/><path d="M3 13h10"/></svg>
+    Export
+  </button>
+</div>
+
+<main id="main">
+  <aside class="side" id="left">
+    <section class="panel-section">
+      <h2>EOS Command</h2>
+      <div id="cmdDisplay"><span class="prompt">&gt;</span><span id="cmdText"></span></div>
+      <div class="keypad" id="keypad">
+        <button class="op" data-cmd="At">@</button>
+        <button class="op" data-cmd="Full">Full</button>
+        <button class="op" data-cmd="Out">Out</button>
+        <button data-cmd="7">7</button>
+        <button data-cmd="8">8</button>
+        <button data-cmd="9">9</button>
+        <button class="op" data-cmd="Thru">Thru</button>
+        <button data-cmd="4">4</button>
+        <button data-cmd="5">5</button>
+        <button data-cmd="6">6</button>
+        <button class="op" data-cmd="+">+</button>
+        <button data-cmd="1">1</button>
+        <button data-cmd="2">2</button>
+        <button data-cmd="3">3</button>
+        <button class="op" data-cmd="Time">Time</button>
+        <button data-cmd="0">0</button>
+        <button data-cmd=".">.</button>
+        <button class="op" data-cmd="Record">Record</button>
+        <button class="op" data-cmd="Cue">Cue</button>
+        <button class="clear" data-cmd="Clear">Clear</button>
+        <button class="enter" data-cmd="Enter">Enter</button>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Selected Channel</h2>
+      <div class="field full">
+        <strong>Channel</strong>
+        <select id="fixtureSelect"></select>
+      </div>
+      <div class="section-row">
+        <label class="field full">Intensity <strong id="intensityValue">45%</strong>
+          <input id="intensityRange" type="range" min="0" max="100" value="45">
+        </label>
+      </div>
+      <div class="section-row">
+        <label class="field" style="flex:1">Color
+          <span class="color-pair"><input id="fixtureColor" type="color" value="#ffd7a6"><strong id="colorLabel">#ffd7a6</strong></span>
+        </label>
+        <label class="field" style="flex:1">Gobo
+          <select id="goboSelect">
+            <option value="open">Open</option>
+            <option value="breakup">Breakup</option>
+            <option value="leaf">Leaf</option>
+            <option value="window">Window</option>
+            <option value="stripes">Stripes</option>
+            <option value="dots">Dots</option>
+          </select>
+        </label>
+      </div>
+      <div class="swatches" id="gelSwatches"></div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Global Focus</h2>
+      <div class="mini-grid">
+        <label class="field">Direction
+          <select id="directionSelect">
+            <option value="front">Front</option>
+            <option value="back">Back</option>
+            <option value="left">Stage Left</option>
+            <option value="right">Stage Right</option>
+            <option value="top">Top</option>
+            <option value="foot">Foot</option>
+          </select>
+        </label>
+        <label class="field">Beam
+          <input id="spreadRange" type="range" min="10" max="48" value="28">
+        </label>
+        <label class="field">Focus X
+          <input id="focusXRange" type="range" min="8" max="92" value="50">
+        </label>
+        <label class="field">Focus Y
+          <input id="focusYRange" type="range" min="8" max="56" value="34">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Channel Map</h2>
+      <div class="channel-list" id="channelList"></div>
+    </section>
+  </aside>
+
+  <section id="stagePanel">
+    <canvas id="stageCanvas" tabindex="0" aria-label="Lighting trainer stage"></canvas>
+    <div class="stage-hud">
+      <div class="hud-item" id="selectedHud">Chan <b>1</b> Front Warm</div>
+      <div class="hud-item" id="pointerHud">X <b>0</b> Y <b>0</b></div>
+      <div class="hud-item" id="playHud">Live edit</div>
+    </div>
+    <div id="focusPanel">
+      <h3>Focus Point</h3>
+      <div class="small-note" id="focusReadout">Channel 1 at X 50, Y 34</div>
+    </div>
+  </section>
+
+  <aside class="side" id="right">
+    <section class="panel-section">
+      <h2>Cue Stack</h2>
+      <div class="section-row">
+        <button class="tbtn primary" id="recordCueBtn">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5"/></svg>
+          Record
+        </button>
+        <button class="tbtn" id="addCueBtn">New</button>
+        <button class="tbtn" id="updateCueBtn">Update</button>
+        <button class="tbtn danger" id="deleteCueBtn">Delete</button>
+      </div>
+      <div class="cue-list" id="cueList" style="margin-top:9px"></div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Cue Timing</h2>
+      <div class="mini-grid">
+        <label class="field">Cue
+          <input id="cueNumberInput" type="text" value="1">
+        </label>
+        <label class="field">Trigger
+          <select id="cueTriggerSelect">
+            <option value="manual">Manual</option>
+            <option value="auto">Auto</option>
+          </select>
+        </label>
+        <label class="field">Fade
+          <input id="cueFadeInput" type="number" min="0" max="60" step="0.1" value="3">
+        </label>
+        <label class="field">Hold
+          <input id="cueHoldInput" type="number" min="0" max="60" step="0.1" value="1">
+        </label>
+      </div>
+      <label class="field full" style="margin-top:8px">Label
+        <input id="cueLabelInput" type="text" value="Warm dance wash">
+      </label>
+    </section>
+
+    <section class="panel-section">
+      <h2>Performers</h2>
+      <div class="performer-list" id="performerList"></div>
+      <div id="performerEditor" style="margin-top:9px"></div>
+    </section>
+  </aside>
+</main>
+
+<footer id="shortcutHelp" aria-label="EOS keyboard shortcuts">
+  <span class="shortcut-title">EOS Keys</span>
+  <span class="hint"><span class="kbd">0-9</span><span>channel/level</span></span>
+  <span class="hint"><span class="kbd">@</span><span>At</span></span>
+  <span class="hint"><span class="kbd">A</span><span>At</span></span>
+  <span class="hint"><span class="kbd">F</span><span>Full</span></span>
+  <span class="hint"><span class="kbd">O</span><span>Out</span></span>
+  <span class="hint"><span class="kbd">T</span><span>Thru</span></span>
+  <span class="hint"><span class="kbd">Shift</span><span class="kbd">T</span><span>Time</span></span>
+  <span class="hint"><span class="kbd">R</span><span>Record</span></span>
+  <span class="hint"><span class="kbd">Q</span><span>Cue</span></span>
+  <span class="hint"><span class="kbd">U</span><span>Update</span></span>
+  <span class="hint"><span class="kbd">Enter</span><span>execute</span></span>
+  <span class="hint"><span class="kbd">Esc</span><span>Clear</span></span>
+  <span class="hint"><span class="kbd">Space</span><span>Go</span></span>
+  <span class="hint"><span class="kbd">G</span><span>Go</span></span>
+  <span class="hint"><span class="kbd">N</span><span>Next</span></span>
+  <span class="hint"><span class="kbd">B</span><span>Back</span></span>
+  <span class="hint"><span class="kbd">&larr;</span><span class="kbd">&rarr;</span><span>Last/Next</span></span>
+  <span class="hint"><span class="kbd">S</span><span>Stop</span></span>
+</footer>
+
+<div class="modal-back" id="exportModal">
+  <div class="modal">
+    <h3>Export</h3>
+    <div class="m-sub" id="exportSub">lighting-cue-trainer</div>
+    <div class="export-options">
+      <button class="export-card" id="exportSceneBtn">
+        <b>Save Scene PNG</b>
+        <span>Choose where to save the current live stage picture as a high resolution image.</span>
+      </button>
+      <button class="export-card" id="exportVideoBtn">
+        <b>Save Sequence WebM</b>
+        <span>Choose where to save a recording of the cue stack with fade and hold timings.</span>
+      </button>
+    </div>
+    <div class="m-actions">
+      <button class="tbtn" id="closeExportBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const canvas = $('stageCanvas');
+const ctx = canvas.getContext('2d');
+const STORAGE_KEY = 'sdscpa-lighting-trainer-v1';
+
+const GELS = [
+  {label:'Open', color:'#ffffff'},
+  {label:'R02', color:'#ffd7a6'},
+  {label:'R05', color:'#ffb46f'},
+  {label:'R27', color:'#d6142f'},
+  {label:'R39', color:'#a60d46'},
+  {label:'R80', color:'#7db7ff'},
+  {label:'R68', color:'#3850c7'},
+  {label:'L119', color:'#5fd3ff'},
+  {label:'L201', color:'#d7ebff'},
+  {label:'L106', color:'#f0202f'},
+  {label:'L139', color:'#2e7d47'},
+  {label:'L181', color:'#375dd6'},
+  {label:'Aqua', color:'#2de3c4'},
+  {label:'Gold', color:'#ffd166'}
+];
+
+const DEFAULT_FIXTURES = [
+  {id:'f1', channel:1, name:'Front Warm', group:'Front', direction:'front', targetX:50, targetY:35, spread:34, color:'#ffd7a6', intensity:45, gobo:'open'},
+  {id:'f2', channel:2, name:'Front Cool', group:'Front', direction:'front', targetX:50, targetY:35, spread:34, color:'#b7d7ff', intensity:18, gobo:'open'},
+  {id:'f3', channel:3, name:'High Side L', group:'Dance', direction:'left', targetX:43, targetY:34, spread:24, color:'#8ab4ff', intensity:0, gobo:'open'},
+  {id:'f4', channel:4, name:'High Side R', group:'Dance', direction:'right', targetX:57, targetY:34, spread:24, color:'#ff7ab8', intensity:0, gobo:'open'},
+  {id:'f5', channel:5, name:'Low Side L', group:'Dance', direction:'left', targetX:38, targetY:42, spread:20, color:'#63e6be', intensity:0, gobo:'open'},
+  {id:'f6', channel:6, name:'Low Side R', group:'Dance', direction:'right', targetX:62, targetY:42, spread:20, color:'#f6d365', intensity:0, gobo:'open'},
+  {id:'f7', channel:7, name:'Top Light', group:'Dance', direction:'top', targetX:50, targetY:34, spread:29, color:'#ffffff', intensity:24, gobo:'open'},
+  {id:'f8', channel:8, name:'Back Light', group:'Dance', direction:'back', targetX:50, targetY:31, spread:31, color:'#9d7cff', intensity:12, gobo:'open'},
+  {id:'f9', channel:9, name:'Footlights', group:'Dance', direction:'foot', targetX:50, targetY:49, spread:38, color:'#ffb86c', intensity:10, gobo:'open'},
+  {id:'f10', channel:10, name:'Gobo Texture', group:'Gobo', direction:'top', targetX:50, targetY:34, spread:42, color:'#dbeafe', intensity:22, gobo:'breakup'},
+  {id:'f11', channel:11, name:'Red Wash', group:'Color Lab', direction:'top', targetX:35, targetY:36, spread:31, color:'#ff244a', intensity:0, gobo:'open'},
+  {id:'f12', channel:12, name:'Green Wash', group:'Color Lab', direction:'top', targetX:50, targetY:36, spread:31, color:'#2fe37c', intensity:0, gobo:'open'},
+  {id:'f13', channel:13, name:'Blue Wash', group:'Color Lab', direction:'top', targetX:65, targetY:36, spread:31, color:'#3b82f6', intensity:0, gobo:'open'},
+  {id:'f14', channel:14, name:'Cyc Left', group:'Cyc', direction:'back', targetX:16.7, targetY:7, spread:34, color:'#ff4b5c', intensity:0, gobo:'open'},
+  {id:'f15', channel:15, name:'Cyc Center', group:'Cyc', direction:'back', targetX:50, targetY:7, spread:34, color:'#6ee7b7', intensity:0, gobo:'open'},
+  {id:'f16', channel:16, name:'Cyc Right', group:'Cyc', direction:'back', targetX:83.3, targetY:7, spread:34, color:'#60a5fa', intensity:28, gobo:'open'},
+  {id:'f17', channel:17, name:'Center Special', group:'Specials', direction:'front', targetX:50, targetY:32, spread:17, color:'#fff0bd', intensity:0, gobo:'open'},
+  {id:'f18', channel:18, name:'Edge Special', group:'Specials', direction:'back', targetX:74, targetY:40, spread:16, color:'#ff5fa2', intensity:0, gobo:'open'}
+];
+
+const START_PERFORMERS = [
+  {id:'p1', name:'Dancer A', x:38, y:38, size:1, skin:'#c68642', costume:'#252c9b'},
+  {id:'p2', name:'Dancer B', x:50, y:34, size:1.05, skin:'#e0ac69', costume:'#92278F'},
+  {id:'p3', name:'Dancer C', x:62, y:39, size:.96, skin:'#8d5524', costume:'#0f766e'}
+];
+
+const state = {
+  fixtures: clone(DEFAULT_FIXTURES),
+  performers: clone(START_PERFORMERS),
+  cues: [],
+  selectedFixtureId: 'f1',
+  selectedPerformerId: null,
+  selectedCueId: null,
+  currentCueIndex: -1,
+  command: [],
+  playback: null,
+  autoRun: false,
+  drag: null,
+  pointer: {x:0,y:0}
+};
+
+let layout = {x:0,y:0,w:100,h:60,scale:1};
+let autosaveTimer = null;
+
+function clone(value){ return JSON.parse(JSON.stringify(value)); }
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function ease(t){ return t < .5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+function nowFileStamp(){ return new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'); }
+function hexToRgb(hex){
+  const clean = (hex || '#000000').replace('#','');
+  const n = parseInt(clean.length === 3 ? clean.split('').map(c=>c+c).join('') : clean, 16);
+  return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
+function rgbToHex(r,g,b){
+  return '#'+[r,g,b].map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('');
+}
+function rgba(hex,alpha){
+  const c=hexToRgb(hex);
+  return `rgba(${c.r},${c.g},${c.b},${alpha})`;
+}
+function mixColor(a,b,t){
+  const ca=hexToRgb(a), cb=hexToRgb(b);
+  return rgbToHex(lerp(ca.r,cb.r,t), lerp(ca.g,cb.g,t), lerp(ca.b,cb.b,t));
+}
+function addLightColor(acc, color, amount){
+  const c=hexToRgb(color);
+  acc.r += c.r * amount;
+  acc.g += c.g * amount;
+  acc.b += c.b * amount;
+  acc.a += amount;
+}
+function fixtureById(id){ return state.fixtures.find(f=>f.id===id) || null; }
+function fixtureByChannel(channel){ return state.fixtures.find(f=>f.channel === channel); }
+function performerById(id){ return state.performers.find(p=>p.id===id) || null; }
+function cueById(id){ return state.cues.find(c=>c.id===id) || null; }
+function currentCue(){ return state.currentCueIndex >= 0 ? state.cues[state.currentCueIndex] : null; }
+function selectedCue(){ return cueById(state.selectedCueId) || state.cues[0] || null; }
+function selectedFixture(){ return state.selectedFixtureId ? fixtureById(state.selectedFixtureId) : null; }
+
+function fixtureMutable(f){
+  return {
+    id:f.id, channel:f.channel, name:f.name, group:f.group, direction:f.direction,
+    targetX:f.targetX, targetY:f.targetY, spread:f.spread, color:f.color,
+    intensity:f.intensity, gobo:f.gobo
+  };
+}
+function fixtureCueMutable(f){
+  return {
+    id:f.id,
+    channel:f.channel,
+    intensity:Number(f.intensity) || 0,
+    color:f.color || '#ffffff'
+  };
+}
+function performerMutable(p){
+  return {
+    id:p.id, name:p.name, x:p.x, y:p.y, size:p.size,
+    skin:p.skin, costume:p.costume
+  };
+}
+function mergeSavedFixture(def, saved){
+  const fixture = Object.assign({}, def, saved || {});
+  if (def.group === 'Cyc') {
+    fixture.name = def.name;
+    fixture.group = def.group;
+    fixture.direction = def.direction;
+    fixture.targetX = def.targetX;
+    fixture.targetY = def.targetY;
+    fixture.spread = def.spread;
+    fixture.gobo = def.gobo;
+    if (!saved || !saved.color) fixture.color = def.color;
+  }
+  return fixture;
+}
+function makeSnapshot(){
+  return {
+    fixtures: state.fixtures.map(fixtureCueMutable),
+    performers: state.performers.map(performerMutable)
+  };
+}
+function normalizeSnapshot(snapshot){
+  const plot = (state.fixtures && state.fixtures.length ? state.fixtures : DEFAULT_FIXTURES);
+  const fixtures = plot.map(base => {
+    const s = snapshot && snapshot.fixtures
+      ? snapshot.fixtures.find(f=>f.id===base.id || f.channel===base.channel)
+      : null;
+    return Object.assign({}, base, {
+      intensity:s && s.intensity != null ? Number(s.intensity) || 0 : Number(base.intensity) || 0,
+      color:s && s.color ? s.color : base.color
+    });
+  });
+  const performers = snapshot && Array.isArray(snapshot.performers) ? snapshot.performers.map(p=>Object.assign({}, p)) : clone(START_PERFORMERS);
+  return {fixtures, performers};
+}
+function applySnapshot(snapshot){
+  const s = normalizeSnapshot(snapshot);
+  state.fixtures = s.fixtures;
+  state.performers = s.performers;
+  if (state.selectedFixtureId && !fixtureById(state.selectedFixtureId)) state.selectedFixtureId = null;
+  if (state.selectedPerformerId && !performerById(state.selectedPerformerId)) state.selectedPerformerId = null;
+}
+function interpolateSnapshot(from, to, t){
+  const a = normalizeSnapshot(from);
+  const b = normalizeSnapshot(to);
+  const k = ease(t);
+  state.fixtures = state.fixtures.map(base => {
+    const fa = a.fixtures.find(f=>f.id===base.id || f.channel===base.channel) || base;
+    const fb = b.fixtures.find(f=>f.id===base.id || f.channel===base.channel) || base;
+    return Object.assign({}, base, {
+      color: mixColor(fa.color, fb.color, k),
+      intensity: lerp(Number(fa.intensity)||0, Number(fb.intensity)||0, k)
+    });
+  });
+  state.performers = b.performers.map(bp => {
+    const ap = a.performers.find(p=>p.id===bp.id) || bp;
+    return Object.assign({}, bp, {
+      x: lerp(Number(ap.x)||bp.x, Number(bp.x)||ap.x, k),
+      y: lerp(Number(ap.y)||bp.y, Number(bp.y)||ap.y, k),
+      size: lerp(Number(ap.size)||1, Number(bp.size)||1, k),
+      skin: k < .5 ? ap.skin : bp.skin,
+      costume: mixColor(ap.costume || '#888888', bp.costume || '#888888', k)
+    });
+  });
+}
+
+function makeCue(number, label, fade, hold, trigger, overrides, performerLayout){
+  const fixtures = DEFAULT_FIXTURES.map(def => Object.assign({}, def, {intensity:0}));
+  overrides.forEach(item => {
+    const f = fixtures.find(candidate => candidate.channel === item.channel);
+    if (f) {
+      if (item.intensity != null) f.intensity = item.intensity;
+      if (item.color) f.color = item.color;
+    }
+  });
+  const performers = clone(START_PERFORMERS);
+  if (performerLayout) {
+    performerLayout.forEach(item => {
+      const p = performers.find(candidate => candidate.id === item.id);
+      if (p) Object.assign(p, item);
+    });
+  }
+  return {
+    id:'cue-'+number+'-'+Math.random().toString(36).slice(2,7),
+    number:String(number),
+    label,
+    fade,
+    hold,
+    trigger,
+    snapshot:{fixtures:fixtures.map(fixtureCueMutable), performers:performers.map(performerMutable)}
+  };
+}
+
+function seedCues(){
+  state.cues = [
+    makeCue(1,'Warm dance wash',3,1.2,'manual',[
+      {channel:1,intensity:55},{channel:2,intensity:20},{channel:7,intensity:24},{channel:9,intensity:12},
+      {channel:14,intensity:12,color:'#ff7a4d'},{channel:15,intensity:16,color:'#ffb86c'},{channel:16,intensity:18,color:'#60a5fa'}
+    ],[
+      {id:'p1',x:36,y:39},{id:'p2',x:50,y:34},{id:'p3',x:64,y:39}
+    ]),
+    makeCue(2,'Blue sidelight texture',4,1,'manual',[
+      {channel:3,intensity:68,color:'#7db7ff',targetX:40,targetY:36,spread:25},
+      {channel:4,intensity:62,color:'#b56dff',targetX:60,targetY:36,spread:25},
+      {channel:8,intensity:24,color:'#3850c7'},
+      {channel:10,intensity:42,gobo:'breakup',direction:'top',targetX:50,targetY:36,spread:44,color:'#dbeafe'},
+      {channel:14,intensity:18,color:'#3358ff'},{channel:15,intensity:34,color:'#60a5fa'},{channel:16,intensity:42,color:'#8b5cf6'}
+    ],[
+      {id:'p1',x:35,y:45},{id:'p2',x:50,y:37},{id:'p3',x:65,y:29}
+    ]),
+    makeCue(3,'Color lab split',2.5,1.5,'auto',[
+      {channel:5,intensity:48,color:'#2fe37c',targetX:37,targetY:39},
+      {channel:6,intensity:48,color:'#ffd166',targetX:63,targetY:39},
+      {channel:11,intensity:30,targetX:31,targetY:35},
+      {channel:12,intensity:22,targetX:50,targetY:35},
+      {channel:13,intensity:38,targetX:69,targetY:35},
+      {channel:14,intensity:34,color:'#ff244a'},{channel:15,intensity:30,color:'#2fe37c'},{channel:16,intensity:38,color:'#3b82f6'}
+    ],[
+      {id:'p1',x:29,y:35},{id:'p2',x:50,y:42},{id:'p3',x:71,y:35}
+    ]),
+    makeCue(4,'Backlight silhouette',3.5,1,'manual',[
+      {channel:8,intensity:78,color:'#9d7cff',targetX:50,targetY:30,spread:35},
+      {channel:10,intensity:35,gobo:'window',direction:'back',targetX:51,targetY:35,spread:38,color:'#5fd3ff'},
+      {channel:14,intensity:20,color:'#1e1b4b'},{channel:15,intensity:18,color:'#312e81'},{channel:16,intensity:64,color:'#60a5fa'},
+      {channel:17,intensity:34,color:'#fff0bd',targetX:50,targetY:34,spread:15}
+    ],[
+      {id:'p1',x:42,y:38},{id:'p2',x:50,y:33},{id:'p3',x:58,y:38}
+    ])
+  ];
+  state.selectedCueId = state.cues[0].id;
+  state.currentCueIndex = 0;
+  applySnapshot(state.cues[0].snapshot);
+}
+function resetTrainer(){
+  if (!confirm('Reset the lighting trainer to the starter show? This clears local changes.')) return;
+  clearPlaybackTimers();
+  state.fixtures = clone(DEFAULT_FIXTURES);
+  state.performers = clone(START_PERFORMERS);
+  state.cues = [];
+  state.selectedFixtureId = null;
+  state.selectedPerformerId = null;
+  state.selectedCueId = null;
+  state.currentCueIndex = -1;
+  state.command = [];
+  state.autoRun = false;
+  state.drag = null;
+  $('exportModal').classList.remove('show');
+  $('playHud').textContent = 'Live edit';
+  setCommandText('');
+  seedCues();
+  renderAll();
+  resizeCanvas();
+  save();
+  toast('Trainer reset.', 'good');
+}
+
+function save(){
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        fixtures: state.fixtures,
+        performers: state.performers,
+        cues: state.cues,
+        selectedFixtureId: state.selectedFixtureId,
+        selectedPerformerId: state.selectedPerformerId,
+        selectedCueId: state.selectedCueId,
+        currentCueIndex: state.currentCueIndex,
+        autoRun: state.autoRun
+      }));
+    } catch (_) {}
+  }, 100);
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.fixtures) || !Array.isArray(data.cues)) return false;
+    state.fixtures = DEFAULT_FIXTURES.map(def => mergeSavedFixture(def, data.fixtures.find(f=>f.id===def.id)));
+    state.performers = Array.isArray(data.performers) ? data.performers : clone(START_PERFORMERS);
+    state.cues = data.cues.map(c => {
+      const snap = normalizeSnapshot(c.snapshot);
+      return Object.assign({}, c, {
+        snapshot:{
+          fixtures:snap.fixtures.map(fixtureCueMutable),
+          performers:snap.performers.map(performerMutable)
+        }
+      });
+    });
+    state.selectedFixtureId = data.selectedFixtureId || state.fixtures[0].id;
+    state.selectedPerformerId = data.selectedPerformerId || null;
+    state.selectedCueId = data.selectedCueId || (state.cues[0] && state.cues[0].id) || null;
+    state.currentCueIndex = Number.isFinite(data.currentCueIndex) ? data.currentCueIndex : -1;
+    state.autoRun = !!data.autoRun;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function toast(message, type=''){
+  const t = $('toast');
+  t.textContent = message;
+  t.className = type;
+  t.style.display = 'block';
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(()=>{ t.style.display='none'; }, 2200);
+}
+
+function buildGelSwatches(){
+  $('gelSwatches').innerHTML = GELS.map(g => `<button class="swatch" data-color="${g.color}" data-label="${g.label}" style="background:${g.color}" title="${g.label}"></button>`).join('');
+}
+function buildFixtureSelect(){
+  $('fixtureSelect').innerHTML = '<option value="">No channel selected</option>' +
+    state.fixtures.map(f => `<option value="${f.id}">Chan ${f.channel} - ${f.name}</option>`).join('');
+}
+function setFixtureControlsDisabled(disabled){
+  ['intensityRange','fixtureColor','goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
+    $(id).disabled = disabled;
+    $(id).style.opacity = disabled ? '.45' : '1';
+  });
+}
+function renderFixtureControls(){
+  const f = selectedFixture();
+  if (!f) {
+    $('fixtureSelect').value = '';
+    $('intensityRange').value = 0;
+    $('intensityValue').textContent = '--';
+    $('fixtureColor').value = '#ffffff';
+    $('colorLabel').textContent = '--';
+    $('goboSelect').value = 'open';
+    $('directionSelect').value = 'front';
+    $('spreadRange').value = 28;
+    $('focusXRange').value = 50;
+    $('focusYRange').value = 34;
+    setFixtureControlsDisabled(true);
+    document.querySelectorAll('.swatch').forEach(sw => sw.classList.remove('on'));
+    $('selectedHud').innerHTML = 'No channel selected';
+    $('focusReadout').textContent = 'Type a channel number and Enter to select a light.';
+    return;
+  }
+  const isCyc = f.group === 'Cyc';
+  $('fixtureSelect').value = f.id;
+  $('intensityRange').value = Math.round(f.intensity);
+  $('intensityValue').textContent = Math.round(f.intensity) + '%';
+  $('fixtureColor').value = f.color;
+  $('colorLabel').textContent = f.color.toUpperCase();
+  $('goboSelect').value = f.gobo;
+  $('directionSelect').value = f.direction;
+  $('spreadRange').value = Math.round(f.spread);
+  $('focusXRange').value = Math.round(f.targetX);
+  $('focusYRange').value = Math.round(f.targetY);
+  setFixtureControlsDisabled(false);
+  ['goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
+    $(id).disabled = isCyc;
+    $(id).style.opacity = isCyc ? '.45' : '1';
+  });
+  document.querySelectorAll('.swatch').forEach(sw => sw.classList.toggle('on', sw.dataset.color.toLowerCase() === f.color.toLowerCase()));
+  $('selectedHud').innerHTML = `Chan <b>${f.channel}</b> ${escapeHtml(f.name)}`;
+  $('focusReadout').textContent = isCyc
+    ? `Channel ${f.channel} is a fixed cyc zone: intensity and color only`
+    : `Channel ${f.channel} at X ${Math.round(f.targetX)}, Y ${Math.round(f.targetY)}`;
+}
+function renderChannelList(){
+  $('channelList').innerHTML = state.fixtures.map(f => {
+    const on = f.id === state.selectedFixtureId ? ' on' : '';
+    const sub = f.group === 'Cyc' ? 'fixed cyc zone' : `${escapeHtml(f.direction)} ${escapeHtml(f.gobo)}`;
+    return `<div class="channel-row${on}" data-id="${f.id}">
+      <div class="row-main"><b>Chan ${f.channel}</b><span>${escapeHtml(f.name)}</span><strong>${Math.round(f.intensity)}%</strong></div>
+      <div class="level-track"><div class="level-fill" style="width:${clamp(f.intensity,0,100)}%;background:${f.color}"></div></div>
+      <div class="row-sub"><span>${escapeHtml(f.group)}</span><span>${sub}</span></div>
+    </div>`;
+  }).join('');
+}
+function renderCueList(){
+  $('cueList').innerHTML = state.cues.map((cue, index) => {
+    const on = cue.id === state.selectedCueId ? ' on' : '';
+    const live = index === state.currentCueIndex ? ' live' : '';
+    const trigger = cue.trigger === 'auto' ? 'auto' : '';
+    return `<div class="cue-row${on}${live}" data-id="${cue.id}">
+      <div class="cue-num">${escapeHtml(cue.number)}</div>
+      <div>
+        <div class="cue-name">${escapeHtml(cue.label || 'Cue')}</div>
+        <div class="cue-meta">${Number(cue.fade).toFixed(1)}s fade / ${Number(cue.hold).toFixed(1)}s hold</div>
+      </div>
+      <div class="cue-trigger ${trigger}">${cue.trigger === 'auto' ? 'AUTO' : 'GO'}</div>
+    </div>`;
+  }).join('');
+  const cue = selectedCue();
+  if (cue) {
+    $('cueNumberInput').value = cue.number;
+    $('cueLabelInput').value = cue.label || '';
+    $('cueFadeInput').value = cue.fade;
+    $('cueHoldInput').value = cue.hold;
+    $('cueTriggerSelect').value = cue.trigger || 'manual';
+  }
+  const live = currentCue();
+  $('liveCuePill').innerHTML = `Cue <b>${live ? escapeHtml(live.number) : '-'}</b>`;
+}
+function renderPerformers(){
+  $('performerList').innerHTML = state.performers.map(p => {
+    const on = p.id === state.selectedPerformerId ? ' on' : '';
+    return `<div class="performer-row${on}" data-id="${p.id}">
+      <div>
+        <div class="row-main"><b>${escapeHtml(p.name)}</b><span>X ${Math.round(p.x)} Y ${Math.round(p.y)}</span></div>
+        <div class="row-sub"><span>Size ${Number(p.size).toFixed(2)}</span><span>${escapeHtml(p.costume)}</span></div>
+      </div>
+      <span class="performer-chip" style="background:${p.costume}"></span>
+    </div>`;
+  }).join('');
+  renderPerformerEditor();
+}
+function renderPerformerEditor(){
+  const p = performerById(state.selectedPerformerId);
+  const el = $('performerEditor');
+  if (!p) {
+    el.innerHTML = '<div class="small-note">Select a performer on the stage or from the list.</div>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="field full"><strong>Name</strong><input id="perfName" type="text" value="${escapeAttr(p.name)}"></div>
+    <div class="section-row">
+      <label class="field" style="flex:1">Skin<input id="perfSkin" type="color" value="${p.skin}"></label>
+      <label class="field" style="flex:1">Costume<input id="perfCostume" type="color" value="${p.costume}"></label>
+    </div>
+    <label class="field full" style="margin-top:8px">Size
+      <input id="perfSize" type="range" min="0.75" max="1.35" step="0.01" value="${p.size}">
+    </label>
+    <div class="section-row">
+      <button class="tbtn danger" id="deletePerformerBtn">Delete performer</button>
+    </div>
+  `;
+  $('perfName').addEventListener('input', e=>{ p.name = e.target.value || 'Performer'; renderPerformers(); draw(); save(); });
+  $('perfSkin').addEventListener('input', e=>{ p.skin = e.target.value; draw(); save(); });
+  $('perfCostume').addEventListener('input', e=>{ p.costume = e.target.value; renderPerformers(); draw(); save(); });
+  $('perfSize').addEventListener('input', e=>{ p.size = Number(e.target.value); draw(); save(); });
+  $('deletePerformerBtn').addEventListener('click', deleteSelectedPerformer);
+}
+function renderAll(){
+  buildFixtureSelect();
+  renderFixtureControls();
+  renderChannelList();
+  renderCueList();
+  renderPerformers();
+  $('autoRun').checked = state.autoRun;
+  draw();
+}
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(value){ return escapeHtml(value).replace(/`/g,'&#96;'); }
+
+function updateFixtureFromControls(pushCommand){
+  const f = selectedFixture();
+  if (!f) return;
+  f.intensity = Number($('intensityRange').value);
+  f.color = $('fixtureColor').value;
+  if (f.group !== 'Cyc') {
+    f.gobo = $('goboSelect').value;
+    f.direction = $('directionSelect').value;
+    f.spread = Number($('spreadRange').value);
+    f.targetX = Number($('focusXRange').value);
+    f.targetY = Number($('focusYRange').value);
+  }
+  if (pushCommand) setCommandText(`Chan ${f.channel} At ${Math.round(f.intensity)}`);
+  renderFixtureControls();
+  renderChannelList();
+  draw();
+  save();
+}
+function setCommandText(text){
+  $('cmdText').textContent = text || '';
+}
+function commandDisplayText(tokens){
+  const parts = [];
+  let num = '';
+  tokens.forEach(token => {
+    if (/^[0-9.]$/.test(token)) {
+      num += token;
+      return;
+    }
+    if (num) {
+      parts.push(num);
+      num = '';
+    }
+    parts.push(token === 'At' ? '@' : token);
+  });
+  if (num) parts.push(num);
+  return parts.join(' ');
+}
+function syncCommandDisplay(){
+  setCommandText(commandDisplayText(state.command));
+}
+function clearEosLine(){
+  state.command = [];
+  state.selectedFixtureId = null;
+  setCommandText('');
+  renderAll();
+  save();
+}
+
+function readNumber(tokens, start){
+  let text = '';
+  let i = start;
+  while (i < tokens.length && /^[0-9.]$/.test(tokens[i])) {
+    text += tokens[i];
+    i++;
+  }
+  return {value: text === '' ? null : Number(text), next:i};
+}
+function parseChannels(tokens){
+  const idx = tokens.indexOf('Chan');
+  const start = idx >= 0 ? idx + 1 : 0;
+  const first = readNumber(tokens, start);
+  if (first.value == null) return [];
+  if (tokens[first.next] === 'Thru') {
+    const last = readNumber(tokens, first.next + 1);
+    if (last.value == null) return [first.value];
+    const a = Math.min(first.value, last.value);
+    const b = Math.max(first.value, last.value);
+    const channels = [];
+    for (let n = a; n <= b; n++) channels.push(n);
+    return channels;
+  }
+  const channels = [first.value];
+  let i = first.next;
+  while (tokens[i] === '+') {
+    const next = readNumber(tokens, i + 1);
+    if (next.value == null) break;
+    channels.push(next.value);
+    i = next.next;
+  }
+  return channels;
+}
+function channelsForLevelCommand(tokens){
+  const channels = parseChannels(tokens);
+  if (channels.length) return channels;
+  const f = selectedFixture();
+  return f && (tokens[0] === 'At' || tokens[0] === 'Full' || tokens[0] === 'Out') ? [f.channel] : [];
+}
+function levelFromCommand(tokens){
+  const atIdx = tokens.indexOf('At');
+  let start = atIdx >= 0 ? atIdx + 1 : -1;
+  if (start < 0) {
+    const fullIdx = tokens.indexOf('Full');
+    const outIdx = tokens.indexOf('Out');
+    if (fullIdx >= 0 && (outIdx < 0 || fullIdx < outIdx)) start = fullIdx;
+    else if (outIdx >= 0) start = outIdx;
+  }
+  if (start < 0) return null;
+  if (tokens[start] === 'Full') return 100;
+  if (tokens[start] === 'Out') return 0;
+  return readNumber(tokens, start).value;
+}
+function applyLevelToChannels(channels, level){
+  channels.forEach(ch => {
+    const f = fixtureByChannel(ch);
+    if (f) f.intensity = clamp(level,0,100);
+  });
+  const firstFixture = fixtureByChannel(channels[0]);
+  if (firstFixture) state.selectedFixtureId = firstFixture.id;
+  setCommandText(`${channels.join('+')} @ ${clamp(level,0,100)}`);
+  state.command = [];
+  renderAll();
+  save();
+}
+function executeCommand(){
+  const tokens = state.command.slice();
+  if (!tokens.length) return;
+  if (tokens.includes('Update')) {
+    state.command = [];
+    updateSelectedCue();
+    setCommandText('Update');
+    return;
+  }
+  if (tokens.includes('Record')) {
+    const cueIdx = tokens.indexOf('Cue');
+    const num = cueIdx >= 0 ? (readNumber(tokens, cueIdx + 1).value || nextCueNumber()) : ($('cueNumberInput').value || nextCueNumber());
+    const timeIdx = tokens.indexOf('Time');
+    const fade = timeIdx >= 0 ? (readNumber(tokens, timeIdx + 1).value ?? 3) : Number($('cueFadeInput').value || 3);
+    recordCue(String(num), fade);
+    state.command = [];
+    setCommandText(`Record Cue ${num}${timeIdx >= 0 ? ` Time ${fade}` : ''}`);
+    return;
+  }
+  if (tokens[0] === 'Cue') {
+    const num = readNumber(tokens, 1).value;
+    const index = state.cues.findIndex(c=>Number(c.number) === num);
+    if (index >= 0) {
+      state.command = [];
+      const timeIdx = tokens.indexOf('Time');
+      if (timeIdx >= 0) {
+        state.cues[index].fade = readNumber(tokens, timeIdx + 1).value ?? state.cues[index].fade;
+        state.selectedCueId = state.cues[index].id;
+        renderCueList();
+        save();
+        setCommandText(`Cue ${num} Time ${state.cues[index].fade}`);
+        toast(`Cue ${num} time updated.`, 'good');
+      } else {
+        runCue(index);
+        setCommandText(`Cue ${num}`);
+      }
+    } else {
+      toast('Cue not found.', 'warn');
+    }
+    return;
+  }
+  const level = levelFromCommand(tokens);
+  if (level != null) {
+    const channels = channelsForLevelCommand(tokens);
+    if (channels.length) {
+      applyLevelToChannels(channels, level);
+      return;
+    }
+  }
+  const channels = parseChannels(tokens);
+  const onlyChannelSelection = channels.length && tokens.every(t => /^[0-9.]$/.test(t) || t === '+' || t === 'Thru' || t === 'Chan');
+  if (onlyChannelSelection) {
+    const f = fixtureByChannel(channels[0]);
+    if (f) {
+      state.selectedFixtureId = f.id;
+      state.command = [];
+      setCommandText(String(f.channel));
+      renderAll();
+      save();
+      return;
+    }
+    toast('Channel not found.', 'warn');
+    return;
+  }
+  toast('Command not recognized.', 'warn');
+}
+function keypadCommand(cmd){
+  if (cmd === 'Clear') {
+    clearEosLine();
+    return;
+  }
+  if (cmd === 'Enter') {
+    executeCommand();
+    return;
+  }
+  state.command.push(cmd);
+  syncCommandDisplay();
+}
+function commandTokenFromKey(event){
+  if (event.ctrlKey || event.metaKey || event.altKey) return null;
+  if (/^[0-9]$/.test(event.key)) return event.key;
+  if (event.key === '.') return '.';
+  if (event.key === '+') return '+';
+  if (event.key === '@') return 'At';
+  if (event.key === '/') return 'Thru';
+  const key = event.key.toLowerCase();
+  if (key === 'a') return 'At';
+  if (key === 'f') return 'Full';
+  if (key === 'o') return 'Out';
+  if (key === 't') return event.shiftKey ? 'Time' : 'Thru';
+  if (key === 'r') return 'Record';
+  if (key === 'q') return 'Cue';
+  if (key === 'u') return 'Update';
+  return null;
+}
+function handleCommandKey(event){
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (event.key === 'Enter' && state.command.length) {
+    event.preventDefault();
+    executeCommand();
+    return true;
+  }
+  if (event.key === 'Backspace' && state.command.length) {
+    event.preventDefault();
+    state.command.pop();
+    syncCommandDisplay();
+    return true;
+  }
+  if (event.code === 'Space' && state.command.length) {
+    event.preventDefault();
+    return true;
+  }
+  const token = commandTokenFromKey(event);
+  if (token) {
+    event.preventDefault();
+    state.command.push(token);
+    syncCommandDisplay();
+    return true;
+  }
+  return false;
+}
+function handleTransportKey(event){
+  if (event.ctrlKey || event.metaKey || event.altKey || state.command.length) return false;
+  const key = event.key.toLowerCase();
+  if (event.code === 'Space') {
+    event.preventDefault();
+    goNext();
+    return true;
+  }
+  if (event.key === 'ArrowRight' || key === 'n' || key === 'g') {
+    event.preventDefault();
+    goNext();
+    return true;
+  }
+  if (event.key === 'ArrowLeft' || key === 'b') {
+    event.preventDefault();
+    goPrev();
+    return true;
+  }
+  if (key === 's') {
+    event.preventDefault();
+    stopPlayback();
+    return true;
+  }
+  return false;
+}
+
+function nextCueNumber(){
+  const nums = state.cues.map(c=>Number(c.number)).filter(Number.isFinite);
+  return nums.length ? Math.max(...nums) + 1 : 1;
+}
+function sortCues(){
+  state.cues.sort((a,b) => {
+    const na = Number(a.number), nb = Number(b.number);
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+    return String(a.number).localeCompare(String(b.number));
+  });
+}
+function makeCueFromCurrent(number, fade){
+  return {
+    id:'cue-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+    number:String(number),
+    label:$('cueLabelInput').value || `Cue ${number}`,
+    fade:Number(fade ?? $('cueFadeInput').value ?? 3),
+    hold:Number($('cueHoldInput').value || 1),
+    trigger:$('cueTriggerSelect').value || 'manual',
+    snapshot:makeSnapshot()
+  };
+}
+function recordCue(number, fade){
+  const existing = state.cues.find(c => String(c.number) === String(number));
+  if (existing) {
+    existing.fade = Number(fade ?? existing.fade ?? 3);
+    existing.hold = Number($('cueHoldInput').value || existing.hold || 1);
+    existing.trigger = $('cueTriggerSelect').value || existing.trigger || 'manual';
+    existing.label = $('cueLabelInput').value || existing.label || `Cue ${number}`;
+    existing.snapshot = makeSnapshot();
+    state.selectedCueId = existing.id;
+    toast(`Cue ${existing.number} updated.`, 'good');
+  } else {
+    const cue = makeCueFromCurrent(number, fade);
+    state.cues.push(cue);
+    sortCues();
+    state.selectedCueId = cue.id;
+    toast(`Cue ${cue.number} recorded.`, 'good');
+  }
+  renderCueList();
+  save();
+}
+function addCue(){
+  const cue = makeCueFromCurrent(nextCueNumber(), $('cueFadeInput').value || 3);
+  cue.label = `Cue ${cue.number}`;
+  state.cues.push(cue);
+  sortCues();
+  state.selectedCueId = cue.id;
+  renderCueList();
+  save();
+}
+function updateSelectedCue(){
+  const cue = selectedCue();
+  if (!cue) return;
+  cue.number = $('cueNumberInput').value || cue.number;
+  cue.label = $('cueLabelInput').value || cue.label;
+  cue.fade = Number($('cueFadeInput').value || cue.fade || 0);
+  cue.hold = Number($('cueHoldInput').value || cue.hold || 0);
+  cue.trigger = $('cueTriggerSelect').value || 'manual';
+  cue.snapshot = makeSnapshot();
+  sortCues();
+  state.currentCueIndex = state.cues.findIndex(c=>c.id === cue.id);
+  state.selectedCueId = cue.id;
+  renderCueList();
+  save();
+  toast(`Cue ${cue.number} updated.`, 'good');
+}
+function deleteSelectedCue(){
+  const cue = selectedCue();
+  if (!cue || state.cues.length <= 1) {
+    toast('Keep at least one cue in the stack.', 'warn');
+    return;
+  }
+  state.cues = state.cues.filter(c=>c.id !== cue.id);
+  state.selectedCueId = state.cues[Math.max(0, state.currentCueIndex)]?.id || state.cues[0].id;
+  state.currentCueIndex = Math.min(state.currentCueIndex, state.cues.length - 1);
+  renderCueList();
+  save();
+}
+function selectCue(id, apply){
+  const cue = cueById(id);
+  if (!cue) return;
+  state.selectedCueId = cue.id;
+  if (apply) {
+    applySnapshot(cue.snapshot);
+    state.currentCueIndex = state.cues.findIndex(c=>c.id===cue.id);
+  }
+  renderAll();
+  save();
+}
+
+function runCue(index){
+  if (!state.cues[index]) return;
+  clearPlaybackTimers();
+  const cue = state.cues[index];
+  state.selectedCueId = cue.id;
+  state.playback = {
+    index,
+    from: makeSnapshot(),
+    to: clone(cue.snapshot),
+    start: performance.now(),
+    fadeMs: Math.max(0.01, Number(cue.fade || 0)) * 1000,
+    timer: null
+  };
+  $('playHud').textContent = `Running cue ${cue.number}`;
+  requestAnimationFrame(playbackFrame);
+}
+function playbackFrame(ts){
+  if (!state.playback) return;
+  const p = state.playback;
+  const t = clamp((ts - p.start) / p.fadeMs, 0, 1);
+  interpolateSnapshot(p.from, p.to, t);
+  draw();
+  renderFixtureControls();
+  renderChannelList();
+  renderPerformers();
+  if (t < 1) {
+    requestAnimationFrame(playbackFrame);
+    return;
+  }
+  applySnapshot(p.to);
+  state.currentCueIndex = p.index;
+  state.selectedCueId = state.cues[p.index].id;
+  state.playback = null;
+  $('playHud').textContent = `Cue ${state.cues[p.index].number} complete`;
+  renderAll();
+  save();
+  scheduleAutoAdvance();
+}
+function scheduleAutoAdvance(){
+  const cue = currentCue();
+  if (!cue) return;
+  const next = state.cues[state.currentCueIndex + 1];
+  if (!next) return;
+  if (state.autoRun || next.trigger === 'auto') {
+    const holdMs = Math.max(0, Number(cue.hold || 0)) * 1000;
+    state.playback = {timer:setTimeout(()=>runCue(state.currentCueIndex + 1), holdMs), hold:true};
+    $('playHud').textContent = `Holding cue ${cue.number}`;
+  }
+}
+function clearPlaybackTimers(){
+  if (state.playback && state.playback.timer) clearTimeout(state.playback.timer);
+  state.playback = null;
+}
+function stopPlayback(){
+  clearPlaybackTimers();
+  $('playHud').textContent = 'Live edit';
+  draw();
+}
+function goNext(){
+  if (state.playback && !state.playback.hold) return;
+  const next = state.currentCueIndex < 0 ? 0 : Math.min(state.currentCueIndex + 1, state.cues.length - 1);
+  runCue(next);
+}
+function goPrev(){
+  const prev = state.currentCueIndex <= 0 ? 0 : state.currentCueIndex - 1;
+  runCue(prev);
+}
+
+function addPerformer(){
+  const count = state.performers.length + 1;
+  const p = {
+    id:'p'+Date.now(),
+    name:'Dancer '+count,
+    x:44 + (count % 4) * 5,
+    y:36 + (count % 3) * 4,
+    size:1,
+    skin:['#ffe0bd','#f1c27d','#e0ac69','#c68642','#8d5524'][count % 5],
+    costume:GELS[(count + 3) % GELS.length].color
+  };
+  state.performers.push(p);
+  state.selectedPerformerId = p.id;
+  renderPerformers();
+  draw();
+  save();
+}
+function deleteSelectedPerformer(){
+  if (!state.selectedPerformerId) return;
+  state.performers = state.performers.filter(p=>p.id !== state.selectedPerformerId);
+  state.selectedPerformerId = null;
+  renderPerformers();
+  draw();
+  save();
+}
+
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+function computeLayout(width,height){
+  const padX = Math.max(48, Math.min(96, width * .08));
+  const padTop = Math.max(34, height * .05);
+  const padBottom = Math.max(54, height * .08);
+  const availW = width - padX * 2;
+  const availH = height - padTop - padBottom;
+  const ratio = 1.45;
+  let w = availW;
+  let h = w / ratio;
+  if (h > availH) { h = availH; w = h * ratio; }
+  const x = (width - w) / 2;
+  const y = padTop + (availH - h) / 2;
+  layout = {
+    x, y, w, h,
+    cx:x + w/2,
+    backY:y + h*.18,
+    frontY:y + h*.88,
+    backW:w*.62,
+    frontW:w*1.02,
+    apronY:y + h*.96,
+    scale:w/100
+  };
+}
+function depthEase(y){
+  return Math.pow(clamp(y/60, 0, 1), 1.18);
+}
+function widthAtDepth(t){
+  return lerp(layout.backW, layout.frontW, Math.pow(clamp(t,0,1), .76));
+}
+function screenYAtWorldY(y){
+  const t = y/60;
+  if (t < 0) return layout.backY + t * layout.h * .32;
+  if (t > 1) return layout.frontY + (t-1) * layout.h * .22;
+  return lerp(layout.backY, layout.frontY, depthEase(y));
+}
+function worldToScreen(pt){
+  const tRaw = pt.y / 60;
+  const t = clamp(tRaw, 0, 1);
+  const width = widthAtDepth(t);
+  const x = layout.cx + (pt.x - 50) * width / 100;
+  const y = screenYAtWorldY(pt.y);
+  return {x, y, scale:width/100, depth:t};
+}
+function screenToWorld(pt){
+  let lo = 0, hi = 60;
+  for (let i=0; i<16; i++) {
+    const mid = (lo + hi) / 2;
+    if (screenYAtWorldY(mid) < pt.y) lo = mid;
+    else hi = mid;
+  }
+  const y = (lo + hi) / 2;
+  const width = widthAtDepth(y/60);
+  const x = 50 + (pt.x - layout.cx) * 100 / width;
+  return {x, y};
+}
+function sourceFor(f){
+  if (f.direction === 'front') return {x:f.targetX, y:70};
+  if (f.direction === 'back') return {x:f.targetX, y:-9};
+  if (f.direction === 'left') return {x:-10, y:f.targetY};
+  if (f.direction === 'right') return {x:110, y:f.targetY};
+  if (f.direction === 'foot') return {x:f.targetX, y:64};
+  return {x:f.targetX, y:-7};
+}
+function draw(){
+  const rect = canvas.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+  ctx.clearRect(0,0,width,height);
+  computeLayout(width,height);
+  drawBackground(width,height);
+  drawStageBase();
+  drawCyc();
+  drawLightBeams();
+  drawPerformers();
+  drawFixturePlan();
+  drawFocusTarget();
+}
+function drawBackground(width,height){
+  ctx.fillStyle = '#050506';
+  ctx.fillRect(0,0,width,height);
+  const grad = ctx.createLinearGradient(0,0,0,height);
+  grad.addColorStop(0,'#0d0d12');
+  grad.addColorStop(1,'#050506');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,width,height);
+}
+function pathPoints(points){
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+  ctx.closePath();
+}
+function stageQuad(y1,y2){
+  return [
+    worldToScreen({x:0,y:y1}),
+    worldToScreen({x:100,y:y1}),
+    worldToScreen({x:100,y:y2}),
+    worldToScreen({x:0,y:y2})
+  ];
+}
+function stageZone(x1,x2,y1,y2){
+  return [
+    worldToScreen({x:x1,y:y1}),
+    worldToScreen({x:x2,y:y1}),
+    worldToScreen({x:x2,y:y2}),
+    worldToScreen({x:x1,y:y2})
+  ];
+}
+function drawStageBase(){
+  const upL=worldToScreen({x:0,y:0}), upR=worldToScreen({x:100,y:0});
+  const dnL=worldToScreen({x:0,y:60}), dnR=worldToScreen({x:100,y:60});
+  const wall = stageQuad(0,18);
+  const floor = stageQuad(18,60);
+  ctx.save();
+  ctx.fillStyle = '#07070a';
+  ctx.fillRect(layout.x-34,layout.y-8,layout.w+68,layout.h+42);
+
+  const portalTop = layout.backY - layout.h*.12;
+  ctx.fillStyle = '#020203';
+  ctx.fillRect(layout.x-48, portalTop, layout.w+96, layout.apronY-portalTop);
+  ctx.fillStyle = '#111118';
+  ctx.fillRect(layout.cx-layout.frontW*.57, portalTop, layout.frontW*1.14, 16);
+  ctx.fillStyle = '#050506';
+  ctx.fillRect(upL.x-34, portalTop+10, 22, layout.apronY-portalTop-2);
+  ctx.fillRect(upR.x+12, portalTop+10, 22, layout.apronY-portalTop-2);
+
+  ctx.beginPath();
+  pathPoints(wall);
+  const wallGrad = ctx.createLinearGradient(0,wall[0].y,0,wall[2].y);
+  wallGrad.addColorStop(0,'#f5f6f8');
+  wallGrad.addColorStop(.55,'#e7e9ee');
+  wallGrad.addColorStop(1,'#d7dae1');
+  ctx.fillStyle = wallGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(20,20,28,.28)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  pathPoints(wall);
+  ctx.stroke();
+
+  ctx.beginPath();
+  pathPoints(floor);
+  const floorGrad = ctx.createLinearGradient(0,floor[0].y,0,floor[2].y);
+  floorGrad.addColorStop(0,'#15151a');
+  floorGrad.addColorStop(.45,'#111118');
+  floorGrad.addColorStop(1,'#09090d');
+  ctx.fillStyle = floorGrad;
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  pathPoints(stageQuad(0,60));
+  ctx.clip();
+  const sheen = ctx.createRadialGradient(layout.cx, layout.frontY, 0, layout.cx, layout.frontY, layout.w*.7);
+  sheen.addColorStop(0,'rgba(255,255,255,.08)');
+  sheen.addColorStop(.58,'rgba(255,255,255,.025)');
+  sheen.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(layout.x,layout.y,layout.w,layout.h);
+  ctx.restore();
+
+  ctx.strokeStyle = '#2f3038';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  pathPoints(stageQuad(0,60));
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(20,20,28,.26)';
+  ctx.beginPath();
+  ctx.moveTo(worldToScreen({x:0,y:18}).x, worldToScreen({x:0,y:18}).y);
+  ctx.lineTo(worldToScreen({x:100,y:18}).x, worldToScreen({x:100,y:18}).y);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.lineWidth = 1;
+  for (let gx=10; gx<100; gx+=10) {
+    const p1=worldToScreen({x:gx,y:0}), p2=worldToScreen({x:gx,y:60});
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+  }
+  for (let gy=10; gy<60; gy+=10) {
+    const p1=worldToScreen({x:0,y:gy}), p2=worldToScreen({x:100,y:gy});
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+  }
+  ctx.fillStyle = '#08080b';
+  ctx.beginPath();
+  pathPoints([
+    {x:dnL.x-10,y:dnL.y+6},
+    {x:dnR.x+10,y:dnR.y+6},
+    {x:dnR.x+30,y:layout.apronY},
+    {x:dnL.x-30,y:layout.apronY}
+  ]);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.beginPath(); ctx.moveTo(dnL.x-8,dnL.y+6); ctx.lineTo(dnR.x+8,dnR.y+6); ctx.stroke();
+
+  const centerGlow = ctx.createRadialGradient(layout.cx, layout.backY+layout.h*.18, 0, layout.cx, layout.backY+layout.h*.18, layout.w*.5);
+  centerGlow.addColorStop(0,'rgba(255,255,255,.045)');
+  centerGlow.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = centerGlow;
+  ctx.fillRect(layout.x, layout.y, layout.w, layout.h*.58);
+
+  ctx.fillStyle = '#4b5563';
+  ctx.font = '11px '+getComputedStyle(document.documentElement).getPropertyValue('--mono');
+  ctx.fillText('UPSTAGE', upL.x+12, upL.y+22);
+  ctx.fillStyle = '#888888';
+  ctx.fillText('DOWNSTAGE', dnL.x+16, dnL.y-13);
+  ctx.restore();
+}
+function drawCyc(){
+  const cyc = state.fixtures.filter(f=>f.group === 'Cyc').sort((a,b)=>a.targetX-b.targetX);
+  if (!cyc.length) return;
+  const segments = [[0,33.333],[33.333,66.667],[66.667,100]];
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  cyc.forEach((f, index) => {
+    const seg = segments[index] || [index*100/cyc.length, (index+1)*100/cyc.length];
+    const zone = stageZone(seg[0], seg[1], 0, 18);
+    const alpha = clamp(f.intensity/100, 0, 1);
+    if (alpha <= 0) return;
+    const top = worldToScreen({x:(seg[0]+seg[1])/2,y:0});
+    const bottom = worldToScreen({x:(seg[0]+seg[1])/2,y:18});
+    ctx.beginPath();
+    pathPoints(zone);
+    const grad = ctx.createLinearGradient(0, top.y, 0, bottom.y);
+    grad.addColorStop(0, rgba(f.color, alpha*.66));
+    grad.addColorStop(.52, rgba(f.color, alpha*.42));
+    grad.addColorStop(1, rgba(f.color, alpha*.18));
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    pathPoints(zone);
+    ctx.clip();
+    ctx.globalCompositeOperation = 'lighter';
+    const p = worldToScreen({x:(seg[0]+seg[1])/2,y:8});
+    const glow = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,layout.w*.22);
+    glow.addColorStop(0, rgba(f.color, alpha*.24));
+    glow.addColorStop(1, rgba(f.color, 0));
+    ctx.fillStyle = glow;
+    ctx.fillRect(layout.x,layout.y,layout.w,layout.h*.36);
+    ctx.restore();
+  });
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.lineWidth = 1;
+  [33.333,66.667].forEach(x => {
+    const a = worldToScreen({x,y:0});
+    const b = worldToScreen({x,y:18});
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+    ctx.stroke();
+  });
+  const label = worldToScreen({x:50,y:8});
+  const labelSize = Math.max(34, Math.min(92, layout.w * .13));
+  ctx.save();
+  ctx.translate(label.x, label.y);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `900 ${labelSize}px ${getComputedStyle(document.documentElement).getPropertyValue('--sans')}`;
+  ctx.fillStyle = 'rgba(12,12,13,.18)';
+  ctx.strokeStyle = 'rgba(255,255,255,.34)';
+  ctx.lineWidth = Math.max(2, labelSize * .035);
+  ctx.letterSpacing = '0px';
+  const desiredLabelWidth = Math.max(180, Math.min(layout.w * .48, 560));
+  const labelWidth = ctx.measureText('CYC').width || desiredLabelWidth;
+  ctx.scale(clamp(desiredLabelWidth / labelWidth, 1, 2.2), 1);
+  ctx.strokeText('CYC', 0, 0);
+  ctx.fillText('CYC', 0, 0);
+  ctx.restore();
+  ctx.restore();
+}
+function drawLightBeams(){
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  state.fixtures.filter(f=>f.group !== 'Cyc' && f.intensity > 0).forEach(drawBeam);
+  ctx.restore();
+}
+function drawBeam(f){
+  const source = worldToScreen(sourceFor(f));
+  const target = worldToScreen({x:f.targetX,y:f.targetY});
+  const radius = f.spread * target.scale * .78;
+  const alpha = clamp(f.intensity/100,0,1);
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const len = Math.hypot(dx,dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(source.x,source.y);
+  ctx.lineTo(target.x + nx*radius*.82, target.y + ny*radius*.48);
+  ctx.lineTo(target.x - nx*radius*.82, target.y - ny*radius*.48);
+  ctx.closePath();
+  const cone = ctx.createLinearGradient(source.x,source.y,target.x,target.y);
+  cone.addColorStop(0, rgba(f.color, alpha*.12));
+  cone.addColorStop(1, rgba(f.color, alpha*.02));
+  ctx.fillStyle = cone;
+  ctx.fill();
+  ctx.translate(target.x,target.y);
+  ctx.rotate(Math.atan2(dy,dx)+Math.PI/2);
+  const pool = ctx.createRadialGradient(0,0,0,0,0,radius);
+  pool.addColorStop(0, rgba(f.color, alpha*.34));
+  pool.addColorStop(.62, rgba(f.color, alpha*.18));
+  pool.addColorStop(1, rgba(f.color, 0));
+  ctx.fillStyle = pool;
+  ctx.beginPath();
+  ctx.ellipse(0,0,radius*.9,radius*.46,0,0,Math.PI*2);
+  ctx.fill();
+  if (f.gobo && f.gobo !== 'open') drawGoboPattern(f, radius);
+  ctx.restore();
+}
+function drawGoboPattern(f, radius){
+  const alpha = clamp(f.intensity/100,0,1);
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0,0,radius*.88,radius*.44,0,0,Math.PI*2);
+  ctx.clip();
+  ctx.globalAlpha = alpha*.42;
+  ctx.strokeStyle = f.color;
+  ctx.fillStyle = f.color;
+  ctx.lineWidth = Math.max(1.2, radius*.025);
+  if (f.gobo === 'window') {
+    for (let x=-radius; x<=radius; x+=radius*.22) {
+      ctx.beginPath(); ctx.moveTo(x,-radius*.48); ctx.lineTo(x,radius*.48); ctx.stroke();
+    }
+    for (let y=-radius*.44; y<=radius*.44; y+=radius*.18) {
+      ctx.beginPath(); ctx.moveTo(-radius,y); ctx.lineTo(radius,y); ctx.stroke();
+    }
+  } else if (f.gobo === 'stripes') {
+    ctx.rotate(-.65);
+    for (let x=-radius*1.4; x<=radius*1.4; x+=radius*.17) {
+      ctx.beginPath(); ctx.moveTo(x,-radius); ctx.lineTo(x,radius); ctx.stroke();
+    }
+  } else if (f.gobo === 'dots') {
+    for (let i=0; i<44; i++) {
+      const x = Math.sin(i*12.9898)*radius*.82;
+      const y = Math.cos(i*78.233)*radius*.38;
+      ctx.beginPath(); ctx.arc(x,y,Math.max(2,radius*.035),0,Math.PI*2); ctx.fill();
+    }
+  } else if (f.gobo === 'leaf') {
+    for (let i=0; i<18; i++) {
+      const x = Math.sin(i*4.11)*radius*.72;
+      const y = Math.cos(i*3.37)*radius*.34;
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(i*.83);
+      ctx.beginPath();
+      ctx.ellipse(0,0,radius*.09,radius*.026,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  } else {
+    for (let i=0; i<34; i++) {
+      const x = Math.sin(i*8.41)*radius*.8;
+      const y = Math.cos(i*5.97)*radius*.38;
+      ctx.beginPath();
+      ctx.ellipse(x,y,radius*(.05 + (i%5)*.012),radius*(.022 + (i%4)*.01),i*.43,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+function lightAt(x,y){
+  const acc = {r:28,g:30,b:38,a:.22};
+  state.fixtures.forEach(f => {
+    if (f.intensity <= 0 || f.group === 'Cyc') return;
+    const dx = (x - f.targetX) / Math.max(1, f.spread*.85);
+    const dy = (y - f.targetY) / Math.max(1, f.spread*.55);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const amount = Math.pow(clamp(1 - dist, 0, 1), 1.35) * (f.intensity/100);
+    if (amount > 0) addLightColor(acc, f.color, amount);
+  });
+  return {
+    color: rgbToHex(acc.r/acc.a, acc.g/acc.a, acc.b/acc.a),
+    level: clamp(acc.a, .12, 1.6)
+  };
+}
+function accColor(acc, fallback){
+  if (!acc.a) return fallback;
+  return rgbToHex(acc.r/acc.a, acc.g/acc.a, acc.b/acc.a);
+}
+function addToAcc(acc, color, amount){
+  if (amount <= 0) return;
+  const c = hexToRgb(color);
+  acc.r += c.r * amount;
+  acc.g += c.g * amount;
+  acc.b += c.b * amount;
+  acc.a += amount;
+}
+function performerLighting(p){
+  const buckets = {
+    total:{r:18,g:20,b:28,a:.14},
+    left:{r:0,g:0,b:0,a:0},
+    right:{r:0,g:0,b:0,a:0},
+    front:{r:0,g:0,b:0,a:0},
+    back:{r:0,g:0,b:0,a:0},
+    top:{r:0,g:0,b:0,a:0}
+  };
+  state.fixtures.forEach(f => {
+    if (f.intensity <= 0) return;
+    let amount = 0;
+    if (f.group === 'Cyc') {
+      amount = (f.intensity/100) * clamp(1 - p.y/82, .18, .78) * .42;
+      addToAcc(buckets.total, f.color, amount*.72);
+      addToAcc(buckets.back, f.color, amount*1.25);
+      return;
+    }
+    const dx = (p.x - f.targetX) / Math.max(1, f.spread*.78);
+    const dy = (p.y - f.targetY) / Math.max(1, f.spread*.48);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    amount = Math.pow(clamp(1 - dist, 0, 1), 1.28) * (f.intensity/100) * 1.22;
+    if (amount <= 0) return;
+    const src = sourceFor(f);
+    const sx = src.x - p.x;
+    const sy = src.y - p.y;
+    const sideBias = clamp(Math.abs(sx) / 48, 0, 1);
+    const frontBias = clamp(Math.abs(sy) / 58, 0, 1);
+    addToAcc(buckets.total, f.color, amount*1.08);
+    addToAcc(buckets.left, f.color, amount * (sx < -4 ? .58 + 1.05*sideBias : .12));
+    addToAcc(buckets.right, f.color, amount * (sx > 4 ? .58 + 1.05*sideBias : .12));
+    addToAcc(buckets.front, f.color, amount * (sy > 5 ? .62 + .95*frontBias : .16));
+    addToAcc(buckets.back, f.color, amount * (sy < -5 ? .64 + .95*frontBias : .16));
+    addToAcc(buckets.top, f.color, amount * (f.direction === 'top' ? 1.35 : .28));
+  });
+  const totalColor = accColor(buckets.total, '#4a4a50');
+  const leftColor = accColor(buckets.left, totalColor);
+  const rightColor = accColor(buckets.right, totalColor);
+  const frontColor = accColor(buckets.front, totalColor);
+  const backColor = accColor(buckets.back, totalColor);
+  const topColor = accColor(buckets.top, totalColor);
+  const level = clamp(buckets.total.a, .08, 2.25);
+  return {
+    color:totalColor,
+    leftColor,
+    rightColor,
+    frontColor,
+    backColor,
+    topColor,
+    level,
+    left:clamp(buckets.left.a,0,1.8),
+    right:clamp(buckets.right.a,0,1.8),
+    front:clamp(buckets.front.a,0,1.8),
+    back:clamp(buckets.back.a,0,1.8),
+    top:clamp(buckets.top.a,0,1.8)
+  };
+}
+function materialTone(base, lt, strength){
+  const dim = mixColor(base, '#050506', clamp(.62 - lt.level*.16, .1, .7));
+  const lit = mixColor(dim, lt.color, clamp(strength * lt.level * 1.18, 0, .9));
+  return mixColor(lit, lt.topColor, clamp(lt.top*.18, 0, .34));
+}
+function materialGradient(base, lt, x0, x1, strength){
+  const mid = materialTone(base, lt, strength);
+  const dark = mixColor(base, '#050506', clamp(.7 - lt.level*.12, .24, .76));
+  const left = mixColor(dark, lt.leftColor, clamp(.18 + lt.left*.62, .18, .86));
+  const right = mixColor(dark, lt.rightColor, clamp(.18 + lt.right*.62, .18, .86));
+  const hi = mixColor(mid, lt.frontColor, clamp(.18 + lt.front*.32 + lt.top*.22, .18, .72));
+  const g = ctx.createLinearGradient(x0,0,x1,0);
+  g.addColorStop(0,left);
+  g.addColorStop(.22,mid);
+  g.addColorStop(.5,hi);
+  g.addColorStop(.78,mid);
+  g.addColorStop(1,right);
+  return g;
+}
+function drawCapsule(x1,y1,x2,y2,width,fill,stroke){
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = width;
+  ctx.strokeStyle = fill;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+  ctx.lineWidth = Math.max(1,width*.16);
+  ctx.strokeStyle = stroke;
+  ctx.globalAlpha = .65;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+  ctx.restore();
+}
+function drawLitEllipse(cx,cy,rx,ry,fill,stroke,rot=0,lineWidth=1){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rot);
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);
+  ctx.fill();
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawPerformers(){
+  state.performers
+    .slice()
+    .sort((a,b)=>a.y-b.y)
+    .forEach(p => drawPerformer(p));
+}
+function drawPerformer(p){
+  const s = worldToScreen({x:p.x,y:p.y});
+  const scale = s.scale * (p.size || 1) * .64;
+  const light = performerLighting(p);
+  const skinFill = materialGradient(p.skin, light, -18, 18, .62);
+  const costumeFill = materialGradient(p.costume, light, -18, 18, .74);
+  const skinMid = materialTone(p.skin, light, .68);
+  const costumeMid = materialTone(p.costume, light, .76);
+  const skinEdge = mixColor(p.skin, '#050506', clamp(.5 - light.level*.05, .36, .58));
+  const costumeEdge = mixColor(p.costume, '#050506', clamp(.62 - light.level*.06, .42, .68));
+  const selected = p.id === state.selectedPerformerId;
+  ctx.save();
+  ctx.translate(s.x,s.y);
+  ctx.scale(scale,scale);
+  const shadowAlpha = clamp(.62 - light.level*.16 + light.back*.1, .16, .68);
+  const shadowDx = clamp((light.left - light.right) * 10, -10, 10);
+  ctx.fillStyle = rgba(light.color, clamp(light.level*.13, .03, .28));
+  ctx.beginPath(); ctx.ellipse(-shadowDx*.25,20,21,7,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
+  ctx.beginPath(); ctx.ellipse(shadowDx,23,18,5.4,0,0,Math.PI*2); ctx.fill();
+  if (light.back > .08 || Math.max(light.left, light.right) > .16) {
+    ctx.save();
+    ctx.globalAlpha = clamp(light.back*.42 + Math.max(light.left, light.right)*.22, .12, .68);
+    ctx.strokeStyle = light.backColor;
+    ctx.lineWidth = 4.6;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-10,-10); ctx.quadraticCurveTo(-17,0,-15,12); ctx.lineTo(-11,25);
+    ctx.moveTo(10,-10); ctx.quadraticCurveTo(17,0,15,12); ctx.lineTo(11,25);
+    ctx.moveTo(-6,-25); ctx.quadraticCurveTo(0,-30,6,-25);
+    ctx.stroke();
+    ctx.restore();
+  }
+  if (selected) {
+    ctx.strokeStyle = '#EC008C';
+    ctx.lineWidth = 1.8 / scale;
+    ctx.setLineDash([5/scale,4/scale]);
+    ctx.beginPath(); ctx.ellipse(0,-7,18,31,0,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Back limbs first so the torso sits naturally in front.
+  drawCapsule(-5,7,-8,16,5.2,skinFill,skinEdge);
+  drawCapsule(-8,16,-11,27,4.8,skinFill,skinEdge);
+  drawLitEllipse(-12.5,28.2,5.4,2.4,skinFill,skinEdge,-.18,.8);
+  drawCapsule(5,7,8,16,5.2,skinFill,skinEdge);
+  drawCapsule(8,16,11,27,4.8,skinFill,skinEdge);
+  drawLitEllipse(12.5,28.2,5.4,2.4,skinFill,skinEdge,.18,.8);
+
+  drawCapsule(-9,-7,-15,2,4.8,skinFill,skinEdge);
+  drawCapsule(-15,2,-18,12,4.3,skinFill,skinEdge);
+  drawLitEllipse(-18.4,13.2,2.9,2.1,skinFill,skinEdge,-.22,.7);
+  drawCapsule(9,-7,15,2,4.8,skinFill,skinEdge);
+  drawCapsule(15,2,18,12,4.3,skinFill,skinEdge);
+  drawLitEllipse(18.4,13.2,2.9,2.1,skinFill,skinEdge,.22,.7);
+
+  ctx.fillStyle = skinFill;
+  ctx.strokeStyle = skinEdge;
+  ctx.lineWidth = .9;
+  ctx.beginPath();
+  ctx.roundRect(-3.2,-15.2,6.4,8,2.4);
+  ctx.fill();
+  ctx.stroke();
+
+  // Torso with shoulders, ribcage, and waist contour.
+  ctx.fillStyle = costumeFill;
+  ctx.strokeStyle = costumeEdge;
+  ctx.lineWidth = 1.35;
+  ctx.beginPath();
+  ctx.moveTo(-10.5,-10.5);
+  ctx.bezierCurveTo(-12.4,-6,-11.2,1,-8.8,6.4);
+  ctx.bezierCurveTo(-6.2,10.2,-2.8,11.5,0,11.2);
+  ctx.bezierCurveTo(2.8,11.5,6.2,10.2,8.8,6.4);
+  ctx.bezierCurveTo(11.2,1,12.4,-6,10.5,-10.5);
+  ctx.bezierCurveTo(5.8,-13.2,-5.8,-13.2,-10.5,-10.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  const torsoHi = ctx.createLinearGradient(-6,-12,6,10);
+  torsoHi.addColorStop(0, `rgba(255,255,255,${clamp(.1 + light.front*.18 + light.top*.2, .1, .46)})`);
+  torsoHi.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = torsoHi;
+  ctx.beginPath();
+  ctx.moveTo(-4.5,-10.5);
+  ctx.bezierCurveTo(1,-11,6,-5,5.6,7.4);
+  ctx.lineTo(.5,9.2);
+  ctx.bezierCurveTo(2.4,2.2,1.2,-5.8,-4.5,-10.5);
+  ctx.fill();
+
+  ctx.strokeStyle = mixColor(costumeMid, '#050506', .34);
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = .55;
+  ctx.beginPath();
+  ctx.moveTo(-5.5,5.8);
+  ctx.quadraticCurveTo(0,8.8,5.5,5.8);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  ctx.strokeStyle = mixColor(skinMid, '#050506', .18);
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-4,-13.2);
+  ctx.lineTo(-3.2,-10);
+  ctx.moveTo(4,-13.2);
+  ctx.lineTo(3.2,-10);
+  ctx.stroke();
+
+  const head = ctx.createRadialGradient(
+    clamp((light.right-light.left)*5 - 3.5, -5.5, 5.5),
+    -22 - clamp(light.top*3.6,0,5),
+    1.4,
+    0,
+    -20.5,
+    8.1
+  );
+  head.addColorStop(0, mixColor(skinMid, '#ffffff', clamp(.18 + light.top*.18 + light.front*.14, .18, .48)));
+  head.addColorStop(.45, skinMid);
+  head.addColorStop(1, mixColor(skinMid, '#050506', clamp(.36 - light.level*.06, .18, .42)));
+  ctx.fillStyle = head;
+  ctx.beginPath(); ctx.ellipse(0,-20.5,6.4,8,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = skinEdge; ctx.lineWidth = 1; ctx.stroke();
+
+  ctx.fillStyle = mixColor(skinEdge, light.frontColor, clamp(light.front*.18,0,.28));
+  ctx.beginPath();
+  ctx.ellipse(-2.1,-21.3,.55,.42,0,0,Math.PI*2);
+  ctx.ellipse(2.1,-21.3,.55,.42,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(20,20,20,${clamp(.18 + light.front*.08, .12, .32)})`;
+  ctx.lineWidth = .45;
+  ctx.beginPath();
+  ctx.moveTo(.3,-20.6);
+  ctx.lineTo(.9,-18.8);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-1.8,-17.7);
+  ctx.quadraticCurveTo(0,-16.8,1.8,-17.7);
+  ctx.stroke();
+
+  ctx.fillStyle = `rgba(255,255,255,${clamp(light.front*.2 + light.top*.16, .03, .34)})`;
+  ctx.beginPath();
+  ctx.ellipse(-2.4,-23.4,1.35,.9,-.25,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(255,255,255,${clamp(light.back*.2,0,.32)})`;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(0,-20.5,6.8,-Math.PI*.45,Math.PI*.45);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = clamp(light.level*.16, .04, .36);
+  ctx.fillStyle = light.color;
+  ctx.beginPath();
+  ctx.ellipse(0,-4,13,21,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = mixColor(costumeMid, light.color, clamp(light.level*.24,0,.44));
+  ctx.beginPath();
+  ctx.ellipse(0,3.8,3.3,1.3,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  const labelY = s.y + 31 * scale;
+  ctx.font = '700 11px '+getComputedStyle(document.documentElement).getPropertyValue('--mono');
+  ctx.textAlign = 'center';
+  const labelWidth = ctx.measureText(p.name).width + 12;
+  ctx.fillStyle = 'rgba(5,5,6,.72)';
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.beginPath();
+  roundedRectPath(s.x - labelWidth/2, labelY - 11, labelWidth, 17, 5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillText(p.name, s.x, labelY + 1);
+  ctx.restore();
+}
+function roundedRectPath(x,y,w,h,r){
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+}
+function drawFixturePlan(){
+  state.fixtures.forEach(f => {
+    const src = worldToScreen(sourceFor(f));
+    const target = worldToScreen({x:f.targetX,y:f.targetY});
+    const active = f.id === state.selectedFixtureId;
+    ctx.save();
+    ctx.globalAlpha = active ? 1 : .68;
+    ctx.strokeStyle = active ? '#fbbf24' : 'rgba(255,255,255,.34)';
+    ctx.fillStyle = active ? f.color : '#202027';
+    ctx.lineWidth = active ? 2 : 1;
+    ctx.beginPath();
+    ctx.arc(src.x,src.y,active?7:5,0,Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    if (active && f.group !== 'Cyc') {
+      ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(src.x,src.y); ctx.lineTo(target.x,target.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.fillStyle = '#f0f0f0';
+    ctx.font = '10px '+getComputedStyle(document.documentElement).getPropertyValue('--mono');
+    ctx.textAlign = 'center';
+    ctx.fillText(String(f.channel), src.x, src.y - 10);
+    ctx.restore();
+  });
+}
+function drawFocusTarget(){
+  const f = selectedFixture();
+  if (!f || f.group === 'Cyc') return;
+  const p = worldToScreen({x:f.targetX,y:f.targetY});
+  ctx.save();
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(p.x,p.y,6,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(p.x-10,p.y); ctx.lineTo(p.x+10,p.y); ctx.moveTo(p.x,p.y-10); ctx.lineTo(p.x,p.y+10); ctx.stroke();
+  ctx.restore();
+}
+
+function canvasPoint(event){
+  const rect = canvas.getBoundingClientRect();
+  return {x:event.clientX - rect.left, y:event.clientY - rect.top};
+}
+function hitPerformer(world){
+  const ordered = state.performers.slice().sort((a,b)=>b.y-a.y);
+  for (let i=0; i<ordered.length; i++) {
+    const p = ordered[i];
+    const dx = world.x - p.x;
+    const dy = world.y - p.y;
+    if (Math.hypot(dx,dy) < 6 * (p.size || 1)) return p;
+  }
+  return null;
+}
+function hitFixtureSource(screen){
+  let best = null;
+  let bestD = Infinity;
+  state.fixtures.forEach(f => {
+    const s = worldToScreen(sourceFor(f));
+    const d = Math.hypot(screen.x - s.x, screen.y - s.y);
+    if (d < bestD) { best = f; bestD = d; }
+  });
+  return bestD < 14 ? best : null;
+}
+function onPointerDown(event){
+  const screen = canvasPoint(event);
+  const world = screenToWorld(screen);
+  state.pointer = world;
+  const performer = hitPerformer(world);
+  const source = hitFixtureSource(screen);
+  if (performer) {
+    state.selectedPerformerId = performer.id;
+    state.drag = {type:'performer', id:performer.id, dx:world.x-performer.x, dy:world.y-performer.y};
+    canvas.classList.add('dragging');
+    canvas.setPointerCapture(event.pointerId);
+    renderPerformers();
+    draw();
+    return;
+  }
+  if (source) {
+    state.selectedFixtureId = source.id;
+    state.drag = source.group === 'Cyc' ? null : {type:'focus', id:source.id};
+    canvas.setPointerCapture(event.pointerId);
+    renderAll();
+    return;
+  }
+  const activeFixture = selectedFixture();
+  if (!activeFixture || activeFixture.group === 'Cyc') {
+    renderAll();
+    return;
+  }
+  state.drag = {type:'focus', id:state.selectedFixtureId};
+  activeFixture.targetX = clamp(world.x,8,92);
+  activeFixture.targetY = clamp(world.y,8,56);
+  canvas.setPointerCapture(event.pointerId);
+  renderFixtureControls();
+  draw();
+}
+function onPointerMove(event){
+  const world = screenToWorld(canvasPoint(event));
+  state.pointer = world;
+  $('pointerHud').innerHTML = `X <b>${Math.round(world.x)}</b> Y <b>${Math.round(world.y)}</b>`;
+  if (!state.drag) return;
+  if (state.drag.type === 'performer') {
+    const p = performerById(state.drag.id);
+    if (p) {
+      p.x = clamp(world.x - state.drag.dx, 8, 92);
+      p.y = clamp(world.y - state.drag.dy, 18, 55);
+      renderPerformers();
+      draw();
+    }
+  } else if (state.drag.type === 'focus') {
+    const f = fixtureById(state.drag.id);
+    if (f) {
+      f.targetX = clamp(world.x,8,92);
+      f.targetY = clamp(world.y,8,56);
+      renderFixtureControls();
+      draw();
+    }
+  }
+}
+function onPointerUp(event){
+  if (state.drag) save();
+  state.drag = null;
+  canvas.classList.remove('dragging');
+  try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+}
+
+async function exportSceneImage(){
+  $('exportModal').classList.remove('show');
+  draw();
+  canvas.toBlob(async blob => {
+    if (!blob) {
+      toast('Image export failed.', 'bad');
+      return;
+    }
+    await saveBlob(blob, `lighting-scene-${nowFileStamp()}.png`, [{
+      description:'PNG image',
+      accept:{'image/png':['.png']}
+    }]);
+  }, 'image/png');
+}
+function wait(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+function animateExportFade(from, to, fadeMs){
+  return new Promise(resolve => {
+    const start = performance.now();
+    function step(ts){
+      const t = clamp((ts - start) / Math.max(16, fadeMs), 0, 1);
+      interpolateSnapshot(from, to, t);
+      draw();
+      if (t < 1) requestAnimationFrame(step);
+      else {
+        applySnapshot(to);
+        draw();
+        resolve();
+      }
+    }
+    requestAnimationFrame(step);
+  });
+}
+async function exportSequenceVideo(){
+  $('exportModal').classList.remove('show');
+  if (!canvas.captureStream || !window.MediaRecorder) {
+    toast('Video export is not supported in this browser.', 'bad');
+    return;
+  }
+  const original = makeSnapshot();
+  const originalCue = state.currentCueIndex;
+  const type = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  const stream = canvas.captureStream(30);
+  const recorder = new MediaRecorder(stream, {mimeType:type});
+  const chunks = [];
+  recorder.ondataavailable = event => { if (event.data && event.data.size) chunks.push(event.data); };
+  const stopped = new Promise(resolve => { recorder.onstop = resolve; });
+  recorder.start();
+  toast('Recording cue sequence...', 'warn');
+  try {
+    for (let i=0; i<state.cues.length; i++) {
+      const cue = state.cues[i];
+      const from = makeSnapshot();
+      await animateExportFade(from, cue.snapshot, Number(cue.fade || 0) * 1000);
+      await wait(Math.max(120, Number(cue.hold || 0) * 1000));
+    }
+  } finally {
+    recorder.stop();
+    await stopped;
+    stream.getTracks().forEach(track=>track.stop());
+    applySnapshot(original);
+    state.currentCueIndex = originalCue;
+    renderAll();
+  }
+  const blob = new Blob(chunks, {type:'video/webm'});
+  await saveBlob(blob, `lighting-sequence-${nowFileStamp()}.webm`, [{
+    description:'WebM video',
+    accept:{'video/webm':['.webm']}
+  }]);
+}
+async function saveBlob(blob, suggestedName, types){
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({suggestedName, types});
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      toast(`Saved ${suggestedName}.`, 'good');
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        toast('Save canceled.', 'warn');
+        return;
+      }
+      toast('Save picker failed; using browser download instead.', 'warn');
+    }
+  }
+  downloadBlob(blob, suggestedName);
+  toast(`Downloaded ${suggestedName}.`, 'good');
+}
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 500);
+}
+
+function bindEvents(){
+  window.addEventListener('resize', resizeCanvas);
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointerleave', onPointerUp);
+  $('keypad').addEventListener('click', event => {
+    const btn = event.target.closest('button[data-cmd]');
+    if (btn) keypadCommand(btn.dataset.cmd);
+  });
+  $('fixtureSelect').addEventListener('change', e=>{ state.selectedFixtureId = e.target.value || null; renderAll(); save(); });
+  ['intensityRange','fixtureColor','goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
+    $(id).addEventListener('input', () => updateFixtureFromControls(id === 'intensityRange'));
+    $(id).addEventListener('change', () => updateFixtureFromControls(false));
+  });
+  $('gelSwatches').addEventListener('click', event => {
+    const sw = event.target.closest('[data-color]');
+    if (!sw) return;
+    $('fixtureColor').value = sw.dataset.color;
+    updateFixtureFromControls(false);
+  });
+  $('channelList').addEventListener('click', event => {
+    const row = event.target.closest('[data-id]');
+    if (!row) return;
+    state.selectedFixtureId = row.dataset.id;
+    const f = selectedFixture();
+    setCommandText(f ? String(f.channel) : '');
+    renderAll();
+    save();
+  });
+  $('cueList').addEventListener('click', event => {
+    const row = event.target.closest('[data-id]');
+    if (!row) return;
+    selectCue(row.dataset.id, true);
+  });
+  ['cueNumberInput','cueLabelInput','cueFadeInput','cueHoldInput','cueTriggerSelect'].forEach(id => {
+    $(id).addEventListener('change', () => {
+      const cue = selectedCue();
+      if (!cue) return;
+      cue.number = $('cueNumberInput').value || cue.number;
+      cue.label = $('cueLabelInput').value || cue.label;
+      cue.fade = Number($('cueFadeInput').value || cue.fade || 0);
+      cue.hold = Number($('cueHoldInput').value || cue.hold || 0);
+      cue.trigger = $('cueTriggerSelect').value || 'manual';
+      sortCues();
+      renderCueList();
+      save();
+    });
+  });
+  $('recordCueBtn').addEventListener('click', () => recordCue($('cueNumberInput').value || nextCueNumber(), $('cueFadeInput').value || 3));
+  $('addCueBtn').addEventListener('click', addCue);
+  $('updateCueBtn').addEventListener('click', updateSelectedCue);
+  $('deleteCueBtn').addEventListener('click', deleteSelectedCue);
+  $('performerList').addEventListener('click', event => {
+    const row = event.target.closest('[data-id]');
+    if (!row) return;
+    state.selectedPerformerId = row.dataset.id;
+    renderPerformers();
+    draw();
+    save();
+  });
+  $('addPerformerBtn').addEventListener('click', addPerformer);
+  $('goBtn').addEventListener('click', goNext);
+  $('nextBtn').addEventListener('click', goNext);
+  $('prevBtn').addEventListener('click', goPrev);
+  $('stopBtn').addEventListener('click', stopPlayback);
+  $('autoRun').addEventListener('change', e=>{ state.autoRun = e.target.checked; save(); });
+  $('exportBtn').addEventListener('click', () => $('exportModal').classList.add('show'));
+  $('resetBtn').addEventListener('click', resetTrainer);
+  $('closeExportBtn').addEventListener('click', () => $('exportModal').classList.remove('show'));
+  $('exportModal').addEventListener('click', event => { if (event.target === $('exportModal')) $('exportModal').classList.remove('show'); });
+  $('exportSceneBtn').addEventListener('click', exportSceneImage);
+  $('exportVideoBtn').addEventListener('click', exportSequenceVideo);
+  window.addEventListener('keydown', event => {
+    const tag = (document.activeElement || {}).tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+      if (event.key === 'Escape') document.activeElement.blur();
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      $('exportModal').classList.remove('show');
+      if (state.command.length || state.selectedFixtureId) {
+        clearEosLine();
+        return;
+      }
+      stopPlayback();
+      state.selectedPerformerId = null;
+      renderPerformers();
+      draw();
+      return;
+    }
+    if (handleCommandKey(event)) return;
+    if (handleTransportKey(event)) return;
+    if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedPerformerId) {
+      event.preventDefault();
+      deleteSelectedPerformer();
+    }
+  });
+}
+
+function init(){
+  buildGelSwatches();
+  if (!load()) seedCues();
+  if (!state.cues.length) seedCues();
+  bindEvents();
+  renderAll();
+  resizeCanvas();
+}
+init();
+</script>
+</body>
+</html>
