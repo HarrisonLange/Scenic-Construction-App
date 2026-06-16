@@ -988,6 +988,10 @@ function renderEditor(){
       <input id="edRot" type="range" min="0" max="345" step="15" value="${o.rot||0}"></label>
     <label class="field full" style="margin-top:8px">Size <strong id="edScaleVal">${Math.round((o.scale||1)*100)}%</strong>
       <input id="edScale" type="range" min="0.5" max="2.2" step="0.05" value="${o.scale||1}"></label>
+    <label class="field full" style="margin-top:8px">Width <strong id="edWVal">${((o.w??t.w)*(o.scale||1)).toFixed(1)} ft</strong>
+      <input id="edW" type="range" min="0.5" max="44" step="0.1" value="${(o.w??t.w)}"></label>
+    <label class="field full" style="margin-top:8px">Depth <strong id="edDVal">${((o.d??t.d)*(o.scale||1)).toFixed(1)} ft</strong>
+      <input id="edD" type="range" min="0.5" max="20" step="0.1" value="${(o.d??t.d)}"></label>
     <label class="field full" style="margin-top:8px">Height <strong id="edHtVal">${objHeight(o).toFixed(1)} ft</strong>
       <input id="edHt" type="range" min="0.1" max="20" step="0.1" value="${(o.h??t.h)}"></label>
     <label class="field full" style="margin-top:8px">Elevation off deck <strong id="edZVal">${(o.z||0).toFixed(1)} ft</strong>
@@ -999,8 +1003,11 @@ function renderEditor(){
   $('edName').addEventListener('input',e=>{o.name=e.target.value;renderObjList();draw();save();});
   $('edColor').addEventListener('input',e=>{o.color=e.target.value;renderObjList();draw();save();});
   $('edRot').addEventListener('input',e=>{o.rot=Number(e.target.value);$('edRotVal').innerHTML=o.rot+'&deg;';renderObjList();draw();save();});
-  $('edScale').addEventListener('input',e=>{o.scale=Number(e.target.value);$('edScaleVal').textContent=Math.round(o.scale*100)+'%';$('edHtVal').textContent=objHeight(o).toFixed(1)+' ft';draw();save();});
-  $('edHt').addEventListener('input',e=>{o.h=Number(e.target.value);$('edHtVal').textContent=objHeight(o).toFixed(1)+' ft';draw();save();});
+  const syncDims=()=>{const sc=o.scale||1;$('edScaleVal').textContent=Math.round(sc*100)+'%';$('edWVal').textContent=((o.w??t.w)*sc).toFixed(1)+' ft';$('edDVal').textContent=((o.d??t.d)*sc).toFixed(1)+' ft';$('edHtVal').textContent=objHeight(o).toFixed(1)+' ft';};
+  $('edScale').addEventListener('input',e=>{o.scale=Number(e.target.value);syncDims();draw();save();});
+  $('edW').addEventListener('input',e=>{o.w=Number(e.target.value);syncDims();renderObjList();draw();save();});
+  $('edD').addEventListener('input',e=>{o.d=Number(e.target.value);syncDims();renderObjList();draw();save();});
+  $('edHt').addEventListener('input',e=>{o.h=Number(e.target.value);syncDims();draw();save();});
   $('edZ').addEventListener('input',e=>{o.z=Number(e.target.value);$('edZVal').textContent=o.z.toFixed(1)+' ft';renderObjList();draw();save();});
   $('edDup').addEventListener('click',()=>{const n={...o,id:uid(),x:clamp(o.x+3,-STAGE.halfW,STAGE.halfW),y:clamp(o.y+2,0,STAGE.depthBack)};state.objects.push(n);state.selectedId=n.id;renderObjList();renderEditor();draw();save();});
   $('edDel').addEventListener('click',()=>{state.objects=state.objects.filter(x=>x.id!==o.id);state.selectedId=null;renderObjList();renderEditor();draw();save();toast('Piece removed.');});
