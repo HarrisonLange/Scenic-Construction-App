@@ -347,6 +347,10 @@
     </section>
 
     <section class="panel-section">
+      <button class="tbtn" id="focusLockBtn" style="width:100%;justify-content:flex-start;margin-bottom:9px" aria-pressed="false">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg>
+        <span id="focusLockText">Lock light placement/focus</span>
+      </button>
       <h2>Global Focus</h2>
       <div class="mini-grid">
         <label class="field">Direction
@@ -383,6 +387,7 @@
       <div class="hud-item" id="selectedHud">Chan <b>1</b> Front Warm</div>
       <div class="hud-item" id="pointerHud">X <b>0</b> Y <b>0</b></div>
       <div class="hud-item" id="playHud">Live edit</div>
+      <div class="hud-item" id="zoomHud">Zoom <b>100%</b></div>
     </div>
     <div id="focusPanel">
       <h3>Focus Point</h3>
@@ -544,6 +549,8 @@ const state = {
   command: [],
   playback: null,
   autoRun: false,
+  viewZoom: 1,
+  focusLocked: false,
   drag: null,
   pointer: {x:0,y:0}
 };
@@ -752,6 +759,8 @@ function resetTrainer(){
   state.currentCueIndex = -1;
   state.command = [];
   state.autoRun = false;
+  state.viewZoom = 1;
+  state.focusLocked = false;
   state.drag = null;
   $('exportModal').classList.remove('show');
   $('playHud').textContent = 'Live edit';
@@ -775,7 +784,9 @@ function save(){
         selectedPerformerId: state.selectedPerformerId,
         selectedCueId: state.selectedCueId,
         currentCueIndex: state.currentCueIndex,
-        autoRun: state.autoRun
+        autoRun: state.autoRun,
+        viewZoom: state.viewZoom,
+        focusLocked: state.focusLocked
       }));
     } catch (_) {}
   }, 100);
@@ -802,6 +813,8 @@ function load(){
     state.selectedCueId = data.selectedCueId || (state.cues[0] && state.cues[0].id) || null;
     state.currentCueIndex = Number.isFinite(data.currentCueIndex) ? data.currentCueIndex : -1;
     state.autoRun = !!data.autoRun;
+    state.viewZoom = clamp(Number(data.viewZoom) || 1, .58, 1.5);
+    state.focusLocked = !!data.focusLocked;
     return true;
   } catch (_) {
     return false;
@@ -823,6 +836,19 @@ function buildGelSwatches(){
 function buildFixtureSelect(){
   $('fixtureSelect').innerHTML = '<option value="">No channel selected</option>' +
     state.fixtures.map(f => `<option value="${f.id}">Chan ${f.channel} - ${f.name}</option>`).join('');
+}
+function renderFocusLock(){
+  const locked = !!state.focusLocked;
+  $('focusLockBtn').classList.toggle('warn', locked);
+  $('focusLockBtn').setAttribute('aria-pressed', String(locked));
+  $('focusLockText').textContent = locked ? 'Light placement/focus locked' : 'Lock light placement/focus';
+}
+function toggleFocusLock(){
+  state.focusLocked = !state.focusLocked;
+  if (state.drag && state.drag.type === 'focus') state.drag = null;
+  renderAll();
+  save();
+  toast(state.focusLocked ? 'Light placement and focus locked.' : 'Light placement and focus unlocked.', state.focusLocked ? 'warn' : 'good');
 }
 function setFixtureControlsDisabled(disabled){
   ['intensityRange','fixtureColor','goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
@@ -850,6 +876,7 @@ function renderFixtureControls(){
     return;
   }
   const isCyc = f.group === 'Cyc';
+  const focusDisabled = isCyc || state.focusLocked;
   $('fixtureSelect').value = f.id;
   $('intensityRange').value = Math.round(f.intensity);
   $('intensityValue').textContent = Math.round(f.intensity) + '%';
@@ -862,14 +889,17 @@ function renderFixtureControls(){
   $('focusYRange').value = Math.round(f.targetY);
   setFixtureControlsDisabled(false);
   ['goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
-    $(id).disabled = isCyc;
-    $(id).style.opacity = isCyc ? '.45' : '1';
+    const disabled = id === 'goboSelect' ? isCyc : focusDisabled;
+    $(id).disabled = disabled;
+    $(id).style.opacity = disabled ? '.45' : '1';
   });
   document.querySelectorAll('.swatch').forEach(sw => sw.classList.toggle('on', sw.dataset.color.toLowerCase() === f.color.toLowerCase()));
   $('selectedHud').innerHTML = `Chan <b>${f.channel}</b> ${escapeHtml(f.name)}`;
   $('focusReadout').textContent = isCyc
     ? `Channel ${f.channel} is a fixed cyc zone: intensity and color only`
-    : `Channel ${f.channel} at X ${Math.round(f.targetX)}, Y ${Math.round(f.targetY)}`;
+    : state.focusLocked
+      ? `Focus plot locked: channel ${f.channel} stays at X ${Math.round(f.targetX)}, Y ${Math.round(f.targetY)}`
+      : `Channel ${f.channel} at X ${Math.round(f.targetX)}, Y ${Math.round(f.targetY)}`;
 }
 function renderChannelList(){
   $('channelList').innerHTML = state.fixtures.map(f => {
@@ -948,6 +978,7 @@ function renderPerformerEditor(){
 }
 function renderAll(){
   buildFixtureSelect();
+  renderFocusLock();
   renderFixtureControls();
   renderChannelList();
   renderCueList();
@@ -965,12 +996,14 @@ function updateFixtureFromControls(pushCommand){
   if (!f) return;
   f.intensity = Number($('intensityRange').value);
   f.color = $('fixtureColor').value;
-  if (f.group !== 'Cyc') {
+  if (f.group !== 'Cyc' && !state.focusLocked) {
     f.gobo = $('goboSelect').value;
     f.direction = $('directionSelect').value;
     f.spread = Number($('spreadRange').value);
     f.targetX = Number($('focusXRange').value);
     f.targetY = Number($('focusYRange').value);
+  } else if (f.group !== 'Cyc') {
+    f.gobo = $('goboSelect').value;
   }
   if (pushCommand) setCommandText(`Chan ${f.channel} At ${Math.round(f.intensity)}`);
   renderFixtureControls();
@@ -1414,16 +1447,34 @@ function resizeCanvas(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   draw();
 }
+function updateZoomHud(){
+  $('zoomHud').innerHTML = `Zoom <b>${Math.round((state.viewZoom || 1) * 100)}%</b>`;
+}
+function setStageZoom(value){
+  state.viewZoom = clamp(value, .58, 1.5);
+  updateZoomHud();
+  draw();
+  save();
+}
+function onStageWheel(event){
+  if (event.ctrlKey) return;
+  event.preventDefault();
+  const step = event.deltaY > 0 ? -.08 : .08;
+  setStageZoom((state.viewZoom || 1) + step);
+}
 function computeLayout(width,height){
-  const padX = Math.max(48, Math.min(96, width * .08));
-  const padTop = Math.max(34, height * .05);
-  const padBottom = Math.max(54, height * .08);
+  const padX = Math.max(24, Math.min(58, width * .045));
+  const padTop = Math.max(20, height * .035);
+  const padBottom = Math.max(32, height * .055);
   const availW = width - padX * 2;
   const availH = height - padTop - padBottom;
   const ratio = 1.45;
   let w = availW;
   let h = w / ratio;
   if (h > availH) { h = availH; w = h * ratio; }
+  const zoom = clamp(state.viewZoom || 1, .58, 1.5);
+  w *= 1.5 * zoom;
+  h *= 1.5 * zoom;
   const x = (width - w) / 2;
   const y = padTop + (availH - h) / 2;
   layout = {
@@ -1483,6 +1534,7 @@ function draw(){
   const height = rect.height;
   ctx.clearRect(0,0,width,height);
   computeLayout(width,height);
+  updateZoomHud();
   drawBackground(width,height);
   drawStageBase();
   drawCyc();
@@ -1693,7 +1745,7 @@ function drawLightBeams(){
 function drawBeam(f){
   const source = worldToScreen(sourceFor(f));
   const target = worldToScreen({x:f.targetX,y:f.targetY});
-  const radius = f.spread * target.scale * .78;
+  const radius = f.spread * target.scale * .95;
   const alpha = clamp(f.intensity/100,0,1);
   const dx = target.x - source.x;
   const dy = target.y - source.y;
@@ -1707,15 +1759,15 @@ function drawBeam(f){
   ctx.lineTo(target.x - nx*radius*.82, target.y - ny*radius*.48);
   ctx.closePath();
   const cone = ctx.createLinearGradient(source.x,source.y,target.x,target.y);
-  cone.addColorStop(0, rgba(f.color, alpha*.12));
-  cone.addColorStop(1, rgba(f.color, alpha*.02));
+  cone.addColorStop(0, rgba(f.color, alpha*.15));
+  cone.addColorStop(1, rgba(f.color, alpha*.025));
   ctx.fillStyle = cone;
   ctx.fill();
   ctx.translate(target.x,target.y);
   ctx.rotate(Math.atan2(dy,dx)+Math.PI/2);
   const pool = ctx.createRadialGradient(0,0,0,0,0,radius);
-  pool.addColorStop(0, rgba(f.color, alpha*.34));
-  pool.addColorStop(.62, rgba(f.color, alpha*.18));
+  pool.addColorStop(0, rgba(f.color, alpha*.42));
+  pool.addColorStop(.62, rgba(f.color, alpha*.22));
   pool.addColorStop(1, rgba(f.color, 0));
   ctx.fillStyle = pool;
   ctx.beginPath();
@@ -1804,7 +1856,7 @@ function addToAcc(acc, color, amount){
 }
 function performerLighting(p){
   const buckets = {
-    total:{r:18,g:20,b:28,a:.14},
+    total:{r:10,g:11,b:16,a:.09},
     left:{r:0,g:0,b:0,a:0},
     right:{r:0,g:0,b:0,a:0},
     front:{r:0,g:0,b:0,a:0},
@@ -1815,27 +1867,27 @@ function performerLighting(p){
     if (f.intensity <= 0) return;
     let amount = 0;
     if (f.group === 'Cyc') {
-      amount = (f.intensity/100) * clamp(1 - p.y/82, .18, .78) * .42;
-      addToAcc(buckets.total, f.color, amount*.72);
-      addToAcc(buckets.back, f.color, amount*1.25);
+      amount = (f.intensity/100) * clamp(1 - p.y/82, .18, .82) * .52;
+      addToAcc(buckets.total, f.color, amount*.82);
+      addToAcc(buckets.back, f.color, amount*1.45);
       return;
     }
     const dx = (p.x - f.targetX) / Math.max(1, f.spread*.78);
     const dy = (p.y - f.targetY) / Math.max(1, f.spread*.48);
     const dist = Math.sqrt(dx*dx + dy*dy);
-    amount = Math.pow(clamp(1 - dist, 0, 1), 1.28) * (f.intensity/100) * 1.22;
+    amount = Math.pow(clamp(1 - dist, 0, 1), 1.18) * (f.intensity/100) * 1.42;
     if (amount <= 0) return;
     const src = sourceFor(f);
     const sx = src.x - p.x;
     const sy = src.y - p.y;
     const sideBias = clamp(Math.abs(sx) / 48, 0, 1);
     const frontBias = clamp(Math.abs(sy) / 58, 0, 1);
-    addToAcc(buckets.total, f.color, amount*1.08);
-    addToAcc(buckets.left, f.color, amount * (sx < -4 ? .58 + 1.05*sideBias : .12));
-    addToAcc(buckets.right, f.color, amount * (sx > 4 ? .58 + 1.05*sideBias : .12));
-    addToAcc(buckets.front, f.color, amount * (sy > 5 ? .62 + .95*frontBias : .16));
-    addToAcc(buckets.back, f.color, amount * (sy < -5 ? .64 + .95*frontBias : .16));
-    addToAcc(buckets.top, f.color, amount * (f.direction === 'top' ? 1.35 : .28));
+    addToAcc(buckets.total, f.color, amount*1.2);
+    addToAcc(buckets.left, f.color, amount * (sx < -4 ? .72 + 1.2*sideBias : .14));
+    addToAcc(buckets.right, f.color, amount * (sx > 4 ? .72 + 1.2*sideBias : .14));
+    addToAcc(buckets.front, f.color, amount * (sy > 5 ? .8 + 1.08*frontBias : .18));
+    addToAcc(buckets.back, f.color, amount * (sy < -5 ? .82 + 1.08*frontBias : .18));
+    addToAcc(buckets.top, f.color, amount * (f.direction === 'top' ? 1.55 : .34));
   });
   const totalColor = accColor(buckets.total, '#4a4a50');
   const leftColor = accColor(buckets.left, totalColor);
@@ -1843,7 +1895,7 @@ function performerLighting(p){
   const frontColor = accColor(buckets.front, totalColor);
   const backColor = accColor(buckets.back, totalColor);
   const topColor = accColor(buckets.top, totalColor);
-  const level = clamp(buckets.total.a, .08, 2.25);
+  const level = clamp(buckets.total.a, .06, 2.65);
   return {
     color:totalColor,
     leftColor,
@@ -1860,16 +1912,16 @@ function performerLighting(p){
   };
 }
 function materialTone(base, lt, strength){
-  const dim = mixColor(base, '#050506', clamp(.62 - lt.level*.16, .1, .7));
-  const lit = mixColor(dim, lt.color, clamp(strength * lt.level * 1.18, 0, .9));
-  return mixColor(lit, lt.topColor, clamp(lt.top*.18, 0, .34));
+  const dim = mixColor(base, '#050506', clamp(.72 - lt.level*.2, .08, .78));
+  const lit = mixColor(dim, lt.color, clamp(strength * lt.level * 1.42, 0, .96));
+  return mixColor(lit, lt.topColor, clamp(lt.top*.24, 0, .46));
 }
 function materialGradient(base, lt, x0, x1, strength){
   const mid = materialTone(base, lt, strength);
-  const dark = mixColor(base, '#050506', clamp(.7 - lt.level*.12, .24, .76));
-  const left = mixColor(dark, lt.leftColor, clamp(.18 + lt.left*.62, .18, .86));
-  const right = mixColor(dark, lt.rightColor, clamp(.18 + lt.right*.62, .18, .86));
-  const hi = mixColor(mid, lt.frontColor, clamp(.18 + lt.front*.32 + lt.top*.22, .18, .72));
+  const dark = mixColor(base, '#050506', clamp(.78 - lt.level*.16, .18, .82));
+  const left = mixColor(dark, lt.leftColor, clamp(.2 + lt.left*.78, .2, .94));
+  const right = mixColor(dark, lt.rightColor, clamp(.2 + lt.right*.78, .2, .94));
+  const hi = mixColor(mid, lt.frontColor, clamp(.2 + lt.front*.42 + lt.top*.28, .2, .82));
   const g = ctx.createLinearGradient(x0,0,x1,0);
   g.addColorStop(0,left);
   g.addColorStop(.22,mid);
@@ -1919,7 +1971,7 @@ function drawPerformers(){
 }
 function drawPerformer(p){
   const s = worldToScreen({x:p.x,y:p.y});
-  const scale = s.scale * (p.size || 1) * .64;
+  const scale = s.scale * (p.size || 1) * .58;
   const light = performerLighting(p);
   const skinFill = materialGradient(p.skin, light, -18, 18, .62);
   const costumeFill = materialGradient(p.costume, light, -18, 18, .74);
@@ -1927,21 +1979,32 @@ function drawPerformer(p){
   const costumeMid = materialTone(p.costume, light, .76);
   const skinEdge = mixColor(p.skin, '#050506', clamp(.5 - light.level*.05, .36, .58));
   const costumeEdge = mixColor(p.costume, '#050506', clamp(.62 - light.level*.06, .42, .68));
+  const hairColor = mixColor(skinEdge, '#050506', .78);
   const selected = p.id === state.selectedPerformerId;
   ctx.save();
   ctx.translate(s.x,s.y);
   ctx.scale(scale,scale);
   const shadowAlpha = clamp(.62 - light.level*.16 + light.back*.1, .16, .68);
   const shadowDx = clamp((light.left - light.right) * 10, -10, 10);
-  ctx.fillStyle = rgba(light.color, clamp(light.level*.13, .03, .28));
-  ctx.beginPath(); ctx.ellipse(-shadowDx*.25,20,21,7,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = rgba(light.color, clamp(light.level*.18, .04, .38));
+  ctx.beginPath(); ctx.ellipse(-shadowDx*.25,20,25,8.5,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
-  ctx.beginPath(); ctx.ellipse(shadowDx,23,18,5.4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(shadowDx,23,21,6.4,0,0,Math.PI*2); ctx.fill();
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = clamp(light.level*.12 + light.front*.06, .03, .24);
+  ctx.fillStyle = light.color;
+  ctx.beginPath();
+  ctx.ellipse(-5,32,5.8,13,.12,0,Math.PI*2);
+  ctx.ellipse(5,32,5.8,13,-.12,0,Math.PI*2);
+  ctx.ellipse(0,24,13,3.2,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
   if (light.back > .08 || Math.max(light.left, light.right) > .16) {
     ctx.save();
-    ctx.globalAlpha = clamp(light.back*.42 + Math.max(light.left, light.right)*.22, .12, .68);
+    ctx.globalAlpha = clamp(light.back*.52 + Math.max(light.left, light.right)*.28, .16, .82);
     ctx.strokeStyle = light.backColor;
-    ctx.lineWidth = 4.6;
+    ctx.lineWidth = 5.8;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -2026,6 +2089,17 @@ function drawPerformer(p){
   ctx.lineTo(3.2,-10);
   ctx.stroke();
 
+  const hair = ctx.createRadialGradient(-2,-25,1,0,-22,8.4);
+  hair.addColorStop(0, mixColor(hairColor, light.topColor, clamp(light.top*.34,0,.42)));
+  hair.addColorStop(.55, hairColor);
+  hair.addColorStop(1, '#050506');
+  ctx.fillStyle = hair;
+  ctx.beginPath();
+  ctx.ellipse(0,-22.8,6.9,7.2,.05,Math.PI*.86,Math.PI*2.18);
+  ctx.quadraticCurveTo(4.8,-29.2,-1,-29.5);
+  ctx.quadraticCurveTo(-7.5,-28.4,-6.1,-21.6);
+  ctx.fill();
+
   const head = ctx.createRadialGradient(
     clamp((light.right-light.left)*5 - 3.5, -5.5, 5.5),
     -22 - clamp(light.top*3.6,0,5),
@@ -2070,10 +2144,10 @@ function drawPerformer(p){
 
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = clamp(light.level*.16, .04, .36);
+  ctx.globalAlpha = clamp(light.level*.22, .06, .48);
   ctx.fillStyle = light.color;
   ctx.beginPath();
-  ctx.ellipse(0,-4,13,21,0,0,Math.PI*2);
+  ctx.ellipse(0,-4,14,22.5,0,0,Math.PI*2);
   ctx.fill();
   ctx.restore();
 
@@ -2081,6 +2155,16 @@ function drawPerformer(p){
   ctx.beginPath();
   ctx.ellipse(0,3.8,3.3,1.3,0,0,Math.PI*2);
   ctx.fill();
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = clamp(Math.max(light.left, light.right, light.back)*.2, 0, .32);
+  ctx.strokeStyle = light.left > light.right ? light.leftColor : light.rightColor;
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(light.left > light.right ? -9 : 9, -10);
+  ctx.quadraticCurveTo(light.left > light.right ? -13 : 13, -1, light.left > light.right ? -9 : 9, 8);
+  ctx.stroke();
+  ctx.restore();
   ctx.restore();
   ctx.save();
   const labelY = s.y + 31 * scale;
@@ -2108,6 +2192,83 @@ function roundedRectPath(x,y,w,h,r){
   ctx.lineTo(x,y+r);
   ctx.quadraticCurveTo(x,y,x+r,y);
 }
+function drawSource4LedSymbol(f, src, target, active){
+  const angle = Math.atan2(target.y - src.y, target.x - src.x);
+  const size = active ? 21 : 17;
+  const bodyFill = active ? mixColor(f.color, '#111118', .5) : '#17171d';
+  const outline = active ? '#fbbf24' : 'rgba(255,255,255,.58)';
+  ctx.save();
+  ctx.translate(src.x, src.y);
+  ctx.rotate(angle);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.strokeStyle = 'rgba(255,255,255,.2)';
+  ctx.lineWidth = Math.max(1.2, size*.08);
+  ctx.beginPath();
+  ctx.arc(-size*.18, 0, size*.72, -Math.PI*.78, Math.PI*.78);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-size*.54, -size*.64);
+  ctx.lineTo(-size*.54, size*.64);
+  ctx.stroke();
+
+  ctx.fillStyle = '#0a0a0d';
+  ctx.strokeStyle = outline;
+  ctx.lineWidth = active ? 2 : 1.25;
+  ctx.beginPath();
+  ctx.roundRect(-size*.88, -size*.32, size*.46, size*.64, size*.08);
+  ctx.fill();
+  ctx.stroke();
+
+  const body = ctx.createLinearGradient(-size*.45, -size*.52, size*.78, size*.52);
+  body.addColorStop(0, mixColor(bodyFill, '#ffffff', active ? .16 : .08));
+  body.addColorStop(.48, bodyFill);
+  body.addColorStop(1, '#050506');
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size*.76, size*.46, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = active ? rgba(f.color, .74) : '#24242c';
+  ctx.beginPath();
+  ctx.ellipse(size*.55, 0, size*.18, size*.36, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = active ? rgba(f.color, .82) : 'rgba(255,255,255,.28)';
+  ctx.lineWidth = Math.max(1, size*.06);
+  ctx.beginPath();
+  ctx.moveTo(size*.72, -size*.34);
+  ctx.lineTo(size*.9, -size*.26);
+  ctx.lineTo(size*.9, size*.26);
+  ctx.lineTo(size*.72, size*.34);
+  ctx.stroke();
+
+  ctx.fillStyle = active ? '#fff7b8' : '#d4d4d8';
+  ctx.beginPath();
+  ctx.arc(-size*.16, 0, size*.11, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `800 ${active ? 12 : 10}px ${getComputedStyle(document.documentElement).getPropertyValue('--mono')}`;
+  const labelY = src.y - size - 9;
+  const labelW = ctx.measureText(String(f.channel)).width + 8;
+  ctx.fillStyle = 'rgba(5,5,6,.82)';
+  ctx.strokeStyle = active ? '#fbbf24' : 'rgba(255,255,255,.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  roundedRectPath(src.x - labelW/2, labelY - 8, labelW, 16, 5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = active ? '#fff7b8' : '#f4f4f5';
+  ctx.fillText(String(f.channel), src.x, labelY + .5);
+  ctx.restore();
+}
 function drawFixturePlan(){
   state.fixtures.forEach(f => {
     const src = worldToScreen(sourceFor(f));
@@ -2116,20 +2277,12 @@ function drawFixturePlan(){
     ctx.save();
     ctx.globalAlpha = active ? 1 : .68;
     ctx.strokeStyle = active ? '#fbbf24' : 'rgba(255,255,255,.34)';
-    ctx.fillStyle = active ? f.color : '#202027';
-    ctx.lineWidth = active ? 2 : 1;
-    ctx.beginPath();
-    ctx.arc(src.x,src.y,active?7:5,0,Math.PI*2);
-    ctx.fill(); ctx.stroke();
     if (active && f.group !== 'Cyc') {
       ctx.setLineDash([4,4]);
       ctx.beginPath(); ctx.moveTo(src.x,src.y); ctx.lineTo(target.x,target.y); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.fillStyle = '#f0f0f0';
-    ctx.font = '10px '+getComputedStyle(document.documentElement).getPropertyValue('--mono');
-    ctx.textAlign = 'center';
-    ctx.fillText(String(f.channel), src.x, src.y - 10);
+    drawSource4LedSymbol(f, src, target, active);
     ctx.restore();
   });
 }
@@ -2167,7 +2320,7 @@ function hitFixtureSource(screen){
     const d = Math.hypot(screen.x - s.x, screen.y - s.y);
     if (d < bestD) { best = f; bestD = d; }
   });
-  return bestD < 14 ? best : null;
+  return bestD < 24 ? best : null;
 }
 function onPointerDown(event){
   const screen = canvasPoint(event);
@@ -2186,13 +2339,15 @@ function onPointerDown(event){
   }
   if (source) {
     state.selectedFixtureId = source.id;
-    state.drag = source.group === 'Cyc' ? null : {type:'focus', id:source.id};
+    state.drag = source.group === 'Cyc' || state.focusLocked ? null : {type:'focus', id:source.id};
     canvas.setPointerCapture(event.pointerId);
+    if (state.focusLocked && source.group !== 'Cyc') toast('Light placement and focus are locked.', 'warn');
     renderAll();
     return;
   }
   const activeFixture = selectedFixture();
-  if (!activeFixture || activeFixture.group === 'Cyc') {
+  if (!activeFixture || activeFixture.group === 'Cyc' || state.focusLocked) {
+    if (activeFixture && activeFixture.group !== 'Cyc' && state.focusLocked) toast('Light placement and focus are locked.', 'warn');
     renderAll();
     return;
   }
@@ -2216,7 +2371,7 @@ function onPointerMove(event){
       renderPerformers();
       draw();
     }
-  } else if (state.drag.type === 'focus') {
+  } else if (state.drag.type === 'focus' && !state.focusLocked) {
     const f = fixtureById(state.drag.id);
     if (f) {
       f.targetX = clamp(world.x,8,92);
@@ -2341,6 +2496,7 @@ function bindEvents(){
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointerleave', onPointerUp);
+  canvas.addEventListener('wheel', onStageWheel, {passive:false});
   $('keypad').addEventListener('click', event => {
     const btn = event.target.closest('button[data-cmd]');
     if (btn) keypadCommand(btn.dataset.cmd);
@@ -2402,6 +2558,7 @@ function bindEvents(){
   $('prevBtn').addEventListener('click', goPrev);
   $('stopBtn').addEventListener('click', stopPlayback);
   $('autoRun').addEventListener('change', e=>{ state.autoRun = e.target.checked; save(); });
+  $('focusLockBtn').addEventListener('click', toggleFocusLock);
   $('exportBtn').addEventListener('click', () => $('exportModal').classList.add('show'));
   $('resetBtn').addEventListener('click', resetTrainer);
   $('closeExportBtn').addEventListener('click', () => $('exportModal').classList.remove('show'));
