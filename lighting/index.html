@@ -273,6 +273,18 @@
   .export-card:hover{border-color:var(--accent)}
   .export-card b{display:block;font-size:14px;margin-bottom:7px}
   .export-card span{display:block;font-size:12px;line-height:1.45;color:var(--text-dim)}
+  .export-preview{display:none;border:1px solid var(--ui-dark3);border-radius:8px;background:#101014;padding:12px}
+  .export-preview.show{display:block}
+  .export-preview img{
+    width:100%;max-height:280px;object-fit:contain;background:#050506;border:1px solid var(--ui-dark3);
+    border-radius:6px;margin-bottom:10px;
+  }
+  .export-preview pre{
+    max-height:260px;overflow:auto;background:#050506;border:1px solid var(--ui-dark3);border-radius:6px;
+    color:#dbeafe;padding:10px;font:11px/1.45 var(--mono);white-space:pre-wrap;margin-bottom:10px;
+  }
+  .export-preview .preview-title{font-size:13px;font-weight:800;margin-bottom:5px}
+  .export-preview .preview-copy{font-size:11px;color:var(--text-dim);line-height:1.45;margin-bottom:10px}
   .m-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 
   #toast{
@@ -614,7 +626,14 @@
         <span>Restore an editable Lighting Design Lab project backup.</span>
       </button>
     </div>
+    <div class="export-preview" id="exportPreview">
+      <div class="preview-title" id="exportPreviewTitle">Preview</div>
+      <div class="preview-copy" id="exportPreviewCopy"></div>
+      <div id="exportPreviewBody"></div>
+    </div>
     <div class="m-actions">
+      <button class="tbtn" id="backExportBtn" style="display:none">Back</button>
+      <button class="tbtn primary" id="savePreviewExportBtn" style="display:none">Save This Export</button>
       <button class="tbtn" id="closeExportBtn">Close</button>
     </div>
   </div>
@@ -707,6 +726,7 @@ let layout = {x:0,y:0,w:100,h:60,scale:1};
 let autosaveTimer = null;
 let undoStack = [];
 let restoringUndo = false;
+let pendingExportKind = null;
 const AUDIENCE_CAMERA = {dist:20, height:6, pitch:.07, stageHalfW:33, stageDepth:30};
 
 function clone(value){ return JSON.parse(JSON.stringify(value)); }
@@ -2400,6 +2420,15 @@ function fixtureConeAt(f, x, y){
   const focusBoost = Math.pow(clamp(1 - Math.hypot(x - cone.target.x, y - cone.target.y) / Math.max(4, (Number(f.spread)||24)*.72), 0, 1), 1.35) * .28;
   return Math.pow(edge, 1.45) * throwFalloff * (1 + focusBoost) * (f.intensity/100);
 }
+function floorCirclePath(cx, cy, radiusWorld, steps=72){
+  for (let i=0; i<=steps; i++) {
+    const a = (Math.PI * 2 * i) / steps;
+    const p = worldToScreen({x:cx + Math.cos(a)*radiusWorld, y:cy + Math.sin(a)*radiusWorld});
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+}
 function drawBeam(f){
   const coneWorld = fixtureConeGeometry(f);
   const source = worldToScreen(sourceFor(f));
@@ -2426,17 +2455,27 @@ function drawBeam(f){
   ctx.lineWidth = Math.max(1, target.scale * 1.2);
   ctx.stroke();
   if (f.direction === 'top') {
+    const floorRadius = Math.max(2, (Number(f.spread) || 24) * .58);
+    ctx.save();
+    ctx.beginPath();
+    floorCirclePath(coneWorld.target.x, coneWorld.target.y, floorRadius);
     ctx.clip();
-    ctx.translate(target.x,target.y);
-    const pool = ctx.createRadialGradient(0,0,0,0,0,radius);
+    const pool = ctx.createRadialGradient(target.x,target.y,0,target.x,target.y,radius);
     pool.addColorStop(0, rgba(f.color, alpha*.42));
     pool.addColorStop(.62, rgba(f.color, alpha*.22));
     pool.addColorStop(1, rgba(f.color, 0));
     ctx.fillStyle = pool;
+    ctx.fillRect(layout.x-80, layout.y-80, layout.w+160, layout.h+160);
+    ctx.strokeStyle = rgba(f.color, alpha*.18);
+    ctx.lineWidth = Math.max(1, target.scale);
     ctx.beginPath();
-    ctx.ellipse(0,0,radius*.9,radius*.46,0,0,Math.PI*2);
-    ctx.fill();
-    if (f.gobo && f.gobo !== 'open') drawGoboPattern(f, radius);
+    floorCirclePath(coneWorld.target.x, coneWorld.target.y, floorRadius);
+    ctx.stroke();
+    if (f.gobo && f.gobo !== 'open') {
+      ctx.translate(target.x,target.y);
+      drawGoboPattern(f, radius);
+    }
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -3436,6 +3475,90 @@ function onPointerUp(event){
   try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
 }
 
+function exportProjectPayload(){
+  return {
+    app:'SDSCPA Lighting Design Lab',
+    version:1,
+    exportedAt:new Date().toISOString(),
+    fixtures:state.fixtures.map(fixtureMutable),
+    performers:state.performers.map(performerMutable),
+    cues:state.cues,
+    selectedCueId:state.selectedCueId,
+    currentCueIndex:state.currentCueIndex,
+    viewZoom:state.viewZoom,
+    viewPanX:state.viewPanX,
+    focusLocked:state.focusLocked
+  };
+}
+function cueSheetCsvText(){
+  const lines = [['Cue','Label','Fade','Hold','Trigger','Notes'].map(csvCell).join(',')];
+  state.cues.forEach((cue,index) => {
+    const next = state.cues[index+1];
+    const note = `${index === state.currentCueIndex ? 'LIVE ' : ''}${next ? `Next ${next.number}` : 'End of stack'}`;
+    lines.push([cue.number,cue.label,Number(cue.fade||0).toFixed(1),Number(cue.hold||0).toFixed(1),cue.trigger || 'manual',note].map(csvCell).join(','));
+  });
+  return lines.join('\n');
+}
+function setExportPickerMode(showPreview){
+  $('exportModal').classList.add('show');
+  $('exportPreview').classList.toggle('show', showPreview);
+  document.querySelector('#exportModal .export-options').style.display = showPreview ? 'none' : 'grid';
+  $('backExportBtn').style.display = showPreview ? '' : 'none';
+  $('savePreviewExportBtn').style.display = showPreview ? '' : 'none';
+  pendingExportKind = showPreview ? pendingExportKind : null;
+}
+function showExportChooser(){
+  pendingExportKind = null;
+  $('exportPreviewBody').innerHTML = '';
+  $('exportPreviewTitle').textContent = 'Preview';
+  $('exportPreviewCopy').textContent = '';
+  setExportPickerMode(false);
+}
+function stagePreviewImage(){
+  draw();
+  return canvas.toDataURL('image/png');
+}
+function sequencePreviewText(startAtSelected=false){
+  const startIndex = startAtSelected ? Math.max(0, state.cues.findIndex(c=>c.id === state.selectedCueId)) : 0;
+  const cues = state.cues.slice(startIndex);
+  const total = cues.reduce((sum,cue)=>sum + Number(cue.fade||0) + Number(cue.hold||0), 0);
+  return `${cues.length} cue${cues.length === 1 ? '' : 's'}\nStart: ${cues[0] ? `Cue ${cues[0].number} ${cues[0].label || ''}` : 'No cues'}\nApprox. duration: ${total.toFixed(1)}s\n\n` +
+    cues.map(cue => `Cue ${cue.number}: ${cue.label || 'Cue'} | Fade ${Number(cue.fade||0).toFixed(1)} | Hold ${Number(cue.hold||0).toFixed(1)} | ${cue.trigger || 'manual'}`).join('\n');
+}
+function prepareExportPreview(kind){
+  pendingExportKind = kind;
+  const titleMap = {
+    scene:'Save Scene PNG',
+    video:'Save Sequence WebM',
+    selectedVideo:'Save From Selected Cue WebM',
+    project:'Save Editable Project JSON',
+    cueSheet:'Save Cue Sheet CSV'
+  };
+  $('exportPreviewTitle').textContent = titleMap[kind] || 'Preview';
+  if (kind === 'scene') {
+    $('exportPreviewCopy').textContent = 'This still image will be saved exactly as shown.';
+    $('exportPreviewBody').innerHTML = `<img alt="Scene export preview" src="${stagePreviewImage()}">`;
+  } else if (kind === 'video' || kind === 'selectedVideo') {
+    $('exportPreviewCopy').textContent = 'This video will be recorded after you press Save. The still below shows the current stage before recording starts.';
+    $('exportPreviewBody').innerHTML = `<img alt="Sequence export preview" src="${stagePreviewImage()}"><pre>${escapeHtml(sequencePreviewText(kind === 'selectedVideo'))}</pre>`;
+  } else if (kind === 'project') {
+    $('exportPreviewCopy').textContent = 'This editable JSON backup can be imported later.';
+    $('exportPreviewBody').innerHTML = `<pre>${escapeHtml(JSON.stringify(exportProjectPayload(), null, 2).slice(0, 6000))}</pre>`;
+  } else if (kind === 'cueSheet') {
+    $('exportPreviewCopy').textContent = 'This CSV cue sheet can be opened in a spreadsheet.';
+    $('exportPreviewBody').innerHTML = `<pre>${escapeHtml(cueSheetCsvText())}</pre>`;
+  }
+  setExportPickerMode(true);
+}
+function savePreviewedExport(){
+  const kind = pendingExportKind;
+  if (kind === 'scene') return exportSceneImage();
+  if (kind === 'video') return exportSequenceVideo(false);
+  if (kind === 'selectedVideo') return exportSequenceVideo(true);
+  if (kind === 'project') return exportProjectJson();
+  if (kind === 'cueSheet') return exportCueSheetCsv();
+}
+
 async function exportSceneImage(){
   $('exportModal').classList.remove('show');
   draw();
@@ -3514,20 +3637,7 @@ async function exportSequenceVideo(startAtSelected=false){
 }
 async function exportProjectJson(){
   $('exportModal').classList.remove('show');
-  const payload = {
-    app:'SDSCPA Lighting Design Lab',
-    version:1,
-    exportedAt:new Date().toISOString(),
-    fixtures:state.fixtures.map(fixtureMutable),
-    performers:state.performers.map(performerMutable),
-    cues:state.cues,
-    selectedCueId:state.selectedCueId,
-    currentCueIndex:state.currentCueIndex,
-    viewZoom:state.viewZoom,
-    viewPanX:state.viewPanX,
-    focusLocked:state.focusLocked
-  };
-  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify(exportProjectPayload(),null,2)], {type:'application/json'});
   await saveBlob(blob, `lighting-project-${nowFileStamp()}.json`, [{
     description:'JSON project',
     accept:{'application/json':['.json']}
@@ -3539,13 +3649,7 @@ function csvCell(value){
 }
 async function exportCueSheetCsv(){
   $('exportModal').classList.remove('show');
-  const lines = [['Cue','Label','Fade','Hold','Trigger','Notes'].map(csvCell).join(',')];
-  state.cues.forEach((cue,index) => {
-    const next = state.cues[index+1];
-    const note = `${index === state.currentCueIndex ? 'LIVE ' : ''}${next ? `Next ${next.number}` : 'End of stack'}`;
-    lines.push([cue.number,cue.label,Number(cue.fade||0).toFixed(1),Number(cue.hold||0).toFixed(1),cue.trigger || 'manual',note].map(csvCell).join(','));
-  });
-  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const blob = new Blob([cueSheetCsvText()], {type:'text/csv'});
   await saveBlob(blob, `lighting-cue-sheet-${nowFileStamp()}.csv`, [{
     description:'CSV cue sheet',
     accept:{'text/csv':['.csv']}
@@ -3743,7 +3847,7 @@ function bindEvents(){
   $('exportBtn').addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
-    $('exportModal').classList.add('show');
+    showExportChooser();
   });
   $('resetBtn').addEventListener('click', resetTrainer);
   $('closeExportBtn').addEventListener('click', event => {
@@ -3751,32 +3855,42 @@ function bindEvents(){
     event.stopPropagation();
     $('exportModal').classList.remove('show');
   });
+  $('backExportBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    showExportChooser();
+  });
+  $('savePreviewExportBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    savePreviewedExport();
+  });
   $('exportModal').querySelector('.modal').addEventListener('click', event => event.stopPropagation());
   $('exportModal').addEventListener('click', event => { if (event.target === $('exportModal')) $('exportModal').classList.remove('show'); });
   $('exportSceneBtn').addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
-    exportSceneImage();
+    prepareExportPreview('scene');
   });
   $('exportVideoBtn').addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
-    exportSequenceVideo();
+    prepareExportPreview('video');
   });
   $('exportSelectedVideoBtn').addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
-    exportSequenceVideo(true);
+    prepareExportPreview('selectedVideo');
   });
   $('exportProjectBtn').addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
-    exportProjectJson();
+    prepareExportPreview('project');
   });
   $('exportCueSheetBtn').addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
-    exportCueSheetCsv();
+    prepareExportPreview('cueSheet');
   });
   $('importProjectBtn').addEventListener('click', event => {
     event.preventDefault();

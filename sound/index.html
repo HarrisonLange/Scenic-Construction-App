@@ -1482,6 +1482,7 @@
       snap: true,
       showAdvancedLibrary: false,
       activeTool: "equipment",
+      guideDismissed: false,
       activeZoneType: "stage",
       activeEquipmentType: "wired-microphone",
       activeCableType: "xlr",
@@ -3192,7 +3193,7 @@
       dom.scaleHud.hidden = simpleBasic;
       dom.pointerHud.hidden = simpleBasic;
       dom.measurementHud.hidden = simpleBasic;
-      dom.startGuide.hidden = !simpleBasic || state.devices.length > 2 || state.connections.length > 0;
+      dom.startGuide.hidden = !simpleBasic || state.guideDismissed || state.devices.length > 2 || state.connections.length > 0;
       updateOperationChoices();
       if (simpleBasic && !BASIC_DEVICE_TYPES.includes(state.activeEquipmentType)) {
         state.activeEquipmentType = "wired-microphone";
@@ -3834,6 +3835,8 @@
       const screenPoint = getCanvasPoint(event);
       const worldPoint = snapPoint(screenToWorld(screenPoint));
       state.pointer = worldPoint;
+      state.guideDismissed = true;
+      dom.startGuide.hidden = true;
       hidePortPopup();
       if (state.activeTool === "pan" || event.button === 1 || event.shiftKey) {
         state.drag = { type: "pan", startScreen: screenPoint, viewport: cloneValue(state.viewport) };
