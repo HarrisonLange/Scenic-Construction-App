@@ -533,9 +533,18 @@ const DEFAULT_FIXTURES = [
 ];
 
 const START_PERFORMERS = [
-  {id:'p1', name:'Dancer A', x:38, y:38, size:1, skin:'#c68642', costume:'#252c9b'},
-  {id:'p2', name:'Dancer B', x:50, y:34, size:1.05, skin:'#e0ac69', costume:'#92278F'},
-  {id:'p3', name:'Dancer C', x:62, y:39, size:.96, skin:'#8d5524', costume:'#0f766e'}
+  {id:'p1', name:'Dancer A', x:38, y:38, size:1, skin:'#c68642', costume:'#252c9b', pose:'standing'},
+  {id:'p2', name:'Dancer B', x:50, y:34, size:1.05, skin:'#e0ac69', costume:'#92278F', pose:'contrapposto'},
+  {id:'p3', name:'Dancer C', x:62, y:39, size:.96, skin:'#8d5524', costume:'#0f766e', pose:'open'}
+];
+
+const PERFORMER_POSES = [
+  {id:'standing', label:'Standing'},
+  {id:'contrapposto', label:'Contrapposto'},
+  {id:'walk', label:'Walking'},
+  {id:'open', label:'Open arms'},
+  {id:'reach', label:'Reach up'},
+  {id:'low', label:'Low level'}
 ];
 
 const state = {
@@ -612,7 +621,7 @@ function fixtureCueMutable(f){
 function performerMutable(p){
   return {
     id:p.id, name:p.name, x:p.x, y:p.y, size:p.size,
-    skin:p.skin, costume:p.costume
+    skin:p.skin, costume:p.costume, pose:p.pose || 'standing'
   };
 }
 function mergeSavedFixture(def, saved){
@@ -646,7 +655,9 @@ function normalizeSnapshot(snapshot){
       color:s && s.color ? s.color : base.color
     });
   });
-  const performers = snapshot && Array.isArray(snapshot.performers) ? snapshot.performers.map(p=>Object.assign({}, p)) : clone(START_PERFORMERS);
+  const performers = snapshot && Array.isArray(snapshot.performers)
+    ? snapshot.performers.map(p=>Object.assign({pose:'standing'}, p))
+    : clone(START_PERFORMERS);
   return {fixtures, performers};
 }
 function applySnapshot(snapshot){
@@ -675,7 +686,8 @@ function interpolateSnapshot(from, to, t){
       y: lerp(Number(ap.y)||bp.y, Number(bp.y)||ap.y, k),
       size: lerp(Number(ap.size)||1, Number(bp.size)||1, k),
       skin: k < .5 ? ap.skin : bp.skin,
-      costume: mixColor(ap.costume || '#888888', bp.costume || '#888888', k)
+      costume: mixColor(ap.costume || '#888888', bp.costume || '#888888', k),
+      pose: k < .5 ? (ap.pose || 'standing') : (bp.pose || 'standing')
     });
   });
 }
@@ -798,7 +810,9 @@ function load(){
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.fixtures) || !Array.isArray(data.cues)) return false;
     state.fixtures = DEFAULT_FIXTURES.map(def => mergeSavedFixture(def, data.fixtures.find(f=>f.id===def.id)));
-    state.performers = Array.isArray(data.performers) ? data.performers : clone(START_PERFORMERS);
+    state.performers = Array.isArray(data.performers)
+      ? data.performers.map(p=>Object.assign({pose:'standing'}, p))
+      : clone(START_PERFORMERS);
     state.cues = data.cues.map(c => {
       const snap = normalizeSnapshot(c.snapshot);
       return Object.assign({}, c, {
@@ -940,10 +954,11 @@ function renderCueList(){
 function renderPerformers(){
   $('performerList').innerHTML = state.performers.map(p => {
     const on = p.id === state.selectedPerformerId ? ' on' : '';
+    const pose = PERFORMER_POSES.find(item => item.id === (p.pose || 'standing')) || PERFORMER_POSES[0];
     return `<div class="performer-row${on}" data-id="${p.id}">
       <div>
         <div class="row-main"><b>${escapeHtml(p.name)}</b><span>X ${Math.round(p.x)} Y ${Math.round(p.y)}</span></div>
-        <div class="row-sub"><span>Size ${Number(p.size).toFixed(2)}</span><span>${escapeHtml(p.costume)}</span></div>
+        <div class="row-sub"><span>${escapeHtml(pose.label)}</span><span>Size ${Number(p.size).toFixed(2)}</span></div>
       </div>
       <span class="performer-chip" style="background:${p.costume}"></span>
     </div>`;
@@ -959,6 +974,11 @@ function renderPerformerEditor(){
   }
   el.innerHTML = `
     <div class="field full"><strong>Name</strong><input id="perfName" type="text" value="${escapeAttr(p.name)}"></div>
+    <label class="field full" style="margin-top:8px">Pose
+      <select id="perfPose">
+        ${PERFORMER_POSES.map(pose => `<option value="${pose.id}" ${pose.id === (p.pose || 'standing') ? 'selected' : ''}>${pose.label}</option>`).join('')}
+      </select>
+    </label>
     <div class="section-row">
       <label class="field" style="flex:1">Skin<input id="perfSkin" type="color" value="${p.skin}"></label>
       <label class="field" style="flex:1">Costume<input id="perfCostume" type="color" value="${p.costume}"></label>
@@ -971,6 +991,7 @@ function renderPerformerEditor(){
     </div>
   `;
   $('perfName').addEventListener('input', e=>{ p.name = e.target.value || 'Performer'; renderPerformers(); draw(); save(); });
+  $('perfPose').addEventListener('change', e=>{ p.pose = e.target.value; renderPerformers(); draw(); save(); });
   $('perfSkin').addEventListener('input', e=>{ p.skin = e.target.value; draw(); save(); });
   $('perfCostume').addEventListener('input', e=>{ p.costume = e.target.value; renderPerformers(); draw(); save(); });
   $('perfSize').addEventListener('input', e=>{ p.size = Number(e.target.value); draw(); save(); });
@@ -1422,7 +1443,8 @@ function addPerformer(){
     y:36 + (count % 3) * 4,
     size:1,
     skin:['#ffe0bd','#f1c27d','#e0ac69','#c68642','#8d5524'][count % 5],
-    costume:GELS[(count + 3) % GELS.length].color
+    costume:GELS[(count + 3) % GELS.length].color,
+    pose:PERFORMER_POSES[count % PERFORMER_POSES.length].id
   };
   state.performers.push(p);
   state.selectedPerformerId = p.id;
@@ -1861,17 +1883,14 @@ function performerLighting(p){
     right:{r:0,g:0,b:0,a:0},
     front:{r:0,g:0,b:0,a:0},
     back:{r:0,g:0,b:0,a:0},
-    top:{r:0,g:0,b:0,a:0}
+    top:{r:0,g:0,b:0,a:0},
+    cyc:{r:0,g:0,b:0,a:0},
+    vector:{x:0,y:0,a:0}
   };
   state.fixtures.forEach(f => {
     if (f.intensity <= 0) return;
     let amount = 0;
-    if (f.group === 'Cyc') {
-      amount = (f.intensity/100) * clamp(1 - p.y/82, .18, .82) * .52;
-      addToAcc(buckets.total, f.color, amount*.82);
-      addToAcc(buckets.back, f.color, amount*1.45);
-      return;
-    }
+    if (f.group === 'Cyc') return;
     const dx = (p.x - f.targetX) / Math.max(1, f.spread*.78);
     const dy = (p.y - f.targetY) / Math.max(1, f.spread*.48);
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -1880,6 +1899,7 @@ function performerLighting(p){
     const src = sourceFor(f);
     const sx = src.x - p.x;
     const sy = src.y - p.y;
+    const srcLen = Math.hypot(sx, sy) || 1;
     const sideBias = clamp(Math.abs(sx) / 48, 0, 1);
     const frontBias = clamp(Math.abs(sy) / 58, 0, 1);
     addToAcc(buckets.total, f.color, amount*1.2);
@@ -1888,6 +1908,9 @@ function performerLighting(p){
     addToAcc(buckets.front, f.color, amount * (sy > 5 ? .8 + 1.08*frontBias : .18));
     addToAcc(buckets.back, f.color, amount * (sy < -5 ? .82 + 1.08*frontBias : .18));
     addToAcc(buckets.top, f.color, amount * (f.direction === 'top' ? 1.55 : .34));
+    buckets.vector.x += (sx / srcLen) * amount;
+    buckets.vector.y += (sy / srcLen) * amount;
+    buckets.vector.a += amount;
   });
   const totalColor = accColor(buckets.total, '#4a4a50');
   const leftColor = accColor(buckets.left, totalColor);
@@ -1895,7 +1918,10 @@ function performerLighting(p){
   const frontColor = accColor(buckets.front, totalColor);
   const backColor = accColor(buckets.back, totalColor);
   const topColor = accColor(buckets.top, totalColor);
+  const cycColor = accColor(buckets.cyc, backColor);
   const level = clamp(buckets.total.a, .06, 2.65);
+  const keyX = buckets.vector.a ? clamp(buckets.vector.x / buckets.vector.a, -1, 1) : 0;
+  const keyY = buckets.vector.a ? clamp(buckets.vector.y / buckets.vector.a, -1, 1) : .18;
   return {
     color:totalColor,
     leftColor,
@@ -1903,12 +1929,16 @@ function performerLighting(p){
     frontColor,
     backColor,
     topColor,
+    cycColor,
     level,
+    keyX,
+    keyY,
     left:clamp(buckets.left.a,0,1.8),
     right:clamp(buckets.right.a,0,1.8),
     front:clamp(buckets.front.a,0,1.8),
     back:clamp(buckets.back.a,0,1.8),
-    top:clamp(buckets.top.a,0,1.8)
+    top:clamp(buckets.top.a,0,1.8),
+    cyc:clamp(buckets.cyc.a,0,2.4)
   };
 }
 function materialTone(base, lt, strength){
@@ -1963,6 +1993,96 @@ function drawLitEllipse(cx,cy,rx,ry,fill,stroke,rot=0,lineWidth=1){
   }
   ctx.restore();
 }
+function performerPose(id){
+  const poses = {
+    standing:{
+      legs:[[[-5,7,-8,16,5.2],[-8,16,-11,27,4.8],[-12.5,28.2,-.18]],[[5,7,8,16,5.2],[8,16,11,27,4.8],[12.5,28.2,.18]]],
+      arms:[[[-9,-7,-15,2,4.8],[-15,2,-18,12,4.3],[-18.4,13.2,-.22]],[[9,-7,15,2,4.8],[15,2,18,12,4.3],[18.4,13.2,.22]]]
+    },
+    contrapposto:{
+      legs:[[[-5,7,-9,16,5.2],[-9,16,-10,27,4.8],[-11.5,28.2,-.12]],[[5,7,9,16,5.2],[9,16,15,25,4.8],[16.4,26.2,.32]]],
+      arms:[[[-9,-7,-12,3,4.8],[-12,3,-14,13,4.3],[-14.6,14.2,-.12]],[[9,-7,13,0,4.8],[13,0,17,9,4.3],[17.6,10.2,.24]]]
+    },
+    walk:{
+      legs:[[[-5,7,-13,16,5.2],[-13,16,-19,25,4.8],[-20.5,26.2,-.28]],[[5,7,10,17,5.2],[10,17,7,28,4.8],[8.4,29.2,.08]]],
+      arms:[[[-9,-7,-16,0,4.8],[-16,0,-20,10,4.3],[-20.6,11.2,-.18]],[[9,-7,14,-1,4.8],[14,-1,20,5,4.3],[21,6,.34]]]
+    },
+    open:{
+      legs:[[[-5,7,-11,16,5.2],[-11,16,-17,26,4.8],[-18.2,27.2,-.25]],[[5,7,11,16,5.2],[11,16,17,26,4.8],[18.2,27.2,.25]]],
+      arms:[[[-9,-7,-20,-5,4.8],[-20,-5,-27,0,4.3],[-28,1,-.28]],[[9,-7,20,-5,4.8],[20,-5,27,0,4.3],[28,1,.28]]]
+    },
+    reach:{
+      legs:[[[-5,7,-8,17,5.2],[-8,17,-13,27,4.8],[-14.2,28.2,-.22]],[[5,7,7,16,5.2],[7,16,10,27,4.8],[11.4,28.2,.18]]],
+      arms:[[[-9,-7,-13,-18,4.8],[-13,-18,-11,-29,4.3],[-11,-30.6,.08]],[[9,-7,15,1,4.8],[15,1,19,11,4.3],[19.4,12.2,.24]]]
+    },
+    low:{
+      legs:[[[-5,7,-14,13,5.2],[-14,13,-18,22,4.8],[-19.4,23.2,-.18]],[[5,7,14,13,5.2],[14,13,18,22,4.8],[19.4,23.2,.18]]],
+      arms:[[[-9,-7,-16,2,4.8],[-16,2,-22,9,4.3],[-22.8,10,-.18]],[[9,-7,16,2,4.8],[16,2,22,9,4.3],[22.8,10,.18]]]
+    }
+  };
+  return poses[id] || poses.standing;
+}
+function drawPoseLimbs(limbs, fill, stroke, end='foot'){
+  const rx = end === 'hand' ? 2.9 : 5.4;
+  const ry = end === 'hand' ? 2.1 : 2.4;
+  limbs.forEach(limb => {
+    drawCapsule(...limb[0], fill, stroke);
+    drawCapsule(...limb[1], fill, stroke);
+    drawLitEllipse(limb[2][0], limb[2][1], rx, ry, fill, stroke, limb[2][2], .8);
+  });
+}
+function torsoPath(){
+  ctx.beginPath();
+  ctx.moveTo(-10.5,-10.5);
+  ctx.bezierCurveTo(-12.4,-6,-11.2,1,-8.8,6.4);
+  ctx.bezierCurveTo(-6.2,10.2,-2.8,11.5,0,11.2);
+  ctx.bezierCurveTo(2.8,11.5,6.2,10.2,8.8,6.4);
+  ctx.bezierCurveTo(11.2,1,12.4,-6,10.5,-10.5);
+  ctx.bezierCurveTo(5.8,-13.2,-5.8,-13.2,-10.5,-10.5);
+  ctx.closePath();
+}
+function drawDirectionalSurface(light, fillColor){
+  const rawKeyX = clamp(light.keyX || 0, -1, 1);
+  const keyX = Math.abs(rawKeyX) < .08 ? .08 : rawKeyX;
+  const front = clamp(light.front, 0, 1.8);
+  const side = clamp(Math.max(light.left, light.right), 0, 1.8);
+  const top = clamp(light.top, 0, 1.8);
+  const back = clamp(light.back, 0, 1.8);
+  const hotColor = mixColor(fillColor, light.frontColor, clamp(.28 + front*.18, .22, .62));
+  const sideColor = rawKeyX < 0 ? light.leftColor : light.rightColor;
+
+  ctx.save();
+  torsoPath();
+  ctx.clip();
+  ctx.globalCompositeOperation = 'screen';
+  const hot = ctx.createRadialGradient(keyX*8, -8 - top*2, 1, keyX*4, -3, 19);
+  hot.addColorStop(0, rgba(hotColor, clamp(.28 + light.level*.11 + top*.08, .2, .62)));
+  hot.addColorStop(.48, rgba(sideColor, clamp(.14 + side*.16, .08, .42)));
+  hot.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = hot;
+  ctx.fillRect(-14,-15,28,30);
+
+  ctx.globalCompositeOperation = 'multiply';
+  const shade = ctx.createLinearGradient(keyX*10, 0, -keyX*13, 0);
+  shade.addColorStop(0, 'rgba(0,0,0,.03)');
+  shade.addColorStop(.58, `rgba(0,0,0,${clamp(.22 - light.level*.04, .08, .24)})`);
+  shade.addColorStop(1, `rgba(0,0,0,${clamp(.48 - front*.08 - top*.04, .18, .52)})`);
+  ctx.fillStyle = shade;
+  ctx.fillRect(-14,-15,28,30);
+
+  if (back > .05) {
+    ctx.globalCompositeOperation = 'screen';
+    ctx.strokeStyle = rgba(light.backColor, clamp(back*.24 + light.cyc*.15, .08, .58));
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-9.8,-9.5);
+    ctx.bezierCurveTo(-12, -3, -10.5, 5, -7.8, 9.2);
+    ctx.moveTo(9.8,-9.5);
+    ctx.bezierCurveTo(12, -3, 10.5, 5, 7.8, 9.2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawPerformers(){
   state.performers
     .slice()
@@ -1981,15 +2101,17 @@ function drawPerformer(p){
   const costumeEdge = mixColor(p.costume, '#050506', clamp(.62 - light.level*.06, .42, .68));
   const hairColor = mixColor(skinEdge, '#050506', .78);
   const selected = p.id === state.selectedPerformerId;
+  const pose = performerPose(p.pose || 'standing');
   ctx.save();
   ctx.translate(s.x,s.y);
   ctx.scale(scale,scale);
-  const shadowAlpha = clamp(.62 - light.level*.16 + light.back*.1, .16, .68);
-  const shadowDx = clamp((light.left - light.right) * 10, -10, 10);
+  const shadowAlpha = clamp(.66 - light.level*.17 + light.back*.1, .14, .72);
+  const shadowDx = clamp(-(light.keyX || 0) * 18 + (light.left - light.right) * 4, -18, 18);
+  const shadowDy = clamp((light.keyY || 0) * 7, -8, 8);
   ctx.fillStyle = rgba(light.color, clamp(light.level*.18, .04, .38));
-  ctx.beginPath(); ctx.ellipse(-shadowDx*.25,20,25,8.5,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-shadowDx*.2,20 + shadowDy*.18,25,8.5,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
-  ctx.beginPath(); ctx.ellipse(shadowDx,23,21,6.4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(shadowDx,23 + shadowDy,24,6.8,clamp(shadowDx*.018,-.28,.28),0,Math.PI*2); ctx.fill();
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
   ctx.globalAlpha = clamp(light.level*.12 + light.front*.06, .03, .24);
@@ -2014,6 +2136,27 @@ function drawPerformer(p){
     ctx.stroke();
     ctx.restore();
   }
+  if (light.cyc > .04) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = clamp(light.cyc*.28, .08, .62);
+    ctx.fillStyle = light.cycColor;
+    ctx.beginPath();
+    ctx.ellipse(0,-7,15.5,27,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = light.cycColor;
+    ctx.lineWidth = 2.4;
+    ctx.globalAlpha = clamp(light.cyc*.34, .1, .72);
+    ctx.beginPath();
+    ctx.moveTo(-9,-18);
+    ctx.quadraticCurveTo(-14,-4,-10,12);
+    ctx.moveTo(9,-18);
+    ctx.quadraticCurveTo(14,-4,10,12);
+    ctx.moveTo(-5,-27);
+    ctx.quadraticCurveTo(0,-31,5,-27);
+    ctx.stroke();
+    ctx.restore();
+  }
   if (selected) {
     ctx.strokeStyle = '#EC008C';
     ctx.lineWidth = 1.8 / scale;
@@ -2023,19 +2166,38 @@ function drawPerformer(p){
   }
 
   // Back limbs first so the torso sits naturally in front.
-  drawCapsule(-5,7,-8,16,5.2,skinFill,skinEdge);
-  drawCapsule(-8,16,-11,27,4.8,skinFill,skinEdge);
-  drawLitEllipse(-12.5,28.2,5.4,2.4,skinFill,skinEdge,-.18,.8);
-  drawCapsule(5,7,8,16,5.2,skinFill,skinEdge);
-  drawCapsule(8,16,11,27,4.8,skinFill,skinEdge);
-  drawLitEllipse(12.5,28.2,5.4,2.4,skinFill,skinEdge,.18,.8);
-
-  drawCapsule(-9,-7,-15,2,4.8,skinFill,skinEdge);
-  drawCapsule(-15,2,-18,12,4.3,skinFill,skinEdge);
-  drawLitEllipse(-18.4,13.2,2.9,2.1,skinFill,skinEdge,-.22,.7);
-  drawCapsule(9,-7,15,2,4.8,skinFill,skinEdge);
-  drawCapsule(15,2,18,12,4.3,skinFill,skinEdge);
-  drawLitEllipse(18.4,13.2,2.9,2.1,skinFill,skinEdge,.22,.7);
+  drawPoseLimbs(pose.legs, skinFill, skinEdge, 'foot');
+  drawPoseLimbs(pose.arms, skinFill, skinEdge, 'hand');
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = clamp(Math.max(light.left, light.right, light.front, light.top)*.18, .04, .34);
+  ctx.strokeStyle = light.keyX < 0 ? light.leftColor : light.rightColor;
+  ctx.lineWidth = 1.35;
+  const litArmX = light.keyX < 0 ? -1 : 1;
+  const litArm = pose.arms[litArmX < 0 ? 0 : 1];
+  const litLeg = pose.legs[litArmX < 0 ? 0 : 1];
+  ctx.beginPath();
+  ctx.moveTo(litArm[0][0],litArm[0][1]);
+  ctx.lineTo(litArm[0][2],litArm[0][3]);
+  ctx.lineTo(litArm[1][2],litArm[1][3]);
+  ctx.moveTo(litLeg[0][0],litLeg[0][1]);
+  ctx.lineTo(litLeg[0][2],litLeg[0][3]);
+  ctx.lineTo(litLeg[1][2],litLeg[1][3]);
+  ctx.stroke();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = clamp(.18 - light.level*.025, .08, .2);
+  ctx.strokeStyle = '#050506';
+  ctx.lineWidth = 1.8;
+  const shadeArm = pose.arms[litArmX < 0 ? 1 : 0];
+  const shadeLeg = pose.legs[litArmX < 0 ? 1 : 0];
+  ctx.beginPath();
+  ctx.moveTo(shadeArm[0][0],shadeArm[0][1]);
+  ctx.lineTo(shadeArm[1][2],shadeArm[1][3]);
+  ctx.moveTo(shadeLeg[0][0],shadeLeg[0][1]);
+  ctx.lineTo(shadeLeg[1][2],shadeLeg[1][3]);
+  ctx.stroke();
+  ctx.restore();
 
   ctx.fillStyle = skinFill;
   ctx.strokeStyle = skinEdge;
@@ -2049,16 +2211,10 @@ function drawPerformer(p){
   ctx.fillStyle = costumeFill;
   ctx.strokeStyle = costumeEdge;
   ctx.lineWidth = 1.35;
-  ctx.beginPath();
-  ctx.moveTo(-10.5,-10.5);
-  ctx.bezierCurveTo(-12.4,-6,-11.2,1,-8.8,6.4);
-  ctx.bezierCurveTo(-6.2,10.2,-2.8,11.5,0,11.2);
-  ctx.bezierCurveTo(2.8,11.5,6.2,10.2,8.8,6.4);
-  ctx.bezierCurveTo(11.2,1,12.4,-6,10.5,-10.5);
-  ctx.bezierCurveTo(5.8,-13.2,-5.8,-13.2,-10.5,-10.5);
-  ctx.closePath();
+  torsoPath();
   ctx.fill();
   ctx.stroke();
+  drawDirectionalSurface(light, costumeMid);
 
   const torsoHi = ctx.createLinearGradient(-6,-12,6,10);
   torsoHi.addColorStop(0, `rgba(255,255,255,${clamp(.1 + light.front*.18 + light.top*.2, .1, .46)})`);
@@ -2114,6 +2270,25 @@ function drawPerformer(p){
   ctx.fillStyle = head;
   ctx.beginPath(); ctx.ellipse(0,-20.5,6.4,8,0,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle = skinEdge; ctx.lineWidth = 1; ctx.stroke();
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0,-20.5,6.4,8,0,0,Math.PI*2);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'screen';
+  const faceHot = ctx.createRadialGradient(light.keyX*4.8,-23.5,0,light.keyX*3.2,-21.3,8.2);
+  faceHot.addColorStop(0, rgba(mixColor(skinMid, light.frontColor, .42), clamp(.16 + light.front*.18 + light.top*.12, .1, .48)));
+  faceHot.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = faceHot;
+  ctx.fillRect(-7,-29,14,17);
+  ctx.globalCompositeOperation = 'multiply';
+  const faceKeyX = Math.abs(light.keyX || 0) < .08 ? .08 : light.keyX;
+  const faceShade = ctx.createLinearGradient(faceKeyX*7, -20, -faceKeyX*7, -20);
+  faceShade.addColorStop(0, 'rgba(0,0,0,.02)');
+  faceShade.addColorStop(.62, `rgba(0,0,0,${clamp(.2 - light.front*.04, .08, .24)})`);
+  faceShade.addColorStop(1, `rgba(0,0,0,${clamp(.42 - light.front*.08, .18, .48)})`);
+  ctx.fillStyle = faceShade;
+  ctx.fillRect(-7,-29,14,17);
+  ctx.restore();
 
   ctx.fillStyle = mixColor(skinEdge, light.frontColor, clamp(light.front*.18,0,.28));
   ctx.beginPath();
@@ -2144,8 +2319,8 @@ function drawPerformer(p){
 
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = clamp(light.level*.22, .06, .48);
-  ctx.fillStyle = light.color;
+  ctx.globalAlpha = clamp(light.level*.18 + light.cyc*.08, .06, .56);
+  ctx.fillStyle = mixColor(light.color, light.cycColor, clamp(light.cyc*.18,0,.46));
   ctx.beginPath();
   ctx.ellipse(0,-4,14,22.5,0,0,Math.PI*2);
   ctx.fill();
@@ -2428,6 +2603,13 @@ async function exportSequenceVideo(){
     toast('Video export is not supported in this browser.', 'bad');
     return;
   }
+  const suggestedName = `lighting-sequence-${nowFileStamp()}.webm`;
+  const videoTypes = [{
+    description:'WebM video',
+    accept:{'video/webm':['.webm']}
+  }];
+  const fileTarget = await chooseSaveTarget(suggestedName, videoTypes);
+  if (fileTarget.canceled) return;
   const original = makeSnapshot();
   const originalCue = state.currentCueIndex;
   const type = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
@@ -2454,26 +2636,36 @@ async function exportSequenceVideo(){
     renderAll();
   }
   const blob = new Blob(chunks, {type:'video/webm'});
-  await saveBlob(blob, `lighting-sequence-${nowFileStamp()}.webm`, [{
-    description:'WebM video',
-    accept:{'video/webm':['.webm']}
-  }]);
+  await saveBlob(blob, suggestedName, videoTypes, fileTarget);
 }
-async function saveBlob(blob, suggestedName, types){
+async function chooseSaveTarget(suggestedName, types){
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({suggestedName, types});
+      return {handle};
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        toast('Save canceled.', 'warn');
+        return {canceled:true};
+      }
+      toast('Save picker failed; using browser download instead.', 'warn');
+    }
+  }
+  return {download:true};
+}
+async function saveBlob(blob, suggestedName, types, target=null){
+  const fileTarget = target || await chooseSaveTarget(suggestedName, types);
+  if (fileTarget.canceled) return;
+  if (fileTarget.handle) {
+    try {
+      const handle = fileTarget.handle;
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
       toast(`Saved ${suggestedName}.`, 'good');
       return;
     } catch (err) {
-      if (err && err.name === 'AbortError') {
-        toast('Save canceled.', 'warn');
-        return;
-      }
-      toast('Save picker failed; using browser download instead.', 'warn');
+      toast('Could not write saved file; using browser download instead.', 'warn');
     }
   }
   downloadBlob(blob, suggestedName);
@@ -2559,12 +2751,29 @@ function bindEvents(){
   $('stopBtn').addEventListener('click', stopPlayback);
   $('autoRun').addEventListener('change', e=>{ state.autoRun = e.target.checked; save(); });
   $('focusLockBtn').addEventListener('click', toggleFocusLock);
-  $('exportBtn').addEventListener('click', () => $('exportModal').classList.add('show'));
+  $('exportBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    $('exportModal').classList.add('show');
+  });
   $('resetBtn').addEventListener('click', resetTrainer);
-  $('closeExportBtn').addEventListener('click', () => $('exportModal').classList.remove('show'));
+  $('closeExportBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    $('exportModal').classList.remove('show');
+  });
+  $('exportModal').querySelector('.modal').addEventListener('click', event => event.stopPropagation());
   $('exportModal').addEventListener('click', event => { if (event.target === $('exportModal')) $('exportModal').classList.remove('show'); });
-  $('exportSceneBtn').addEventListener('click', exportSceneImage);
-  $('exportVideoBtn').addEventListener('click', exportSequenceVideo);
+  $('exportSceneBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    exportSceneImage();
+  });
+  $('exportVideoBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    exportSequenceVideo();
+  });
   window.addEventListener('keydown', event => {
     const tag = (document.activeElement || {}).tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {

@@ -111,6 +111,24 @@
   .obj-chip{width:13px;height:13px;border-radius:3px;border:1px solid rgba(255,255,255,.3)}
   .obj-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .obj-sub{font-family:var(--mono);font-size:10px;color:var(--text-dim)}
+  /* cue / scene list */
+  .cue-list{display:grid;gap:6px}
+  .cue-row{
+    display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:9px;
+    border:1px solid var(--ui-dark3);border-radius:7px;background:var(--ui-dark2);padding:7px 9px;cursor:pointer;
+  }
+  .cue-row:hover{border-color:#4b5563}
+  .cue-row.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+  .cue-row .cue-num{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--green)}
+  .cue-row .cue-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cue-row .cue-meta{font-family:var(--mono);font-size:10px;color:var(--text-dim)}
+  .cue-actions{display:flex;gap:5px}
+  .cue-mini{
+    border:1px solid var(--ui-dark3);background:#101014;color:var(--text-dim);border-radius:5px;
+    font-size:10px;padding:3px 6px;cursor:pointer;line-height:1;
+  }
+  .cue-mini:hover{border-color:var(--accent);color:#fff}
+  .cue-mini.del:hover{border-color:var(--bad);color:#fecaca}
   .small-note{color:var(--text-dim);font-size:10.5px;font-family:var(--mono);line-height:1.45}
   .toggle{display:flex;align-items:center;gap:7px;color:var(--text-dim);font-size:12px;cursor:pointer;padding:3px 0}
   .toggle input{accent-color:var(--accent)}
@@ -233,6 +251,17 @@
     </section>
 
     <section class="panel-section">
+      <h2>Scenes / Cues</h2>
+      <div class="section-row">
+        <button class="tbtn primary" id="cueSaveBtn" title="Save the current stage as a new scene">+ Save scene</button>
+        <button class="tbtn" id="cuePrevBtn" title="Previous scene">&lsaquo;</button>
+        <button class="tbtn" id="cueNextBtn" title="Next scene">&rsaquo;</button>
+      </div>
+      <div class="cue-list" id="cueList" style="margin-top:9px"></div>
+      <div class="small-note" id="cueEmpty" style="margin-top:8px">No saved scenes yet. Arrange the stage, then “Save scene”.</div>
+    </section>
+
+    <section class="panel-section">
       <h2>On Stage</h2>
       <div class="obj-list" id="objList"></div>
       <div class="small-note" id="objEmpty" style="margin-top:8px">The stage is empty.</div>
@@ -282,10 +311,17 @@ const STORAGE_KEY = 'sdscpa-scenic-design-lab-v1';
 /* ---- world units are feet. x: +right (audience right = stage left).
    y: depth, 0 at plaster line, + upstage. z: up. ---- */
 const STAGE = {
-  halfW:24, depthBack:30,        // drawable extents
+  halfW:33, depthBack:30,        // drawable extents (wide enough for wings)
   prosHalf:20, prosTop:16,       // proscenium opening 40w x 16h
-  actHalf:20, actDepth:24        // acting area used for the 9 stage areas
+  actHalf:20, actDepth:24,       // acting area used for the 9 stage areas
+  wingX:21                       // onstage edge of the wing / offstage zone
 };
+// leg curtains: hang in the wings parallel to the plaster line, masking the
+// offstage areas from the audience. Each leg is a vertical drape at a depth.
+const LEG_DEPTHS = [5, 12, 19, 26];
+const LEG_INNER = 18.5;          // onstage edge (a sliver shows inside the opening)
+const LEG_OUTER = 32;            // runs out into the wing
+const LEG_TOP = 16;              // curtain height (ft)
 const AREA_XS = [-20, -20/3, 20/3, 20];          // R | C | L  (audience-left = stage right)
 const AREA_YS = [0, 8, 16, 24];                  // Down | Mid | Up
 const AREA_LABELS = [
@@ -345,7 +381,9 @@ const state = {
   camHt:6,
   drag:null,
   pointer:null,
-  seq:1
+  seq:1,
+  cues:[],
+  currentCueId:null
 };
 
 const persp = $('perspCanvas'), pctx = persp.getContext('2d');
@@ -422,6 +460,23 @@ function drawPlan(){
   c.fillStyle='#11161f';
   c.fillRect(bl.x,tr.y,tr.x-bl.x,bl.y-tr.y);
 
+  // offstage / wing zones (hidden from the audience)
+  for(const s of [-1,1]){
+    const a=planToScreen(s*STAGE.wingX,0), b=planToScreen(s*STAGE.halfW,STAGE.depthBack);
+    c.fillStyle='rgba(0,0,0,.5)';
+    c.fillRect(Math.min(a.x,b.x),b.y,Math.abs(b.x-a.x),a.y-b.y);
+    // hatching
+    c.save();c.beginPath();c.rect(Math.min(a.x,b.x),b.y,Math.abs(b.x-a.x),a.y-b.y);c.clip();
+    c.strokeStyle='rgba(120,120,120,.12)';c.lineWidth=1;
+    for(let d=-nv.h;d<nv.w;d+=10){c.beginPath();c.moveTo(Math.min(a.x,b.x)+d,a.y);c.lineTo(Math.min(a.x,b.x)+d+nv.h,b.y);c.stroke();}
+    c.restore();
+    const mid=planToScreen(s*(STAGE.wingX+STAGE.halfW)/2,STAGE.depthBack*0.62);
+    c.save();c.translate(mid.x,mid.y);c.rotate(-Math.PI/2);
+    c.fillStyle='rgba(200,200,200,.38)';c.font='700 10px '+getMono();c.textAlign='center';c.textBaseline='middle';
+    c.fillText(s<0?'OFFSTAGE  R  (WINGS)':'OFFSTAGE  L  (WINGS)',0,0);
+    c.restore();
+  }
+
   // grid (every 4 ft)
   if(state.showGrid){
     c.strokeStyle=rgba('#3b82f6',.10);c.lineWidth=1;
@@ -462,6 +517,15 @@ function drawPlan(){
   c.textAlign='left';c.fillText('STAGE RIGHT',planToScreen(-STAGE.halfW,0).x+2,pL.y+13);
   c.textAlign='right';c.fillText('STAGE LEFT',planToScreen(STAGE.halfW,0).x-2,pR.y+13);
 
+  // leg curtains (drapes hanging in the wings)
+  for(const s of [-1,1]) for(const d of LEG_DEPTHS){
+    const a=planToScreen(s*LEG_INNER,d), b=planToScreen(s*(LEG_OUTER-2),d);
+    c.strokeStyle='#1b1f29';c.lineWidth=5;c.lineCap='round';
+    c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();
+    c.strokeStyle=rgba('#92278F',.7);c.lineWidth=1.5;
+    c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();
+  }
+
   // objects (depth-sorted back to front so near pieces sit on top)
   const sorted=[...state.objects].sort((a,b)=>b.y-a.y);
   for(const o of sorted) drawPlanObject(c,o);
@@ -493,6 +557,12 @@ function drawPlanObject(c,o){
     const fl=(o.d*(o.scale||1))*nv.scale/2+5;
     c.strokeStyle=sel?'#fff':rgba('#fff',.7);c.lineWidth=2;
     c.beginPath();c.moveTo(ce.x,ce.y);c.lineTo(ce.x+Math.sin(r)*fl,ce.y+Math.cos(r)*fl);c.stroke();
+  }
+  // elevation badge when raised off the deck
+  if((o.z||0)>0.05){
+    const ce=planToScreen(o.x,o.y);
+    c.fillStyle=sel?'#fbbf24':rgba('#fbbf24',.85);c.font='700 9px '+getMono();c.textAlign='center';c.textBaseline='middle';
+    c.fillText('↑'+(o.z).toFixed(o.z<10?1:0)+"'",ce.x,ce.y);
   }
   if(sel){
     const ce=planToScreen(o.x,o.y);
@@ -538,14 +608,27 @@ function drawPersp(){
   // plaster line
   projLine(c,view,cam,-STAGE.prosHalf,0,0,STAGE.prosHalf,0,0,rgba('#f0f0f0',.4),2);
 
-  // collect faces from all objects, global painter sort
+  // collect faces from all objects + leg curtains, global painter sort
   const faces=[];
   for(const o of state.objects) collectFaces(o,view,cam,faces);
+  collectLegFaces(view,cam,faces);
   faces.sort((a,b)=>b.depth-a.depth);
   for(const f of faces) paintFace(c,f);
 
   // proscenium mask (crop to the opening) + frame
   drawProsceniumMask(c,view,cam,W,H);
+}
+function collectLegFaces(view,cam,out){
+  for(const s of [-1,1]) for(const d of LEG_DEPTHS){
+    const pts=[
+      project(s*LEG_INNER,d,0,view,cam),
+      project(s*LEG_OUTER,d,0,view,cam),
+      project(s*LEG_OUTER,d,LEG_TOP,view,cam),
+      project(s*LEG_INNER,d,LEG_TOP,view,cam)
+    ];
+    if(pts.some(p=>!p))continue;
+    out.push({pts,leg:true,depth:avgDepth(pts),inner:project(s*LEG_INNER,d,0,view,cam),top:project(s*LEG_INNER,d,LEG_TOP,view,cam)});
+  }
 }
 function projLine(c,view,cam,x1,y1,z1,x2,y2,z2,style,lw){
   const a=project(x1,y1,z1,view,cam),b=project(x2,y2,z2,view,cam);
@@ -556,16 +639,18 @@ function projLine(c,view,cam,x1,y1,z1,x2,y2,z2,style,lw){
 function collectFaces(o,view,cam,out){
   const t=TEMPLATES[o.type]||{};
   const h=objHeight(o);
+  const z0=o.z||0;            // base elevation off the deck
+  const z1=z0+h;
   const fp=footprint(o);
 
   if(o.type==='rug'){
-    const pts=fp.map(p=>project(p.x,p.y,0.01,view,cam));
+    const pts=fp.map(p=>project(p.x,p.y,z0+0.01,view,cam));
     if(pts.every(Boolean)) out.push({pts,fill:rgba(o.color,.8),stroke:shade(o.color,.6),depth:avgDepth(pts)+.5,obj:o});
     return;
   }
   if(t.billboard){
-    const base=project(o.x,o.y,0,view,cam);
-    const top=project(o.x,o.y,h,view,cam);
+    const base=project(o.x,o.y,z0,view,cam);
+    const top=project(o.x,o.y,z1,view,cam);
     if(base&&top){
       const wpx=(o.w*(o.scale||1))*view.focal/base.depth;
       out.push({billboard:t.billboard,o,bx:base.x,by:base.y,tx:top.x,ty:top.y,wpx,depth:base.depth,obj:o});
@@ -573,8 +658,8 @@ function collectFaces(o,view,cam,out){
     return;
   }
   // box faces
-  const bot=fp.map(p=>project(p.x,p.y,0,view,cam));
-  const top=fp.map(p=>project(p.x,p.y,h,view,cam));
+  const bot=fp.map(p=>project(p.x,p.y,z0,view,cam));
+  const top=fp.map(p=>project(p.x,p.y,z1,view,cam));
   if(bot.some(p=>!p)||top.some(p=>!p))return;
   const shades=[.78,.62,.5,.66];
   for(let i=0;i<4;i++){
@@ -584,9 +669,15 @@ function collectFaces(o,view,cam,out){
   }
   // top face
   out.push({pts:top,fill:shade(o.color,1.12),stroke:shade(o.color,.5),depth:avgDepth(top)-.1,obj:o});
+  // when raised, draw the footprint shadow on the deck for blocking clarity
+  if(z0>0.05){
+    const sh=fp.map(p=>project(p.x,p.y,0.01,view,cam));
+    if(sh.every(Boolean)) out.push({pts:sh,fill:'rgba(0,0,0,.32)',stroke:'rgba(0,0,0,0)',depth:avgDepth(sh)+0.4,obj:o});
+  }
 }
 function avgDepth(pts){let s=0,n=0;for(const p of pts){if(p){s+=p.depth;n++;}}return n?s/n:1e9;}
 function paintFace(c,f){
+  if(f.leg){paintLeg(c,f);return;}
   if(f.billboard){paintBillboard(c,f);return;}
   const sel=f.obj&&f.obj.id===state.selectedId;
   c.beginPath();c.moveTo(f.pts[0].x,f.pts[0].y);for(let i=1;i<f.pts.length;i++)c.lineTo(f.pts[i].x,f.pts[i].y);c.closePath();
@@ -618,6 +709,23 @@ function paintOpening(c,f,kind){
     const mid=lerp(tlh,trh,.5);c.quadraticCurveTo(mid.x,mid.y-(tlh.y-tl.y)*.5,tlh.x,tlh.y);c.closePath();
     c.fillStyle='rgba(8,10,14,.7)';c.fill();c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=1;c.stroke();
   }
+}
+function paintLeg(c,f){
+  const p=f.pts;
+  c.beginPath();c.moveTo(p[0].x,p[0].y);for(let i=1;i<4;i++)c.lineTo(p[i].x,p[i].y);c.closePath();
+  const g=c.createLinearGradient(p[0].x,p[0].y,p[3].x,p[3].y);
+  g.addColorStop(0,'#0c0d12');g.addColorStop(.5,'#1a1426');g.addColorStop(1,'#0c0d12');
+  c.fillStyle=g;c.fill();
+  // pleat lines along the curtain
+  c.strokeStyle='rgba(146,39,143,.25)';c.lineWidth=1;
+  for(let k=1;k<6;k++){
+    const t=k/6;
+    const ax=p[0].x+(p[1].x-p[0].x)*t, ay=p[0].y+(p[1].y-p[0].y)*t;
+    const bx=p[3].x+(p[2].x-p[3].x)*t, by=p[3].y+(p[2].y-p[3].y)*t;
+    c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+  }
+  // onstage edge highlight
+  if(f.inner&&f.top){c.strokeStyle='rgba(146,39,143,.55)';c.lineWidth=2;c.beginPath();c.moveTo(f.inner.x,f.inner.y);c.lineTo(f.top.x,f.top.y);c.stroke();}
 }
 function paintBillboard(c,f){
   const o=f.o,sel=o.id===state.selectedId;
@@ -711,7 +819,7 @@ function defaultPos(type){
 function addObject(type){
   const t=TEMPLATES[type];if(!t)return;
   const pos=defaultPos(type);
-  const o={id:uid(),type,name:t.name,x:pos.x,y:pos.y,rot:pos.rot,scale:1,color:t.color,
+  const o={id:uid(),type,name:t.name,x:pos.x,y:pos.y,z:0,rot:pos.rot,scale:1,color:t.color,
            w:t.w,d:t.d,h:t.h,round:!!t.round};
   state.objects.push(o);
   state.selectedId=o.id;
@@ -761,6 +869,8 @@ function renderEditor(){
       <input id="edScale" type="range" min="0.5" max="2.2" step="0.05" value="${o.scale||1}"></label>
     <label class="field full" style="margin-top:8px">Height <strong id="edHtVal">${objHeight(o).toFixed(1)} ft</strong>
       <input id="edHt" type="range" min="0.1" max="20" step="0.1" value="${(o.h??t.h)}"></label>
+    <label class="field full" style="margin-top:8px">Elevation off deck <strong id="edZVal">${(o.z||0).toFixed(1)} ft</strong>
+      <input id="edZ" type="range" min="0" max="16" step="0.25" value="${o.z||0}"></label>
     <div class="section-row" style="margin-top:11px">
       <button class="tbtn" id="edDup">Duplicate</button>
       <button class="tbtn danger" id="edDel">Delete</button>
@@ -770,6 +880,7 @@ function renderEditor(){
   $('edRot').addEventListener('input',e=>{o.rot=Number(e.target.value);$('edRotVal').innerHTML=o.rot+'&deg;';renderObjList();draw();save();});
   $('edScale').addEventListener('input',e=>{o.scale=Number(e.target.value);$('edScaleVal').textContent=Math.round(o.scale*100)+'%';$('edHtVal').textContent=objHeight(o).toFixed(1)+' ft';draw();save();});
   $('edHt').addEventListener('input',e=>{o.h=Number(e.target.value);$('edHtVal').textContent=objHeight(o).toFixed(1)+' ft';draw();save();});
+  $('edZ').addEventListener('input',e=>{o.z=Number(e.target.value);$('edZVal').textContent=o.z.toFixed(1)+' ft';renderObjList();draw();save();});
   $('edDup').addEventListener('click',()=>{const n={...o,id:uid(),x:clamp(o.x+3,-STAGE.halfW,STAGE.halfW),y:clamp(o.y+2,0,STAGE.depthBack)};state.objects.push(n);state.selectedId=n.id;renderObjList();renderEditor();draw();save();});
   $('edDel').addEventListener('click',()=>{state.objects=state.objects.filter(x=>x.id!==o.id);state.selectedId=null;renderObjList();renderEditor();draw();save();toast('Piece removed.');});
 }
@@ -841,6 +952,8 @@ persp.addEventListener('pointerdown',e=>{
 /* ---------- keyboard ---------- */
 window.addEventListener('keydown',e=>{
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName))return;
+  if(e.key===','){stepCue(-1);e.preventDefault();return;}
+  if(e.key==='.'){stepCue(1);e.preventDefault();return;}
   const o=selected();
   if((e.key==='Delete'||e.key==='Backspace')&&o){state.objects=state.objects.filter(x=>x.id!==o.id);state.selectedId=null;renderObjList();renderEditor();draw();save();e.preventDefault();return;}
   if(!o)return;
@@ -928,7 +1041,8 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify({
     objects:state.objects,sceneTitle:state.sceneTitle,designer:state.designer,
-    showAreas:state.showAreas,showGrid:state.showGrid,camDist:state.camDist,camHt:state.camHt,seq:state.seq
+    showAreas:state.showAreas,showGrid:state.showGrid,camDist:state.camDist,camHt:state.camHt,seq:state.seq,
+    cues:state.cues,currentCueId:state.currentCueId
   }));}catch(_){}}, 120);
 }
 function load(){
@@ -939,8 +1053,86 @@ function load(){
     state.sceneTitle=d.sceneTitle||'';state.designer=d.designer||'';
     state.showAreas=d.showAreas!==false;state.showGrid=d.showGrid!==false;
     state.camDist=d.camDist||20;state.camHt=d.camHt||6;state.seq=d.seq||(d.objects.length+1);
+    state.cues=Array.isArray(d.cues)?d.cues:[];
+    state.currentCueId=d.currentCueId||null;
     return true;
   }catch(_){return false;}
+}
+
+/* ---------- scenes / cues ---------- */
+function cueSnapshot(){
+  return {objects:JSON.parse(JSON.stringify(state.objects)),
+          sceneTitle:state.sceneTitle,camDist:state.camDist,camHt:state.camHt};
+}
+function saveCueNew(){
+  const def='Scene '+(state.cues.length+1);
+  const name=(prompt('Name this scene:',state.sceneTitle||def)||'').trim()||def;
+  const cue={id:uid(),name,snap:cueSnapshot()};
+  state.cues.push(cue);state.currentCueId=cue.id;
+  renderCues();save();toast('Saved “'+name+'”.','good');
+}
+function loadCue(id,announce){
+  const cue=state.cues.find(c=>c.id===id);if(!cue)return;
+  state.objects=JSON.parse(JSON.stringify(cue.snap.objects||[]));
+  state.sceneTitle=cue.snap.sceneTitle||'';
+  if(cue.snap.camDist){state.camDist=cue.snap.camDist;$('camDist').value=state.camDist;$('camDistVal').textContent=state.camDist+' ft';}
+  if(cue.snap.camHt){state.camHt=cue.snap.camHt;$('camHt').value=state.camHt;$('camHtVal').textContent=state.camHt.toFixed(1)+' ft';}
+  state.currentCueId=id;
+  if(state.selectedId&&!selected())state.selectedId=null;
+  $('sceneTitle').value=state.sceneTitle;
+  renderCues();renderObjList();renderEditor();draw();save();
+  if(announce)toast('Loaded “'+cue.name+'”.');
+}
+function updateCue(id){
+  const cue=state.cues.find(c=>c.id===id);if(!cue)return;
+  cue.snap=cueSnapshot();state.currentCueId=id;
+  renderCues();save();toast('Updated “'+cue.name+'”.','good');
+}
+function renameCue(id){
+  const cue=state.cues.find(c=>c.id===id);if(!cue)return;
+  const name=(prompt('Rename scene:',cue.name)||'').trim();
+  if(name){cue.name=name;renderCues();save();}
+}
+function deleteCue(id){
+  const cue=state.cues.find(c=>c.id===id);if(!cue)return;
+  if(!confirm('Delete scene “'+cue.name+'”?'))return;
+  state.cues=state.cues.filter(c=>c.id!==id);
+  if(state.currentCueId===id)state.currentCueId=null;
+  renderCues();save();
+}
+function stepCue(dir){
+  if(!state.cues.length){toast('No saved scenes yet.','warn');return;}
+  let i=state.cues.findIndex(c=>c.id===state.currentCueId);
+  if(i<0)i=dir>0?-1:0;
+  i=(i+dir+state.cues.length)%state.cues.length;
+  loadCue(state.cues[i].id,true);
+}
+function renderCues(){
+  const list=$('cueList');
+  $('cueEmpty').style.display=state.cues.length?'none':'block';
+  list.innerHTML=state.cues.map((c,i)=>{
+    const on=c.id===state.currentCueId?' on':'';
+    const n=(c.snap.objects||[]).length;
+    return `<div class="cue-row${on}" data-id="${c.id}">
+      <div class="cue-num">${i+1}</div>
+      <div><div class="cue-name">${escapeHtml(c.name)}</div><div class="cue-meta">${n} piece${n===1?'':'s'}</div></div>
+      <div class="cue-actions">
+        <button class="cue-mini" data-act="update" title="Overwrite with current stage">Set</button>
+        <button class="cue-mini" data-act="rename" title="Rename">Edit</button>
+        <button class="cue-mini del" data-act="delete" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.cue-row').forEach(row=>{
+    const id=row.dataset.id;
+    row.addEventListener('click',e=>{
+      const act=e.target.closest('[data-act]')?.dataset.act;
+      if(act==='update')return updateCue(id);
+      if(act==='rename')return renameCue(id);
+      if(act==='delete')return deleteCue(id);
+      loadCue(id,true);
+    });
+  });
 }
 function seedDemo(){
   const mk=(type,x,y,extra={})=>{const t=TEMPLATES[type];return {id:uid(),type,name:t.name,x,y,rot:0,scale:1,color:t.color,w:t.w,d:t.d,h:t.h,round:!!t.round,...extra};};
@@ -985,7 +1177,10 @@ function init(){
   $('optGrid').checked=state.showGrid;
   $('camDist').value=state.camDist;$('camDistVal').textContent=state.camDist+' ft';
   $('camHt').value=state.camHt;$('camHtVal').textContent=state.camHt.toFixed(1)+' ft';
-  buildPalette();renderObjList();renderEditor();
+  $('cueSaveBtn').addEventListener('click',saveCueNew);
+  $('cuePrevBtn').addEventListener('click',()=>stepCue(-1));
+  $('cueNextBtn').addEventListener('click',()=>stepCue(1));
+  buildPalette();renderObjList();renderEditor();renderCues();
   resize();
 }
 init();
