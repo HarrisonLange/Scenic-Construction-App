@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDSCPA — Costume Design Studio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
+<style>
+  :root{
+    --ui-dark:#0a0a0a; --ui-dark2:#1a1a1a; --ui-dark3:#333333;
+    --accent:#3b82f6; --violet:#8b5cf6; --amber:#fbbf24; --pink:#EC008C;
+    --ok:#22c55e; --bad:#ef4444; --text-light:#f0f0f0; --text-dim:#888888;
+    --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
+    --rainbow:linear-gradient(90deg,#7AC143,#F7941E,#ED1C45,#EC008C,#92278F,#2E3192,#00AEEF);
+    --stage:#15151a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    background:var(--ui-dark);color:var(--text-light);display:flex;flex-direction:column;
+  }
+  /* ── Top bar ─────────────────────────────── */
+  #topbar{
+    height:52px;flex:0 0 52px;display:flex;align-items:center;gap:8px;
+    padding:0 14px;background:var(--ui-dark);border-bottom:1px solid #000;position:relative;z-index:30;
+  }
+  #topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--rainbow);opacity:.9}
+  .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:10px;line-height:1}
+  .brand-logo{height:22px;width:auto;display:block}
+  .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .back{font-size:11px;color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 9px;white-space:nowrap}
+  .back:hover{color:#fff;border-color:var(--accent)}
+  .spacer{flex:1}
+  .tbtn{
+    display:inline-flex;align-items:center;gap:6px;background:var(--ui-dark2);color:var(--text-light);
+    border:1px solid var(--ui-dark3);border-radius:7px;padding:7px 11px;font-size:12.5px;cursor:pointer;font-family:inherit;
+  }
+  .tbtn:hover{border-color:var(--accent)}
+  .tbtn.primary{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
+  .tbtn.primary:hover{background:#ff3aa8}
+  .tbtn svg{display:block}
+
+  /* ── Main layout ─────────────────────────── */
+  #main{flex:1;display:flex;min-height:0}
+  #stageWrap{
+    flex:1;position:relative;overflow:auto;background:
+      radial-gradient(900px 500px at 50% 0%, rgba(139,92,246,.10), transparent 70%),
+      var(--stage);
+  }
+  #stage{display:block}
+  .char{cursor:grab}
+  .char:active{cursor:grabbing}
+  .sel-ring{fill:rgba(236,0,140,.07);stroke:var(--pink);stroke-width:2;stroke-dasharray:7 6;rx:14}
+  .clbl{fill:var(--text-light);font-family:var(--mono);font-size:13px;font-weight:600}
+  .cscene{fill:var(--text-dim);font-family:var(--mono);font-size:11px}
+
+  #emptyHint{
+    position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:10px;color:var(--text-dim);font-size:14px;pointer-events:none;text-align:center;
+  }
+  #emptyHint b{color:var(--text-light)}
+
+  /* selected-character floating panel */
+  #charPanel{
+    position:absolute;top:12px;left:12px;width:236px;z-index:20;display:none;
+    background:rgba(20,20,24,.96);border:1px solid var(--ui-dark3);border-radius:12px;
+    padding:13px 14px;box-shadow:0 10px 30px rgba(0,0,0,.55);
+  }
+  #charPanel.show{display:block}
+  #charPanel h4{font-size:12px;color:var(--pink);letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase}
+  .cp-field{margin-bottom:9px}
+  .cp-field label{display:block;font-size:10px;color:var(--text-dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
+  .cp-field input,.cp-field select{
+    width:100%;background:var(--ui-dark);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:6px;padding:6px 8px;font-size:12.5px;font-family:inherit;outline:none;
+  }
+  .cp-field input:focus,.cp-field select:focus{border-color:var(--pink)}
+  .swatches{display:flex;flex-wrap:wrap;gap:5px}
+  .swatch{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+  .swatch.on{border-color:#fff;box-shadow:0 0 0 1px var(--pink)}
+  .worn{margin-top:8px;border-top:1px solid var(--ui-dark3);padding-top:8px}
+  .worn-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-light);padding:2px 0}
+  .worn-row .wcat{color:var(--text-dim);width:64px;text-transform:capitalize;flex:0 0 64px}
+  .worn-row .wname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .worn-row button{background:none;border:none;color:var(--bad);cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+  .cp-actions{display:flex;gap:6px;margin-top:11px}
+  .cp-actions button{flex:1;border-radius:6px;padding:7px;font-size:11.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3);background:transparent;color:var(--text-dim)}
+  .cp-actions button:hover{color:#fff;background:var(--ui-dark3)}
+  .cp-actions .danger:hover{background:var(--bad);border-color:var(--bad);color:#fff}
+
+  /* ── Wardrobe sidebar ────────────────────── */
+  #sidebar{
+    flex:0 0 320px;background:var(--ui-dark);border-left:1px solid var(--ui-dark3);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .pal-head{
+    font-size:11px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;
+    padding:12px 14px 8px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .pal-head .count{color:var(--violet);font-family:var(--mono)}
+  #catTabs{display:flex;flex-wrap:wrap;gap:4px;padding:0 10px 10px;border-bottom:1px solid var(--ui-dark3)}
+  .cat-tab{
+    background:var(--ui-dark2);color:var(--text-dim);border:1px solid var(--ui-dark3);border-radius:999px;
+    padding:5px 11px;font-size:11.5px;cursor:pointer;font-family:inherit;
+  }
+  .cat-tab:hover{color:#fff}
+  .cat-tab.on{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
+  #grid{flex:1;overflow:auto;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start}
+  .thumb{
+    background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:9px;cursor:pointer;
+    padding:4px;position:relative;transition:border-color .1s,transform .1s;
+  }
+  .thumb:hover{border-color:var(--pink);transform:translateY(-2px)}
+  .thumb.on{border-color:var(--pink);box-shadow:0 0 0 1px var(--pink)}
+  .thumb svg{width:100%;height:104px;display:block}
+  .thumb .tn{position:absolute;bottom:3px;right:5px;font-size:8.5px;color:var(--text-dim);font-family:var(--mono)}
+  .thumb.none{display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:11px;height:auto;min-height:112px;text-align:center;line-height:1.3}
+  .thumb.none svg{display:none}
+  #paletteNote{padding:8px 14px;font-size:11px;color:var(--text-dim);border-top:1px solid var(--ui-dark3);font-style:italic}
+
+  /* ── Modals ──────────────────────────────── */
+  .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+  .modal-back.show{display:flex}
+  .modal{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:14px;padding:20px 22px;width:420px;max-width:94vw;box-shadow:0 18px 50px rgba(0,0,0,.65)}
+  .modal h3{font-size:15px;margin-bottom:4px}
+  .modal .m-sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-bottom:16px}
+  .pose-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+  .pose-opt{background:var(--ui-dark);border:1px solid var(--ui-dark3);border-radius:9px;cursor:pointer;padding:5px 3px 3px;text-align:center}
+  .pose-opt.on{border-color:var(--pink);box-shadow:0 0 0 1px var(--pink)}
+  .pose-opt svg{width:100%;height:74px;display:block}
+  .pose-opt span{font-size:9.5px;color:var(--text-dim)}
+  .m-lbl{font-size:10px;color:var(--text-dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+  .m-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .m-actions button{border-radius:7px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
+  .m-cancel{background:transparent;color:var(--text-dim)}
+  .m-ok{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
+  .m-ok:hover{background:#ff3aa8}
+  #exportPreview{width:100%;border:1px solid var(--ui-dark3);border-radius:8px;background:#fff;max-height:60vh;object-fit:contain}
+  #exportModal .modal{width:680px}
+
+  #toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:130;display:none;
+    background:rgba(28,28,30,.96);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:8px;padding:9px 14px;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  #toast.warn{border-color:var(--amber);color:var(--amber)}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a class="back" href="../" title="Back to all trainers">‹ Trainers</a>
+  <div class="brand">
+    <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
+      <defs><linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#7AC143"/><stop offset=".17" stop-color="#F7941E"/><stop offset=".34" stop-color="#ED1C45"/>
+        <stop offset=".50" stop-color="#EC008C"/><stop offset=".66" stop-color="#92278F"/><stop offset=".83" stop-color="#2E3192"/><stop offset="1" stop-color="#00AEEF"/>
+      </linearGradient></defs>
+      <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
+    </svg>
+    <div class="brand-tag">Costume Design Studio</div>
+  </div>
+  <button class="tbtn primary" id="addBtn">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="5" r="3"/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M13 2v4M11 4h4"/></svg>
+    Add Character
+  </button>
+  <div class="spacer"></div>
+  <button class="tbtn" id="clearBtn">Clear stage</button>
+  <button class="tbtn" id="captureBtn">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="2"/><circle cx="8" cy="9" r="3"/><path d="M5 4l1.2-2h3.6L11 4"/></svg>
+    Capture &amp; Export
+  </button>
+</div>
+
+<div id="main">
+  <div id="stageWrap">
+    <svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="emptyHint">
+      <b>No characters yet</b>
+      <div>Click <b>Add Character</b> to place a figure, then dress it from the wardrobe.</div>
+    </div>
+    <div id="charPanel">
+      <h4>Selected Character</h4>
+      <div class="cp-field"><label>Character name</label><input id="cpName" type="text" placeholder="Character name" autocomplete="off"></div>
+      <div class="cp-field"><label>Scene</label><input id="cpScene" type="text" placeholder="Scene / look" autocomplete="off"></div>
+      <div class="cp-field"><label>Outline / pose</label><select id="cpPose"></select></div>
+      <div class="cp-field"><label>Skin tone</label><div class="swatches" id="cpSkin"></div></div>
+      <div class="worn" id="cpWorn"></div>
+      <div class="cp-actions">
+        <button id="cpClothesClear">Strip outfit</button>
+        <button id="cpRemove" class="danger">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="pal-head">Wardrobe <span class="count" id="catCount">100 looks</span></div>
+    <div id="catTabs"></div>
+    <div id="grid"></div>
+    <div id="paletteNote">Select a character, then click a piece to wear it.</div>
+  </div>
+</div>
+
+<!-- Add character modal -->
+<div class="modal-back" id="addModal">
+  <div class="modal">
+    <h3>Add a character</h3>
+    <div class="m-sub">Choose an outline and skin tone.</div>
+    <div class="m-lbl">Outline</div>
+    <div class="pose-grid" id="poseGrid"></div>
+    <div class="m-lbl">Skin tone</div>
+    <div class="swatches" id="addSkin"></div>
+    <div class="m-actions">
+      <button class="m-cancel" id="addCancel">Cancel</button>
+      <button class="m-ok" id="addConfirm">Add to stage</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div class="modal-back" id="exportModal">
+  <div class="modal">
+    <h3>Costume Plot</h3>
+    <div class="m-sub" id="exFilename">costume-plot.png</div>
+    <img id="exportPreview" alt="Costume plot preview">
+    <div class="m-actions">
+      <button class="m-cancel" id="exClose">Close</button>
+      <button class="m-ok" id="exDownload">Download PNG</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   COSTUME DESIGN STUDIO
+   A "dress-up" trainer: place mannequin characters on a stage,
+   dress them from a procedurally-generated wardrobe (100 stylised
+   variants per category), label each with a name + scene, and
+   export the whole costume plot as a PNG.
+   ============================================================ */
+
+/* ── Palettes ─────────────────────────────── */
+const SKIN_TONES = ['#ffe0bd','#f1c27d','#e0ac69','#c68642','#a56b3f','#8d5524','#6b4423','#523120'];
+const HAIR_COLORS = ['#1b1b1b','#3a2a1d','#5a3a22','#7a4a26','#9a6a2e','#c79a4b','#e4c178','#f0e0a8',
+                     '#bfc3c9','#eceff3','#b83b3b','#e35d8a','#7b4ddb','#3aa0e0','#36c98a','#ff7a3c'];
+const GARMENT_COLORS = ['#e8505b','#f07b3f','#ffd460','#a8e6cf','#3ec1d3','#5b8def','#7d5fff','#c56cf0',
+                        '#ff6fb5','#2d6a4f','#40916c','#ffafcc','#cdb4db','#e63946','#f4a261','#e9c46a',
+                        '#2a9d8f','#8ecae6','#219ebc','#fb8500','#ff006e','#8338ec','#3a86ff','#06d6a0',
+                        '#ef476f','#118ab2','#f6bd60','#84a59d','#b5179e','#480ca8'];
+
+/* ── Colour helper ────────────────────────── */
+function shade(hex, pct){
+  const n = parseInt(hex.slice(1),16); let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const t = pct<0?0:255, p=Math.abs(pct)/100;
+  r=Math.round((t-r)*p)+r; g=Math.round((t-g)*p)+g; b=Math.round((t-b)*p)+b;
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+
+/* ── Pattern / fill helper ────────────────── */
+let _uid = 0;
+function fillFor(spec){
+  const c1 = spec.color, c2 = (spec.color2 && spec.color2!==spec.color) ? spec.color2 : shade(spec.color,-28);
+  const pat = spec.pattern || 'solid';
+  if (pat==='solid') return {fill:c1, def:''};
+  const id = 'p'+(_uid++);
+  if (pat==='stripes')
+    return {fill:`url(#${id})`, def:`<pattern id="${id}" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="12" height="12" fill="${c1}"/><rect width="6" height="12" fill="${c2}"/></pattern>`};
+  if (pat==='dots')
+    return {fill:`url(#${id})`, def:`<pattern id="${id}" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${c1}"/><circle cx="7" cy="7" r="3.2" fill="${c2}"/></pattern>`};
+  if (pat==='gradient')
+    return {fill:`url(#${id})`, def:`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`};
+  if (pat==='twotone')
+    return {fill:`url(#${id})`, def:`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset=".5" stop-color="${c1}"/><stop offset=".5" stop-color="${c2}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`};
+  return {fill:c1, def:''};
+}
+
+/* ── Body presets → anchor points ─────────── */
+const BODY_PRESETS = {
+  neutral : {label:'Neutral',  head:1,   shoulder:1,    torso:1,    waist:1,   hip:1,    legs:1,    arm:1,   leg:1,    stance:1.5},
+  tall    : {label:'Tall',     head:.95, shoulder:.98,  torso:1.08, waist:.9,  hip:.95,  legs:1.2,  arm:1.05,leg:.92,  stance:1.2},
+  curvy   : {label:'Curvy',    head:1,   shoulder:.98,  torso:.98,  waist:.8,  hip:1.2,  legs:.96,  arm:1,   leg:1.08, stance:1.6},
+  athletic: {label:'Athletic', head:.97, shoulder:1.14, torso:1,    waist:.9,  hip:.98,  legs:1.02, arm:1.08,leg:1.05, stance:1.8},
+  petite  : {label:'Petite',   head:1.06,shoulder:.94,  torso:.92,  waist:.95, hip:1,    legs:.84,  arm:.95, leg:.95,  stance:1.3}
+};
+function anchors(key){
+  const p = BODY_PRESETS[key] || BODY_PRESETS.neutral;
+  const cx = 100;
+  const headR = 27*p.head;
+  const headCy = 30+headR;
+  const neckTop = headCy+headR-5;
+  const neckBot = neckTop+13;
+  const neckHalf = 9;
+  const shoulderY = neckBot+3;
+  const shoulderHalf = 44*p.shoulder;
+  const waistY = shoulderY + 94*p.torso;
+  const waistHalf = 27*p.waist;
+  const hipY = waistY+24;
+  const hipHalf = 37*p.hip;
+  const ankleY = hipY + 128*p.legs;
+  const footY = ankleY+10;
+  const armHalf = 8.5*p.arm;
+  const armCx = shoulderHalf-armHalf-1;
+  const armTopY = shoulderY+2;
+  const armBotY = waistY+8;
+  const legHalf = 15*p.leg;
+  const legGap = 5*p.stance;
+  const legCx = legGap+legHalf;
+  return {cx,headR,headCy,neckTop,neckBot,neckHalf,shoulderY,shoulderHalf,waistY,waistHalf,
+          hipY,hipHalf,ankleY,footY,armHalf,armCx,armTopY,armBotY,legHalf,legGap,legCx,
+          totalH:footY+52};
+}
+
+/* ── Mannequin body ───────────────────────── */
+function drawBody(A, skin){
+  const ol = shade(skin,-30); const s=[];
+  [-1,1].forEach(side=>{ const x=A.cx+side*A.legCx;
+    s.push(`<rect x="${x-A.legHalf}" y="${A.hipY-6}" width="${A.legHalf*2}" height="${A.ankleY-A.hipY+6}" rx="${A.legHalf}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`); });
+  [-1,1].forEach(side=>{ const x=A.cx+side*A.armCx;
+    s.push(`<rect x="${x-A.armHalf}" y="${A.armTopY}" width="${A.armHalf*2}" height="${A.armBotY-A.armTopY}" rx="${A.armHalf}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`); });
+  s.push(`<path d="M ${A.cx-A.shoulderHalf} ${A.shoulderY} L ${A.cx+A.shoulderHalf} ${A.shoulderY} L ${A.cx+A.waistHalf} ${A.waistY} L ${A.cx+A.hipHalf} ${A.hipY} L ${A.cx-A.hipHalf} ${A.hipY} L ${A.cx-A.waistHalf} ${A.waistY} Z" fill="${skin}" stroke="${ol}" stroke-width="2"/>`);
+  s.push(`<rect x="${A.cx-A.neckHalf}" y="${A.neckTop}" width="${A.neckHalf*2}" height="${A.neckBot-A.neckTop+2}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`);
+  s.push(`<circle cx="${A.cx}" cy="${A.headCy}" r="${A.headR}" fill="${skin}" stroke="${ol}" stroke-width="2"/>`);
+  const ey=A.headCy+3, ex=A.headR*0.42;
+  s.push(`<circle cx="${A.cx-ex}" cy="${ey}" r="2.6" fill="#2a2a2a"/><circle cx="${A.cx+ex}" cy="${ey}" r="2.6" fill="#2a2a2a"/>`);
+  s.push(`<path d="M ${A.cx-6} ${ey+9} Q ${A.cx} ${ey+15} ${A.cx+6} ${ey+9}" fill="none" stroke="#2a2a2a" stroke-width="2" stroke-linecap="round"/>`);
+  return s.join('');
+}
+
+/* ── Garment drawers ──────────────────────── */
+function drawHair(A, spec, D){
+  const c=spec.color, ol=shade(c,-28), s=[];
+  const cx=A.cx, cy=A.headCy, r=A.headR, st=spec.style;
+  s.push(`<path d="M ${cx-r-2} ${cy+5} Q ${cx-r-3} ${cy-r-9} ${cx} ${cy-r-9} Q ${cx+r+3} ${cy-r-9} ${cx+r+2} ${cy+5} Q ${cx} ${cy-r+3} ${cx-r-2} ${cy+5} Z" fill="${c}" stroke="${ol}" stroke-width="2"/>`);
+  if (st==='bob'){ [-1,1].forEach(side=>{ const x=cx+side*(r+1); s.push(`<path d="M ${x} ${cy-r+4} Q ${x+side*5} ${cy+r-2} ${x-side*3} ${cy+r+8} L ${x-side*9} ${cy+r+2} Q ${x-side*7} ${cy} ${x-side*6} ${cy-r+6} Z" fill="${c}" stroke="${ol}" stroke-width="2"/>`); }); }
+  else if (st==='long'||st==='wavy'){ [-1,1].forEach(side=>{ const x=cx+side*(r-1); const y2=A.shoulderY+70; s.push(`<path d="M ${x+side*4} ${cy-2} Q ${x+side*14} ${cy+30} ${x+side*7} ${y2} L ${x-side*7} ${y2} Q ${x-side*4} ${cy+20} ${x-side*8} ${cy} Z" fill="${c}" stroke="${ol}" stroke-width="2"/>`); }); }
+  else if (st==='ponytail'){ s.push(`<path d="M ${cx+r-2} ${cy-r+8} Q ${cx+r+22} ${cy} ${cx+r+16} ${cy+44} Q ${cx+r+8} ${cy+58} ${cx+r-2} ${cy+40} Q ${cx+r+6} ${cy+18} ${cx+r-6} ${cy} Z" fill="${c}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='bun'){ s.push(`<circle cx="${cx}" cy="${cy-r-7}" r="11" fill="${c}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='curly'){ for(let i=-3;i<=3;i++){ s.push(`<circle cx="${cx+i*8}" cy="${cy-r+2+(i%2?3:0)}" r="7" fill="${c}" stroke="${ol}" stroke-width="1.5"/>`);} }
+  else if (st==='pigtails'){ [-1,1].forEach(side=>{ s.push(`<circle cx="${cx+side*(r+7)}" cy="${cy+r-4}" r="11" fill="${c}" stroke="${ol}" stroke-width="2"/>`);}); }
+  return s.join('');
+}
+
+function drawTop(A, spec, D, skin){
+  const f=fillFor(spec); if(f.def)D.push(f.def);
+  const ol=shade(spec.color,-32), st=spec.style, s=[];
+  const top=A.shoulderY-2, sh=A.shoulderHalf+3;
+  const hem=(st==='crop')?A.waistY-4:A.waistY+12, wa=A.waistHalf+5;
+  const sleeve=(len,extra)=>{ [-1,1].forEach(side=>{ const x=A.cx+side*A.armCx;
+    s.push(`<rect x="${x-A.armHalf-extra}" y="${top}" width="${(A.armHalf+extra)*2}" height="${len}" rx="${A.armHalf+extra}" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }); };
+  if (['longsleeve','hoodie','blouse'].includes(st)) sleeve(A.armBotY-top-2,3);
+  else if (['tee'].includes(st)) sleeve(24,3);
+  else if (st==='offshoulder') {}
+  else sleeve(11,1);
+  s.push(`<path d="M ${A.cx-sh} ${top} L ${A.cx+sh} ${top} L ${A.cx+wa} ${hem} L ${A.cx-wa} ${hem} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`);
+  const ny=top+1;
+  if (st==='vneck') s.push(`<path d="M ${A.cx-11} ${ny} L ${A.cx} ${ny+18} L ${A.cx+11} ${ny} Z" fill="${skin}"/>`);
+  else if (st==='offshoulder') s.push(`<rect x="${A.cx-24}" y="${ny-2}" width="48" height="7" rx="3" fill="${skin}"/>`);
+  else s.push(`<path d="M ${A.cx-12} ${ny} Q ${A.cx} ${ny+12} ${A.cx+12} ${ny} Z" fill="${skin}"/>`);
+  if (st==='hoodie') s.push(`<path d="M ${A.cx-17} ${ny} Q ${A.cx} ${ny-9} ${A.cx+17} ${ny}" fill="none" stroke="${ol}" stroke-width="3"/>`);
+  if (st==='blouse') s.push(`<line x1="${A.cx}" y1="${ny+5}" x2="${A.cx}" y2="${hem-4}" stroke="${ol}" stroke-width="1.5"/>`);
+  return s.join('');
+}
+
+function drawBottom(A, spec, D){
+  const f=fillFor(spec); if(f.def)D.push(f.def);
+  const ol=shade(spec.color,-32), st=spec.style, s=[];
+  const top=A.waistY+2, hw=A.hipHalf+3;
+  if (st==='skirt'||st==='pleated'){
+    const hemY=A.hipY+(st==='pleated'?122:96), flare=(st==='pleated'?34:26);
+    s.push(`<path d="M ${A.cx-hw} ${top} L ${A.cx+hw} ${top} L ${A.cx+hw+flare} ${hemY} L ${A.cx-hw-flare} ${hemY} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`);
+    if (st==='pleated') for(let i=-2;i<=2;i++){ const x=A.cx+i*16; s.push(`<line x1="${x}" y1="${top+8}" x2="${x+i*4}" y2="${hemY}" stroke="${ol}" stroke-width="1.3" opacity=".55"/>`); }
+  } else {
+    const legBot = st==='shorts' ? A.hipY+(A.ankleY-A.hipY)*0.42 : A.ankleY+2;
+    [-1,1].forEach(side=>{ const x=A.cx+side*A.legCx;
+      const lh=(st==='leggings')?A.legHalf+1:A.legHalf+4;
+      const botHalf=(st==='flare')?lh+10:(st==='leggings'?lh-2:lh);
+      s.push(`<path d="M ${x-lh} ${top} L ${x+lh} ${top} L ${x+botHalf} ${legBot} L ${x-botHalf} ${legBot} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); });
+    s.push(`<path d="M ${A.cx-hw} ${top} L ${A.cx+hw} ${top} L ${A.cx+hw-2} ${top+22} L ${A.cx-hw+2} ${top+22} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`);
+  }
+  return s.join('');
+}
+
+function drawDress(A, spec, D, skin){
+  const f=fillFor(spec); if(f.def)D.push(f.def);
+  const ol=shade(spec.color,-32), st=spec.style, s=[];
+  const top=A.shoulderY-2, sh=A.shoulderHalf+3, waist=A.waistY, ww=A.waistHalf+3;
+  const sleeve=(len,extra)=>{ [-1,1].forEach(side=>{ const x=A.cx+side*A.armCx;
+    s.push(`<rect x="${x-A.armHalf-extra}" y="${top}" width="${(A.armHalf+extra)*2}" height="${len}" rx="${A.armHalf+extra}" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }); };
+  if (st==='sheath'||st==='wrap') sleeve(15,2); else sleeve(8,1);
+  s.push(`<path d="M ${A.cx-sh} ${top} L ${A.cx+sh} ${top} L ${A.cx+ww} ${waist} L ${A.cx-ww} ${waist} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`);
+  let hemY, flare;
+  if (st==='ballgown'){hemY=A.ankleY+6; flare=66;}
+  else if (st==='aline'){hemY=A.hipY+122; flare=46;}
+  else if (st==='mermaid'){hemY=A.ankleY+4; flare=40;}
+  else if (st==='sheath'){hemY=A.hipY+112; flare=11;}
+  else if (st==='sundress'){hemY=A.hipY+102; flare=38;}
+  else {hemY=A.hipY+112; flare=40;}
+  if (st==='mermaid'){
+    const kneeY=A.hipY+96, kneeHalf=ww-2;
+    s.push(`<path d="M ${A.cx-ww} ${waist} L ${A.cx+ww} ${waist} L ${A.cx+kneeHalf} ${kneeY} L ${A.cx+flare} ${hemY} L ${A.cx-flare} ${hemY} L ${A.cx-kneeHalf} ${kneeY} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`);
+  } else {
+    s.push(`<path d="M ${A.cx-ww} ${waist} L ${A.cx+ww} ${waist} L ${A.cx+flare} ${hemY} L ${A.cx-flare} ${hemY} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`);
+  }
+  s.push(`<path d="M ${A.cx-12} ${top} Q ${A.cx} ${top+13} ${A.cx+12} ${top} Z" fill="${skin}"/>`);
+  s.push(`<line x1="${A.cx-ww}" y1="${waist}" x2="${A.cx+ww}" y2="${waist}" stroke="${ol}" stroke-width="1.5" opacity=".55"/>`);
+  return s.join('');
+}
+
+function drawShoes(A, spec, D){
+  const f=fillFor(spec); if(f.def)D.push(f.def);
+  const ol=shade(spec.color,-32), st=spec.style, s=[];
+  [-1,1].forEach(side=>{ const x=A.cx+side*A.legCx, y=A.ankleY;
+    if (st==='boots'){ s.push(`<rect x="${x-A.legHalf-2}" y="${y-38}" width="${(A.legHalf+2)*2}" height="42" rx="5" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.legHalf-2}" y="${y}" width="${(A.legHalf+2)*2+8}" height="12" rx="5" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+    else if (st==='heels'){ s.push(`<path d="M ${x-A.legHalf} ${y} L ${x+A.legHalf+9} ${y} L ${x+A.legHalf+11} ${y+8} L ${x-A.legHalf} ${y+10} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.legHalf}" y="${y+10}" width="4" height="15" fill="${f.fill}" stroke="${ol}" stroke-width="1.5"/>`); }
+    else if (st==='sneakers'){ s.push(`<path d="M ${x-A.legHalf-2} ${y-6} L ${x+A.legHalf+2} ${y-6} L ${x+A.legHalf+13} ${y+8} L ${x-A.legHalf-2} ${y+10} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${x-A.legHalf-3}" y="${y+8}" width="${(A.legHalf+9)*1.5}" height="6" rx="3" fill="#fff" stroke="${ol}" stroke-width="1"/>`); }
+    else if (st==='sandals'){ s.push(`<rect x="${x-A.legHalf}" y="${y+6}" width="${A.legHalf*2+11}" height="6" rx="3" fill="${f.fill}" stroke="${ol}" stroke-width="1.5"/>`); s.push(`<path d="M ${x-A.legHalf} ${y} L ${x+A.legHalf+8} ${y+6}" stroke="${f.fill}" stroke-width="3"/>`); }
+    else { s.push(`<ellipse cx="${x+4}" cy="${y+6}" rx="${A.legHalf+9}" ry="7" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  });
+  return s.join('');
+}
+
+function drawHeadwear(A, spec, D){
+  const f=fillFor(spec); if(f.def)D.push(f.def);
+  const ol=shade(spec.color,-30), st=spec.style, s=[];
+  const cx=A.cx, cy=A.headCy, r=A.headR;
+  if (st==='cap'){ s.push(`<path d="M ${cx-r-1} ${cy-2} Q ${cx} ${cy-r-15} ${cx+r+1} ${cy-2} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<path d="M ${cx+r-6} ${cy-3} q 26 -3 30 6 q -16 5 -30 1 Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='tophat'){ s.push(`<rect x="${cx-16}" y="${cy-r-34}" width="32" height="38" rx="2" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${cx-27}" y="${cy-r-2}" width="54" height="7" rx="3" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='crown'){ s.push(`<path d="M ${cx-20} ${cy-r+2} L ${cx-20} ${cy-r-15} L ${cx-10} ${cy-r-3} L ${cx} ${cy-r-19} L ${cx+10} ${cy-r-3} L ${cx+20} ${cy-r-15} L ${cx+20} ${cy-r+2} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='beanie'){ s.push(`<path d="M ${cx-r-1} ${cy-2} Q ${cx} ${cy-r-18} ${cx+r+1} ${cy-2} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${cx-r-1}" y="${cy-5}" width="${(r+1)*2}" height="8" rx="3" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='sunhat'){ s.push(`<ellipse cx="${cx}" cy="${cy-r+3}" rx="${r+22}" ry="9" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<path d="M ${cx-r+4} ${cy-r+3} Q ${cx} ${cy-r-20} ${cx+r-4} ${cy-r+3} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='bow'){ s.push(`<path d="M ${cx} ${cy-r-3} L ${cx-18} ${cy-r-12} L ${cx-18} ${cy-r+5} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<path d="M ${cx} ${cy-r-3} L ${cx+18} ${cy-r-12} L ${cx+18} ${cy-r+5} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<circle cx="${cx}" cy="${cy-r-3}" r="5" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='beret'){ s.push(`<ellipse cx="${cx+4}" cy="${cy-r-1}" rx="${r+4}" ry="10" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<circle cx="${cx+r+3}" cy="${cy-r-8}" r="3" fill="${f.fill}"/>`); }
+  else { s.push(`<path d="M ${cx-r} ${cy-2} Q ${cx} ${cy-r-14} ${cx+r} ${cy-2} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  return s.join('');
+}
+
+function drawOuter(A, spec, D){
+  const f=fillFor(spec); if(f.def)D.push(f.def);
+  const ol=shade(spec.color,-32), st=spec.style, s=[];
+  const top=A.shoulderY-3, sh=A.shoulderHalf+5;
+  if (st==='cape'){
+    const hemY=A.hipY+92;
+    s.push(`<path d="M ${A.cx-sh} ${top} L ${A.cx+sh} ${top} L ${A.cx+sh+26} ${hemY} L ${A.cx-sh-26} ${hemY} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`);
+    s.push(`<path d="M ${A.cx-16} ${top} Q ${A.cx} ${top+12} ${A.cx+16} ${top}" fill="none" stroke="${ol}" stroke-width="3"/>`);
+    return s.join('');
+  }
+  const hem=(st==='coat')?A.hipY+96:A.waistY+14;
+  if (st!=='vest'){ const len=(st==='coat')?(A.armBotY-top+10):(A.armBotY-top-4);
+    [-1,1].forEach(side=>{ const x=A.cx+side*A.armCx;
+      s.push(`<rect x="${x-A.armHalf-4}" y="${top}" width="${(A.armHalf+4)*2}" height="${len}" rx="${A.armHalf+4}" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }); }
+  [-1,1].forEach(side=>{ const outer=A.cx+side*sh, inner=A.cx+side*7;
+    s.push(`<path d="M ${outer} ${top} L ${inner} ${top} L ${inner} ${hem} L ${A.cx+side*(sh-4)} ${hem} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); });
+  s.push(`<path d="M ${A.cx-14} ${top} L ${A.cx} ${top+16} L ${A.cx+14} ${top}" fill="none" stroke="${ol}" stroke-width="2.5"/>`);
+  return s.join('');
+}
+
+function drawAccessory(A, spec, D){
+  const f=fillFor(spec); if(f.def)D.push(f.def);
+  const c=spec.color, ol=shade(c,-32), st=spec.style, s=[];
+  const cx=A.cx, cy=A.headCy, r=A.headR;
+  if (st==='glasses'||st==='sunglasses'){
+    const ey=cy+3, ex=r*0.42, rad=8, lens=(st==='sunglasses')?c:'none';
+    s.push(`<circle cx="${cx-ex}" cy="${ey}" r="${rad}" fill="${lens}" stroke="${ol}" stroke-width="2.5"/>`);
+    s.push(`<circle cx="${cx+ex}" cy="${ey}" r="${rad}" fill="${lens}" stroke="${ol}" stroke-width="2.5"/>`);
+    s.push(`<line x1="${cx-ex+rad}" y1="${ey}" x2="${cx+ex-rad}" y2="${ey}" stroke="${ol}" stroke-width="2.5"/>`);
+  }
+  else if (st==='necklace'){ s.push(`<path d="M ${cx-14} ${A.neckBot} Q ${cx} ${A.neckBot+18} ${cx+14} ${A.neckBot}" fill="none" stroke="${c}" stroke-width="3"/>`); s.push(`<circle cx="${cx}" cy="${A.neckBot+15}" r="4" fill="${c}" stroke="${ol}" stroke-width="1.5"/>`); }
+  else if (st==='scarf'){ s.push(`<rect x="${cx-A.neckHalf-4}" y="${A.neckBot-4}" width="${(A.neckHalf+4)*2}" height="12" rx="4" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${cx-4}" y="${A.neckBot+4}" width="10" height="26" rx="3" fill="${f.fill}" stroke="${ol}" stroke-width="2"/>`); }
+  else if (st==='belt'){ s.push(`<rect x="${cx-A.waistHalf-4}" y="${A.waistY-3}" width="${(A.waistHalf+4)*2}" height="9" fill="${c}" stroke="${ol}" stroke-width="2"/>`); s.push(`<rect x="${cx-5}" y="${A.waistY-3}" width="10" height="9" fill="${shade(c,30)}" stroke="${ol}" stroke-width="1.5"/>`); }
+  else if (st==='earrings'){ [-1,1].forEach(side=>{ s.push(`<circle cx="${cx+side*(r-2)}" cy="${cy+r*0.5}" r="3" fill="${c}" stroke="${ol}" stroke-width="1"/>`); }); }
+  else if (st==='tiara'){ s.push(`<path d="M ${cx-18} ${cy-r+2} L ${cx-9} ${cy-r-8} L ${cx} ${cy-r+1} L ${cx+9} ${cy-r-8} L ${cx+18} ${cy-r+2} Z" fill="${c}" stroke="${ol}" stroke-width="1.5"/>`); s.push(`<circle cx="${cx}" cy="${cy-r-8}" r="3" fill="${shade(c,30)}"/>`); }
+  else if (st==='wings'){ [-1,1].forEach(side=>{ const bx=A.cx+side*(A.shoulderHalf-2);
+    s.push(`<path d="M ${bx} ${A.shoulderY+6} Q ${bx+side*72} ${A.shoulderY-32} ${bx+side*54} ${A.hipY} Q ${bx+side*30} ${A.waistY} ${bx} ${A.waistY-10} Z" fill="${f.fill}" stroke="${ol}" stroke-width="2" opacity=".95"/>`); }); }
+  else { s.push(`<circle cx="${cx}" cy="${A.neckBot+12}" r="4" fill="${c}" stroke="${ol}" stroke-width="1.5"/>`); }
+  return s.join('');
+}
+
+/* ── Category config + item generation ───── */
+const ALL_PAT = ['solid','solid','stripes','dots','gradient','twotone'];
+const CATS = [
+  {key:'hair',        label:'Hair',      slot:'hair',      draw:drawHair,      colors:HAIR_COLORS,    patterns:['solid'],                       styles:['short','bob','long','ponytail','bun','curly','pigtails','wavy']},
+  {key:'tops',        label:'Tops',      slot:'top',       draw:drawTop,       colors:GARMENT_COLORS, patterns:ALL_PAT,                          styles:['tee','tank','vneck','longsleeve','crop','blouse','hoodie','offshoulder']},
+  {key:'bottoms',     label:'Bottoms',   slot:'bottom',    draw:drawBottom,    colors:GARMENT_COLORS, patterns:ALL_PAT,                          styles:['pants','skirt','shorts','flare','pleated','leggings']},
+  {key:'dresses',     label:'Dresses',   slot:'dress',     draw:drawDress,     colors:GARMENT_COLORS, patterns:ALL_PAT,                          styles:['aline','ballgown','sheath','sundress','wrap','mermaid']},
+  {key:'outerwear',   label:'Outerwear', slot:'outer',     draw:drawOuter,     colors:GARMENT_COLORS, patterns:['solid','solid','stripes','twotone'], styles:['jacket','coat','cape','vest']},
+  {key:'shoes',       label:'Shoes',     slot:'shoes',     draw:drawShoes,     colors:GARMENT_COLORS, patterns:['solid','solid','twotone'],      styles:['flats','heels','boots','sneakers','sandals']},
+  {key:'headwear',    label:'Headwear',  slot:'headwear',  draw:drawHeadwear,  colors:GARMENT_COLORS, patterns:['solid','solid','stripes'],      styles:['cap','tophat','crown','beanie','sunhat','bow','beret']},
+  {key:'accessories', label:'Accessories',slot:'accessory',draw:drawAccessory, colors:GARMENT_COLORS, patterns:['solid','solid','gradient'],     styles:['glasses','sunglasses','necklace','scarf','belt','earrings','wings','tiara']}
+];
+const CAT_BY_SLOT = {}; CATS.forEach(c=>CAT_BY_SLOT[c.slot]=c);
+const ITEM_BY_ID = {};
+CATS.forEach(cat=>{
+  cat.items=[]; const S=cat.styles.length;
+  for (let i=0;i<100;i++){
+    const style=cat.styles[i%S];
+    const color=cat.colors[(i*7)%cat.colors.length];
+    let color2=cat.colors[(i*13+5)%cat.colors.length];
+    if (color2===color) color2=cat.colors[(i*13+6)%cat.colors.length];
+    const pattern=cat.patterns[(i*3+Math.floor(i/S))%cat.patterns.length];
+    const item={id:cat.key+'-'+i, cat:cat.key, slot:cat.slot, style, color, color2, pattern, n:i+1};
+    cat.items.push(item); ITEM_BY_ID[item.id]=item;
+  }
+});
+
+/* ── State ────────────────────────────────── */
+const SLOT_ORDER = ['hair','top','bottom','dress','outer','shoes','headwear','accessory'];
+let chars=[], selId=null, seq=0;
+const stage=document.getElementById('stage');
+const stageWrap=document.getElementById('stageWrap');
+const STAGE_W=1600, STAGE_H=1000;
+stage.setAttribute('viewBox',`0 0 ${STAGE_W} ${STAGE_H}`);
+stage.setAttribute('width',STAGE_W); stage.setAttribute('height',STAGE_H);
+
+function selChar(){ return chars.find(c=>c.id===selId)||null; }
+function toast(msg,opts={}){ const t=document.getElementById('toast'); t.innerHTML=msg; t.className=opts.warn?'warn':''; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',opts.ms||1900); }
+
+/* ── Render a character to an SVG group ───── */
+function renderCharInner(ch){
+  const A=anchors(ch.bodyPreset), D=[], parts=[];
+  const sl=ch.slots;
+  if (sl.outer && sl.outer.style==='cape') parts.push(drawOuter(A,sl.outer,D));
+  if (sl.accessory && sl.accessory.style==='wings') parts.push(drawAccessory(A,sl.accessory,D));
+  parts.push(drawBody(A, ch.skin));
+  if (sl.dress){ parts.push(drawDress(A,sl.dress,D,ch.skin)); }
+  else { if (sl.bottom) parts.push(drawBottom(A,sl.bottom,D)); if (sl.top) parts.push(drawTop(A,sl.top,D,ch.skin)); }
+  if (sl.shoes) parts.push(drawShoes(A,sl.shoes,D));
+  if (sl.outer && sl.outer.style!=='cape') parts.push(drawOuter(A,sl.outer,D));
+  if (sl.hair) parts.push(drawHair(A,sl.hair,D));
+  if (sl.headwear) parts.push(drawHeadwear(A,sl.headwear,D));
+  if (sl.accessory && sl.accessory.style!=='wings') parts.push(drawAccessory(A,sl.accessory,D));
+  const defs=D.length?`<defs>${D.join('')}</defs>`:'';
+  return {svg:defs+parts.join(''), A};
+}
+function esc(s){ return (s||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+function renderChar(ch){
+  const {svg,A}=renderCharInner(ch);
+  const sel = ch.id===selId ? `<rect class="sel-ring" x="6" y="6" width="188" height="${A.footY+44}" rx="14"/>` : '';
+  const name = esc(ch.name || ('Character '+ch.seq));
+  const ly = A.footY+26;
+  const scene = ch.scene ? `<text class="cscene" x="100" y="${ly+17}" text-anchor="middle">${esc(ch.scene)}</text>` : '';
+  return `<g class="char" data-id="${ch.id}" transform="translate(${ch.x},${ch.y})">${sel}${svg}`+
+         `<text class="clbl" x="100" y="${ly}" text-anchor="middle">${name}</text>${scene}</g>`;
+}
+function renderStage(){
+  stage.innerHTML = chars.map(renderChar).join('');
+  document.getElementById('emptyHint').style.display = chars.length ? 'none' : 'flex';
+}
+
+/* ── Wardrobe palette ─────────────────────── */
+let activeCat='tops';
+function thumbSVG(item){
+  const A=anchors('neutral'), D=[];
+  const body=`<g opacity=".9">${drawBody(A,'#d7d7dd')}</g>`;
+  const cat=CAT_BY_SLOT[item.slot];
+  const g=cat.draw(A,item,D, '#d7d7dd');
+  const defs=D.length?`<defs>${D.join('')}</defs>`:'';
+  return `<svg viewBox="14 10 172 ${A.footY+4}" preserveAspectRatio="xMidYMid meet">${defs}${body}${g}</svg>`;
+}
+function renderPalette(){
+  const cat=CATS.find(c=>c.key===activeCat);
+  document.getElementById('catCount').textContent='100 looks';
+  const sel=selChar();
+  const wornId = sel ? (sel.slots[cat.slot] && sel.slots[cat.slot].id) : null;
+  const cells=[`<div class="thumb none" data-none="1">✕<br>None</div>`];
+  cat.items.forEach(item=>{
+    cells.push(`<div class="thumb${item.id===wornId?' on':''}" data-id="${item.id}">${thumbSVG(item)}<span class="tn">#${item.n}</span></div>`);
+  });
+  document.getElementById('grid').innerHTML=cells.join('');
+}
+function renderTabs(){
+  document.getElementById('catTabs').innerHTML = CATS.map(c=>
+    `<button class="cat-tab${c.key===activeCat?' on':''}" data-cat="${c.key}">${c.label}</button>`).join('');
+}
+document.getElementById('catTabs').addEventListener('click', e=>{
+  const b=e.target.closest('.cat-tab'); if(!b) return;
+  activeCat=b.dataset.cat; renderTabs(); renderPalette();
+});
+document.getElementById('grid').addEventListener('click', e=>{
+  const cell=e.target.closest('.thumb'); if(!cell) return;
+  const sel=selChar();
+  if (!sel){ toast('Select a character first — or click <b>Add Character</b>.', {warn:true}); return; }
+  const cat=CATS.find(c=>c.key===activeCat);
+  if (cell.dataset.none){ clearSlot(sel, cat.slot); }
+  else { equip(sel, ITEM_BY_ID[cell.dataset.id]); }
+});
+
+/* ── Equip / remove ───────────────────────── */
+function equip(ch, item){
+  if (!item) return;
+  if (item.slot==='dress'){ ch.slots.dress=item; ch.slots.top=null; ch.slots.bottom=null; }
+  else if (item.slot==='top' || item.slot==='bottom'){ ch.slots[item.slot]=item; ch.slots.dress=null; }
+  else ch.slots[item.slot]=item;
+  save(); renderStage(); renderPalette(); renderCharPanel();
+}
+function clearSlot(ch, slot){ ch.slots[slot]=null; save(); renderStage(); renderPalette(); renderCharPanel(); }
+
+/* ── Selected-character panel ─────────────── */
+const charPanel=document.getElementById('charPanel');
+function renderCharPanel(){
+  const ch=selChar();
+  if (!ch){ charPanel.classList.remove('show'); return; }
+  charPanel.classList.add('show');
+  document.getElementById('cpName').value=ch.name||'';
+  document.getElementById('cpScene').value=ch.scene||'';
+  const pose=document.getElementById('cpPose');
+  pose.innerHTML=Object.keys(BODY_PRESETS).map(k=>`<option value="${k}"${k===ch.bodyPreset?' selected':''}>${BODY_PRESETS[k].label}</option>`).join('');
+  document.getElementById('cpSkin').innerHTML=SKIN_TONES.map(c=>`<span class="swatch${c===ch.skin?' on':''}" data-skin="${c}" style="background:${c}"></span>`).join('');
+  const worn=SLOT_ORDER.filter(s=>ch.slots[s]).map(s=>{
+    const it=ch.slots[s];
+    return `<div class="worn-row"><span class="wcat">${CAT_BY_SLOT[s].label}</span><span class="wname">${it.style} #${it.n}</span><button data-clear="${s}" title="Remove">✕</button></div>`;
+  }).join('') || `<div class="worn-row" style="color:var(--text-dim)">Nothing on yet.</div>`;
+  document.getElementById('cpWorn').innerHTML=worn;
+}
+document.getElementById('cpName').addEventListener('input', e=>{ const c=selChar(); if(c){ c.name=e.target.value; save(); renderStage(); } });
+document.getElementById('cpScene').addEventListener('input', e=>{ const c=selChar(); if(c){ c.scene=e.target.value; save(); renderStage(); } });
+document.getElementById('cpPose').addEventListener('change', e=>{ const c=selChar(); if(c){ c.bodyPreset=e.target.value; save(); renderStage(); } });
+document.getElementById('cpSkin').addEventListener('click', e=>{ const sw=e.target.closest('.swatch'); if(!sw)return; const c=selChar(); if(c){ c.skin=sw.dataset.skin; save(); renderStage(); renderCharPanel(); } });
+document.getElementById('cpWorn').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b)return; const c=selChar(); if(c) clearSlot(c,b.dataset.clear); });
+document.getElementById('cpClothesClear').addEventListener('click', ()=>{ const c=selChar(); if(!c)return; SLOT_ORDER.forEach(s=>c.slots[s]=null); save(); renderStage(); renderPalette(); renderCharPanel(); });
+document.getElementById('cpRemove').addEventListener('click', ()=>{ removeChar(selId); });
+
+function select(id){ selId=id; renderStage(); renderCharPanel(); renderPalette(); }
+function removeChar(id){
+  chars=chars.filter(c=>c.id!==id); if(selId===id) selId=null;
+  save(); renderStage(); renderCharPanel(); renderPalette();
+}
+
+/* ── Drag on the stage ────────────────────── */
+let drag=null;
+function svgScale(){ const r=stage.getBoundingClientRect(); return STAGE_W/(r.width||STAGE_W); }
+stage.addEventListener('pointerdown', e=>{
+  const g=e.target.closest('.char');
+  if (!g){ if(selId!==null) select(null); return; }
+  const id=+g.dataset.id; if(id!==selId) select(id);
+  const ch=selChar(); if(!ch) return;
+  drag={id, sx:e.clientX, sy:e.clientY, ox:ch.x, oy:ch.y, k:svgScale(), moved:false};
+  stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove', e=>{
+  if (!drag) return;
+  const ch=chars.find(c=>c.id===drag.id); if(!ch) return;
+  ch.x=Math.max(-40, Math.min(STAGE_W-160, drag.ox+(e.clientX-drag.sx)*drag.k));
+  ch.y=Math.max(-10, Math.min(STAGE_H-120, drag.oy+(e.clientY-drag.sy)*drag.k));
+  drag.moved=true;
+  const el=stage.querySelector(`.char[data-id="${drag.id}"]`);
+  if (el) el.setAttribute('transform',`translate(${ch.x},${ch.y})`);
+});
+stage.addEventListener('pointerup', e=>{ if(drag){ if(drag.moved) save(); drag=null; try{stage.releasePointerCapture(e.pointerId);}catch(_){} } });
+
+/* ── Add character ────────────────────────── */
+const addModal=document.getElementById('addModal');
+let addPose='neutral', addSkin=SKIN_TONES[1];
+function poseThumb(key){
+  const A=anchors(key);
+  return `<svg viewBox="20 14 160 ${A.footY-6}" preserveAspectRatio="xMidYMid meet">${drawBody(A,'#d7d7dd')}</svg>`;
+}
+function openAdd(){
+  addPose='neutral'; addSkin=SKIN_TONES[1];
+  document.getElementById('poseGrid').innerHTML=Object.keys(BODY_PRESETS).map(k=>
+    `<div class="pose-opt${k===addPose?' on':''}" data-pose="${k}">${poseThumb(k)}<span>${BODY_PRESETS[k].label}</span></div>`).join('');
+  document.getElementById('addSkin').innerHTML=SKIN_TONES.map(c=>`<span class="swatch${c===addSkin?' on':''}" data-skin="${c}" style="background:${c}"></span>`).join('');
+  addModal.classList.add('show');
+}
+document.getElementById('addBtn').addEventListener('click', openAdd);
+document.getElementById('addCancel').addEventListener('click', ()=>addModal.classList.remove('show'));
+addModal.addEventListener('click', e=>{ if(e.target===addModal) addModal.classList.remove('show'); });
+document.getElementById('poseGrid').addEventListener('click', e=>{ const o=e.target.closest('.pose-opt'); if(!o)return; addPose=o.dataset.pose; document.querySelectorAll('#poseGrid .pose-opt').forEach(x=>x.classList.toggle('on',x===o)); });
+document.getElementById('addSkin').addEventListener('click', e=>{ const sw=e.target.closest('.swatch'); if(!sw)return; addSkin=sw.dataset.skin; document.querySelectorAll('#addSkin .swatch').forEach(x=>x.classList.toggle('on',x===sw)); });
+document.getElementById('addConfirm').addEventListener('click', ()=>{
+  seq++;
+  const n=chars.length;
+  const ch={ id:Date.now()+Math.floor(Math.random()*999), seq, name:'', scene:'',
+             bodyPreset:addPose, skin:addSkin,
+             x:290+(n%5)*250, y:24+Math.floor(n/5)*470,
+             slots:{hair:null,top:null,bottom:null,dress:null,outer:null,shoes:null,headwear:null,accessory:null} };
+  chars.push(ch); addModal.classList.remove('show');
+  select(ch.id);
+});
+
+/* ── Clear stage ──────────────────────────── */
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if (!chars.length){ toast('Stage is already empty.'); return; }
+  if (confirm('Clear all characters from the stage?')){ chars=[]; selId=null; save(); renderStage(); renderCharPanel(); renderPalette(); }
+});
+
+/* ── Capture & export PNG ─────────────────── */
+function exportPNG(){
+  if (!chars.length){ toast('Add a character before exporting.', {warn:true}); return; }
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  chars.forEach(ch=>{ const A=anchors(ch.bodyPreset);
+    minX=Math.min(minX,ch.x); minY=Math.min(minY,ch.y);
+    maxX=Math.max(maxX,ch.x+200); maxY=Math.max(maxY,ch.y+A.footY+50); });
+  const pad=36, x=minX-pad, y=minY-pad, w=(maxX-minX)+pad*2, h=(maxY-minY)+pad*2;
+  const clone=stage.cloneNode(true);
+  clone.querySelectorAll('.sel-ring').forEach(n=>n.remove());
+  clone.setAttribute('viewBox',`${x} ${y} ${w} ${h}`);
+  clone.setAttribute('width',w); clone.setAttribute('height',h);
+  const bg=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#15151a"/>`;
+  clone.insertAdjacentHTML('afterbegin', bg);
+  const xml=new XMLSerializer().serializeToString(clone);
+  const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
+  const img=new Image();
+  img.onload=()=>{
+    const sc=2, cv=document.createElement('canvas'); cv.width=w*sc; cv.height=h*sc;
+    const g=cv.getContext('2d'); g.scale(sc,sc); g.drawImage(img,0,0,w,h);
+    const png=cv.toDataURL('image/png');
+    const fn='costume-plot-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png';
+    document.getElementById('exFilename').textContent=fn;
+    document.getElementById('exportPreview').src=png;
+    document.getElementById('exDownload').onclick=()=>{ const a=document.createElement('a'); a.href=png; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); };
+    document.getElementById('exportModal').classList.add('show');
+  };
+  img.onerror=()=>toast('Sorry — export failed to render.', {warn:true});
+  img.src=url;
+}
+document.getElementById('captureBtn').addEventListener('click', exportPNG);
+document.getElementById('exClose').addEventListener('click', ()=>document.getElementById('exportModal').classList.remove('show'));
+document.getElementById('exportModal').addEventListener('click', e=>{ if(e.target.id==='exportModal') e.currentTarget.classList.remove('show'); });
+
+/* ── Persistence ──────────────────────────── */
+function save(){ try{ localStorage.setItem('costume-stage', JSON.stringify({chars,seq})); }catch(_){} }
+function load(){
+  try{ const raw=localStorage.getItem('costume-stage'); if(!raw) return;
+    const d=JSON.parse(raw); if(!d||!Array.isArray(d.chars)) return;
+    // re-hydrate slot items from ids (so generator stays the single source)
+    d.chars.forEach(ch=>{ Object.keys(ch.slots||{}).forEach(s=>{ const v=ch.slots[s]; ch.slots[s]= v&&v.id?ITEM_BY_ID[v.id]||null:null; }); });
+    chars=d.chars; seq=d.seq||chars.length;
+  }catch(_){}
+}
+
+/* ── Keyboard ─────────────────────────────── */
+window.addEventListener('keydown', e=>{
+  const tag=(document.activeElement||{}).tagName;
+  if (tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA'){ if(e.key==='Escape') document.activeElement.blur(); return; }
+  if (e.key==='Escape'){ if(addModal.classList.contains('show')) addModal.classList.remove('show'); else if(document.getElementById('exportModal').classList.contains('show')) document.getElementById('exportModal').classList.remove('show'); else select(null); }
+  else if ((e.key==='Delete'||e.key==='Backspace') && selId!=null){ e.preventDefault(); removeChar(selId); }
+});
+
+/* ── Init ─────────────────────────────────── */
+renderTabs(); renderPalette(); load(); renderStage(); renderCharPanel();
+</script>
+</body>
+</html>
