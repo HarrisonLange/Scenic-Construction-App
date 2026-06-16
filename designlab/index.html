@@ -775,11 +775,13 @@ function collectFaces(o,view,cam,out){
       B(-.5,.5,-.5,.5,0,1.0,base,{flatTop:false});
       B(-.5,.5,-.5,-.46,0,1.0,dk(.78));   // downstage facing trim
       return;
-    case 'stairs':
-      for(let k=0;k<4;k++) B(-.5,.5, -.5+k*0.25, .5, 0,(k+1)/4, dk(k%2?.9:1));
+    case 'stairs':{
+      const n=5;
+      for(let k=0;k<n;k++) B(-.5,.5, -.5+k/n, -.5+(k+1)/n, 0,(k+1)/n, dk(0.78+0.07*k));
       return;
+    }
     case 'ramp':
-      pushWedge(o,view,cam,out, -.5*W,.5*W, -.5*D,.5*D, Z, Z+0.04*H, Z+H, base);
+      pushWedge(o,view,cam,out, -.5*W,.5*W, -.5*D,.5*D, Z, Z+0.02*H, Z+H, base);
       return;
     case 'flat':
       B(-.5,.5,-.5,.5,0,1.0); B(-.5,.5,-.5,.5,.97,1.0,dk(.7));    // top batten
