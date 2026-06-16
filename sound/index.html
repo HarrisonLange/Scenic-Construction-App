@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SDSCPA — Live Sound System Simulator</title>
+  <title>SDSCPA — Live Sound Lab</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
   <style>
     :root {
@@ -119,7 +119,7 @@
     .topbar {
       position: relative;
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
       align-items: center;
       gap: 12px;
       padding: 8px 12px;
@@ -140,6 +140,30 @@
       background: linear-gradient(90deg, #7AC143, #F7941E, #ED1C45, #EC008C, #92278F, #2E3192, #00AEEF);
       opacity: 0.9;
       pointer-events: none;
+    }
+
+    .back-hub {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 6px;
+      padding: 0 10px;
+      min-height: 40px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .back-hub:hover {
+      color: var(--ink);
+      border-color: #4a4a52;
+    }
+
+    .back-hub svg {
+      display: block;
     }
 
     .brand {
@@ -724,7 +748,8 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand" title="SDSCPA — Live Sound System Simulator" aria-label="SDSCPA — Live Sound System Simulator">
+    <a class="back-hub" href="../" title="Back to all labs" aria-label="Back to all labs">&lsaquo; Labs</a>
+    <div class="brand" title="SDSCPA — Live Sound Lab" aria-label="SDSCPA — Live Sound Lab">
       <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
         <defs>
           <linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
@@ -740,7 +765,7 @@
         <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif"
               font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
       </svg>
-      <div class="brand-tag">Live Sound System Simulator</div>
+      <div class="brand-tag">Live Sound Lab</div>
     </div>
     <div class="top-controls">
       <label id="skillControl">Skill
@@ -850,6 +875,7 @@
       <div id="startGuide" class="start-guide">
         <h2>Start Here</h2>
         <ol>
+          <li>Draw your stage &amp; audience areas.</li>
           <li>Place equipment.</li>
           <li>Connect cables.</li>
           <li>Test system.</li>
@@ -2831,7 +2857,7 @@
       render();
       const link = document.createElement("a");
       link.href = dom.canvas.toDataURL("image/png");
-      link.download = "live-sound-system-simulator.png";
+      link.download = "live-sound-lab.png";
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -3023,12 +3049,16 @@
     }
 
     function buildToolButtons() {
-      const tools = [
+      const allTools = [
         { id: "select", icon: "SEL", label: "Select" },
         { id: "pan", icon: "PAN", label: "Pan" },
         { id: "measure", icon: "FT", label: "Measure" },
         { id: "label", icon: "T", label: "Label" }
       ];
+      // Basic mode keeps the toolbox lean — just Select (to edit locations) and Pan.
+      const tools = state.skill === "basic"
+        ? allTools.filter(function basicTools(tool) { return tool.id === "select" || tool.id === "pan"; })
+        : allTools;
       dom.toolButtons.innerHTML = tools.map(function mapTool(tool) {
         return "<button type=\"button\" class=\"tool-btn\" data-tool=\"" + tool.id + "\"><span class=\"icon\">" + tool.icon + "</span><span>" + tool.label + "</span></button>";
       }).join("");
@@ -3046,9 +3076,8 @@
       if (state.operation === "teacher") {
         return Object.keys(ZONE_DEFINITIONS);
       }
-      if (state.skill === "basic") {
-        return ["stage", "audience", "foh"];
-      }
+      // Basic mode now offers the full set of stage locations so beginners can
+      // lay out and edit the room (stage, audience, backstage, FOH + custom "other").
       return ["stage", "audience", "backstage", "foh", "custom"];
     }
 
@@ -3131,6 +3160,7 @@
       const scaleLabel = dom.scaleSelect.options[dom.scaleSelect.selectedIndex].textContent;
       dom.scaleHud.textContent = scaleLabel + " | " + getPixelsPerFoot() + " px / ft";
       updateInterfaceVisibility();
+      buildToolButtons();
       buildZoneButtons();
       buildEquipmentButtons();
       buildCableButtons();
@@ -3148,12 +3178,14 @@
       dom.snapToggle.hidden = simpleBasic;
       dom.timerDisplay.hidden = simpleBasic;
       dom.advancedLibraryToggle.hidden = simpleBasic;
-      dom.toolsSection.hidden = simpleBasic;
-      dom.zonesSection.hidden = simpleBasic;
+      // Locations (zones), the Select/Pan toolbox, and the Selection inspector stay
+      // available in basic mode so beginners can add and edit stage areas.
+      dom.toolsSection.hidden = false;
+      dom.zonesSection.hidden = false;
       dom.projectSection.hidden = simpleBasic;
       dom.scenarioSection.hidden = simpleBasic || state.operation === "practice";
       dom.teacherSection.hidden = state.operation !== "teacher";
-      dom.selectionSection.hidden = simpleBasic;
+      dom.selectionSection.hidden = false;
       dom.metricsSection.hidden = simpleBasic;
       dom.faultsSection.hidden = simpleBasic;
       dom.doneButton.hidden = simpleBasic || state.operation === "practice";
@@ -3162,9 +3194,6 @@
       dom.measurementHud.hidden = simpleBasic;
       dom.startGuide.hidden = !simpleBasic || state.devices.length > 2 || state.connections.length > 0;
       updateOperationChoices();
-      if (simpleBasic && state.activeZoneType !== "stage" && state.activeZoneType !== "audience" && state.activeZoneType !== "foh") {
-        state.activeZoneType = "stage";
-      }
       if (simpleBasic && !BASIC_DEVICE_TYPES.includes(state.activeEquipmentType)) {
         state.activeEquipmentType = "wired-microphone";
       }
@@ -3209,11 +3238,26 @@
           dom.inspector.innerHTML = "<p class=\"pill bad\">Selected zone missing</p>";
           return;
         }
-        dom.inspector.innerHTML = "<label class=\"field\"><strong>Zone label</strong><input id=\"zoneLabelInput\" type=\"text\" value=\"" + escapeHtml(zone.label) + "\"></label><div class=\"row\"><span class=\"pill\">" + zone.type + "</span><span class=\"pill\">" + Math.round(zone.w) + " ft x " + Math.round(zone.h) + " ft</span><button type=\"button\" id=\"deleteSelectionButton\" class=\"danger\">Delete</button></div>";
+        dom.inspector.innerHTML = "<label class=\"field\"><strong>Location label</strong><input id=\"zoneLabelInput\" type=\"text\" value=\"" + escapeHtml(zone.label) + "\"></label>"
+          + "<div class=\"row\"><label class=\"field\">Width (ft)<input id=\"zoneWidthInput\" type=\"number\" min=\"2\" step=\"1\" value=\"" + Math.round(zone.w) + "\"></label>"
+          + "<label class=\"field\">Depth (ft)<input id=\"zoneHeightInput\" type=\"number\" min=\"2\" step=\"1\" value=\"" + Math.round(zone.h) + "\"></label></div>"
+          + "<div class=\"row\"><span class=\"pill\">" + zone.type + "</span><button type=\"button\" id=\"deleteSelectionButton\" class=\"danger\">Delete</button></div>"
+          + "<p class=\"field\">Drag the location on the plan to move it.</p>";
         const input = document.getElementById("zoneLabelInput");
         input.addEventListener("input", function updateZoneLabel() {
           zone.label = input.value;
           render();
+        });
+        input.addEventListener("change", saveToStorage);
+        const widthInput = document.getElementById("zoneWidthInput");
+        widthInput.addEventListener("change", function updateZoneWidth() {
+          zone.w = Math.max(2, Math.round(Number(widthInput.value) || zone.w));
+          updateAll();
+        });
+        const heightInput = document.getElementById("zoneHeightInput");
+        heightInput.addEventListener("change", function updateZoneHeight() {
+          zone.h = Math.max(2, Math.round(Number(heightInput.value) || zone.h));
+          updateAll();
         });
         bindDeleteButton();
       }
@@ -3616,11 +3660,14 @@
         roundedRect(point.x, point.y, width, height, 6);
         ctx.fill();
         ctx.stroke();
+        // Symbol only — the device name lives in the Selection inspector, not on the plan.
         ctx.fillStyle = "#17212e";
-        ctx.font = "700 12px system-ui";
-        ctx.fillText(definition.icon, point.x + 8, point.y + 17);
-        ctx.font = "11px system-ui";
-        ctx.fillText(device.label, point.x + 8, point.y + Math.min(height - 8, 34));
+        ctx.font = "700 " + Math.max(11, Math.min(18, Math.round(Math.min(width, height) * 0.5))) + "px system-ui";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(definition.icon, point.x + width / 2, point.y + height / 2);
+        ctx.textAlign = "start";
+        ctx.textBaseline = "alphabetic";
         if (definition.speaker) {
           drawAimArrow(device);
         }
@@ -4049,7 +4096,7 @@
       dom.doneButton.addEventListener("click", completeScenario);
       dom.screenshotButton.addEventListener("click", exportScreenshot);
       dom.saveButton.addEventListener("click", function saveProject() {
-        downloadJson("live-sound-system-project.json", serializeProject());
+        downloadJson("live-sound-lab-project.json", serializeProject());
       });
       dom.loadButton.addEventListener("click", function triggerLoad() {
         dom.projectFileInput.click();

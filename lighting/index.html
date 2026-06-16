@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDSCPA - Lighting Cue Trainer</title>
+<title>SDSCPA — Lighting Design Lab</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
 <style>
   :root{
@@ -96,6 +96,12 @@
   .term{border:1px solid var(--ui-dark3);border-radius:6px;padding:6px;background:#101014;font-size:11px;color:var(--text-dim)}
   .term b{display:block;color:var(--text-light);font-size:11px;margin-bottom:2px}
   .ready-summary{border:1px solid var(--ui-dark3);border-radius:7px;background:#101014;padding:8px;font-size:11px;color:var(--text-dim);line-height:1.45}
+  .quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:8px}
+  .quick-grid .tbtn{justify-content:flex-start;font-size:11.5px;padding:7px 8px}
+  .mode-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px}
+  .mode-row .tbtn{padding:7px 6px;font-size:11px}
+  .cmd-help{margin-top:6px;border:1px solid #26354f;background:#08111f;border-radius:6px;padding:7px 8px;color:#bfdbfe;font-size:11px;line-height:1.35}
+  .cmd-help.warn{border-color:#92400e;background:#1b1305;color:#fde68a}
   .section-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .section-row + .section-row{margin-top:8px}
   .field{display:grid;gap:5px;color:var(--text-dim);font-size:11px;min-width:0}
@@ -153,7 +159,7 @@
   .row-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--text-dim);font-size:10.5px;font-family:var(--mono)}
   .level-track{height:5px;background:#050505;border-radius:999px;overflow:hidden}
   .level-fill{height:100%;background:var(--accent);border-radius:999px}
-  .cue-row{grid-template-columns:42px 44px minmax(0,1fr) auto;align-items:center}
+  .cue-row{grid-template-columns:42px 68px minmax(0,1fr) auto;align-items:center}
   .cue-num{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--amber)}
   .cue-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cue-meta{font-family:var(--mono);font-size:10.5px;color:var(--text-dim)}
@@ -168,9 +174,27 @@
   .cue-badge.live{color:#bbf7d0;border-color:#166534}
   .cue-badge.edit{color:#bfdbfe;border-color:#1d4ed8}
   .cue-badge.next{color:#fde68a;border-color:#92400e}
-  .cue-preview{width:44px;height:30px;border:1px solid var(--ui-dark3);border-radius:5px;overflow:hidden;background:#050506;display:grid;grid-template-columns:repeat(3,1fr);align-self:center;position:relative}
+  .cue-preview{width:68px;height:42px;border:1px solid var(--ui-dark3);border-radius:5px;overflow:hidden;background:#050506;display:grid;grid-template-columns:repeat(3,1fr);align-self:center;position:relative}
   .cue-preview span{display:block}
-  .cue-preview i{position:absolute;width:4px;height:7px;border-radius:999px;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.5)}
+  .cue-preview i{position:absolute;width:5px;height:9px;border-radius:999px;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.5)}
+  .cue-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+  .cue-action{
+    border:1px solid var(--ui-dark3);border-radius:5px;background:#101014;color:var(--text-light);
+    padding:4px 6px;font-size:10px;cursor:pointer;font-family:var(--mono);line-height:1;
+  }
+  .cue-action:hover{border-color:var(--accent);background:#172033}
+  .cue-action.go{color:#bbf7d0;border-color:#166534}
+  .cue-action.preview{color:#fde68a;border-color:#92400e}
+  .stage-manager{display:grid;gap:5px;margin-top:8px}
+  .sm-row{
+    display:grid;grid-template-columns:34px minmax(0,1fr) 42px 42px 42px;gap:5px;align-items:center;
+    border:1px solid var(--ui-dark3);border-radius:6px;background:#101014;padding:6px;font-size:10.5px;
+  }
+  .sm-row.head{color:var(--text-dim);font-family:var(--mono);font-weight:800;background:#08080b}
+  .sm-row.live{border-color:var(--ok)}
+  .sm-row.next{border-color:var(--amber)}
+  .sm-row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sm-row button{border:1px solid var(--ui-dark3);border-radius:4px;background:#18181b;color:#f4f4f5;font-size:10px;padding:4px;cursor:pointer}
 
   #stagePanel{position:relative;min-width:0;min-height:0;overflow:hidden;background:#050506}
   #stageCanvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;background:var(--stage)}
@@ -184,6 +208,11 @@
     padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--text-dim);backdrop-filter:blur(5px);
   }
   .hud-item b{color:var(--text-light)}
+  .hud-mini-btn{
+    margin-left:5px;border:1px solid var(--ui-dark3);border-radius:5px;background:#101014;color:#f4f4f5;
+    font-family:var(--mono);font-size:10px;padding:2px 5px;cursor:pointer;
+  }
+  .hud-mini-btn:hover{border-color:var(--accent);background:#172033}
   #playProgress{
     position:absolute;left:12px;right:12px;top:12px;height:8px;border:1px solid rgba(255,255,255,.18);
     border-radius:999px;background:rgba(5,5,6,.6);overflow:hidden;display:none;pointer-events:none;
@@ -267,7 +296,6 @@
     #topbar .back{order:0}
     #topbar .brand{order:1;flex:1;min-width:132px}
     #topbar #resetBtn{order:2}
-    #topbar #performerStyleBtn{order:2}
     #topbar #addPerformerBtn{order:2}
     #topbar #exportBtn{order:2}
     #topbar .transport{order:3;width:100%;justify-content:center;flex-wrap:wrap}
@@ -283,7 +311,7 @@
 <body>
 
 <div id="topbar">
-  <a class="back" href="../" title="Back to all trainers">&lsaquo; Trainers</a>
+  <a class="back" href="../" title="Back to all labs">&lsaquo; Labs</a>
   <div class="brand">
     <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
       <defs><linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
@@ -292,7 +320,7 @@
       </linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="0" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Lighting Cue Trainer</div>
+    <div class="brand-tag">Lighting Design Lab</div>
   </div>
   <div class="transport">
     <button class="tbtn icon" id="prevBtn" title="Previous cue">
@@ -317,13 +345,9 @@
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4L3 7l3 3"/><path d="M3 7h7a3 3 0 1 1 0 6H8"/></svg>
     <span class="txt">Undo</span>
   </button>
-  <button class="tbtn" id="resetBtn" title="Reset trainer">
+  <button class="tbtn" id="resetBtn" title="Reset lab">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5a5 5 0 1 0 1 3"/><path d="M13 2v3h-3"/></svg>
     <span class="txt">Reset</span>
-  </button>
-  <button class="tbtn" id="performerStyleBtn" title="Switch performer rendering style">
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round"><path d="M8 1.8 2.8 4.6 8 7.4l5.2-2.8L8 1.8z"/><path d="M2.8 4.6v6.1L8 14.2V7.4"/><path d="M13.2 4.6v6.1L8 14.2"/></svg>
-    <span class="txt" id="performerStyleText">3D Models</span>
   </button>
   <button class="tbtn" id="addPerformerBtn" title="Add performer">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="4.5" r="2.5"/><path d="M3 14c.7-3.4 2.6-5.2 5-5.2s4.3 1.8 5 5.2"/><path d="M13 2v4M11 4h4"/></svg>
@@ -340,16 +364,25 @@
     <section class="panel-section">
       <h2>Build Cue Stack</h2>
       <div class="guide-card">
-        <b>Make 3 cues</b>
+        <b>Make a cue stack</b>
         <div class="step-strip">
-          <span><i>1</i>Select a channel and set level/color.</span>
-          <span><i>2</i>Move performers or choose poses.</span>
-          <span><i>3</i>Record Current Look.</span>
-          <span><i>4</i>Change the stage picture and record the next cue.</span>
+          <span><i>1</i>Move performers.</span>
+          <span><i>2</i>Aim lights.</span>
+          <span><i>3</i>Pick colors and levels.</span>
+          <span><i>4</i>Record New Cue.</span>
           <span><i>5</i>Press Go to run your show.</span>
         </div>
-        <div class="small-note">Try: <b>1 @ 70 Enter</b> then <b>Record Cue 2 Enter</b>. The @ key sets brightness.</div>
-        <div class="small-note">Ideas: Cue 1 warm start, Cue 2 blue dance look, Cue 3 blackout/end.</div>
+        <div class="small-note">Try: <b>1 @ 70 Enter</b> then <b>Record Cue 2 Time 3 Enter</b>. The @ key sets brightness.</div>
+        <div class="small-note">Ideas: preset, actor special, blue transition, final warm, blackout.</div>
+        <div class="mode-row" id="workflowModes">
+          <button class="tbtn active" data-mode="performers">Move</button>
+          <button class="tbtn" data-mode="focus">Focus</button>
+          <button class="tbtn" data-mode="cues">Cues</button>
+        </div>
+        <div class="quick-grid">
+          <button class="tbtn" id="practiceStackBtn">3-Cue Practice</button>
+          <button class="tbtn" id="shortSceneBtn">Short Scene</button>
+        </div>
         <button class="tbtn" id="startScratchBtn">Start from scratch</button>
       </div>
       <div class="term-grid">
@@ -364,26 +397,27 @@
     <section class="panel-section">
       <h2>EOS Command</h2>
       <div id="cmdDisplay"><span class="prompt">&gt;</span><span id="cmdText"></span></div>
+      <div class="cmd-help" id="cmdHelp">Type commands like 1 @ 70, channel 1 at 70, record cue 2 time 3, cue 2 go, or blackout.</div>
       <div class="keypad" id="keypad">
-        <button class="op" data-cmd="At">@</button>
-        <button class="op" data-cmd="Full">Full</button>
-        <button class="op" data-cmd="Out">Out</button>
         <button data-cmd="7">7</button>
         <button data-cmd="8">8</button>
         <button data-cmd="9">9</button>
-        <button class="op" data-cmd="Thru">Thru</button>
+        <button class="op" data-cmd="At">@</button>
         <button data-cmd="4">4</button>
         <button data-cmd="5">5</button>
         <button data-cmd="6">6</button>
-        <button class="op" data-cmd="+">+</button>
+        <button class="op" data-cmd="Thru">Thru</button>
         <button data-cmd="1">1</button>
         <button data-cmd="2">2</button>
         <button data-cmd="3">3</button>
-        <button class="op" data-cmd="Time">Time</button>
+        <button class="op" data-cmd="+">+</button>
         <button data-cmd="0">0</button>
         <button data-cmd=".">.</button>
+        <button class="op" data-cmd="Full">Full</button>
+        <button class="op" data-cmd="Out">Out</button>
         <button class="op" data-cmd="Record">Record</button>
         <button class="op" data-cmd="Cue">Cue</button>
+        <button class="op" data-cmd="Time">Time</button>
         <button class="clear" data-cmd="Clear">Clear</button>
         <button class="enter" data-cmd="Enter">Enter</button>
       </div>
@@ -391,6 +425,14 @@
 
     <section class="panel-section">
       <h2>Selected Channel</h2>
+      <div class="quick-grid" id="lookPresets">
+        <button class="tbtn" data-preset="warm">Warm Front</button>
+        <button class="tbtn" data-preset="blue">Blue Look</button>
+        <button class="tbtn" data-preset="special">Center Special</button>
+        <button class="tbtn" data-preset="dance">Dance Sides</button>
+        <button class="tbtn" data-preset="cyc">Cyc Rainbow</button>
+        <button class="tbtn danger" data-preset="blackout">Blackout All</button>
+      </div>
       <div class="field full">
         <strong>Channel</strong>
         <select id="fixtureSelect"></select>
@@ -436,7 +478,7 @@
           </select>
         </label>
         <label class="field">Beam
-          <input id="spreadRange" type="range" min="10" max="48" value="28">
+          <input id="spreadRange" type="range" min="10" max="80" value="28">
         </label>
         <label class="field">Focus X
           <input id="focusXRange" type="range" min="8" max="92" value="50">
@@ -454,13 +496,18 @@
   </aside>
 
   <section id="stagePanel">
-    <canvas id="stageCanvas" tabindex="0" aria-label="Lighting trainer stage"></canvas>
+    <canvas id="stageCanvas" tabindex="0" aria-label="Lighting Design Lab stage"></canvas>
     <div id="playProgress"><div id="playProgressFill"></div></div>
     <div class="stage-hud">
       <div class="hud-item" id="selectedHud">Chan <b>1</b> Front Warm</div>
       <div class="hud-item" id="pointerHud">X <b>0</b> Y <b>0</b></div>
       <div class="hud-item" id="playHud">Live edit</div>
       <div class="hud-item" id="zoomHud">Zoom <b>100%</b></div>
+      <div class="hud-item" id="panHud">Pan <b>0</b>
+        <button class="hud-mini-btn" id="panLeftBtn" title="Pan view left">&larr;</button>
+        <button class="hud-mini-btn" id="panResetBtn" title="Center view">Center</button>
+        <button class="hud-mini-btn" id="panRightBtn" title="Pan view right">&rarr;</button>
+      </div>
     </div>
     <div id="focusPanel">
       <h3>Focus Point</h3>
@@ -471,17 +518,7 @@
   <aside class="side" id="right">
     <section class="panel-section">
       <h2>Cue Stack</h2>
-      <div class="ready-summary" id="readySummary">Ready to record: choose a channel, set a look, then record the current stage picture.</div>
-      <div class="section-row">
-        <button class="tbtn primary" id="recordCueBtn">
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5"/></svg>
-          Record Current Look
-        </button>
-        <button class="tbtn" id="addCueBtn">Blank Cue</button>
-        <button class="tbtn" id="updateCueBtn">Save Changes</button>
-        <button class="tbtn" id="compareCueBtn">Compare Previous</button>
-        <button class="tbtn danger" id="deleteCueBtn">Delete</button>
-      </div>
+      <div class="ready-summary" id="readySummary">Suggested order: preset, actor special, blue transition, final warm, blackout.</div>
       <div class="cue-list" id="cueList" style="margin-top:9px"></div>
     </section>
 
@@ -507,6 +544,12 @@
       <label class="field full" style="margin-top:8px">Label
         <input id="cueLabelInput" type="text" value="Warm dance wash">
       </label>
+      <div class="small-note" id="cueEditHint" style="margin-top:8px">Editing selected cue timing and label.</div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Stage Manager</h2>
+      <div class="stage-manager" id="stageManagerView"></div>
     </section>
 
     <section class="panel-section">
@@ -517,13 +560,14 @@
   </aside>
 </main>
 
-<footer id="shortcutHelp" aria-label="Trainer keyboard shortcuts">
+<footer id="shortcutHelp" aria-label="Lab keyboard shortcuts">
   <span class="shortcut-title">Build</span>
   <span class="hint"><span class="kbd">0-9</span><span>channel/level</span></span>
   <span class="hint"><span class="kbd">@</span><span>sets brightness</span></span>
   <span class="hint"><span class="kbd">F</span><span>Full</span></span>
   <span class="hint"><span class="kbd">O</span><span>Out</span></span>
   <span class="hint"><span class="kbd">T</span><span>Thru</span></span>
+  <span class="hint"><span class="kbd">Shift</span><span class="kbd">T</span><span>Time</span></span>
   <span class="shortcut-title">Record</span>
   <span class="hint"><span class="kbd">R</span><span>Record</span></span>
   <span class="hint"><span class="kbd">Q</span><span>Cue</span></span>
@@ -537,12 +581,13 @@
   <span class="hint"><span class="kbd">B</span><span>Back</span></span>
   <span class="hint"><span class="kbd">&larr;</span><span class="kbd">&rarr;</span><span>Last/Next</span></span>
   <span class="hint"><span class="kbd">S</span><span>Stop</span></span>
+  <span class="hint"><span class="kbd">blackout</span><span>all out</span></span>
 </footer>
 
 <div class="modal-back" id="exportModal">
   <div class="modal">
     <h3>Export</h3>
-    <div class="m-sub" id="exportSub">lighting-cue-trainer</div>
+    <div class="m-sub" id="exportSub">lighting-design-lab</div>
     <div class="export-options">
       <button class="export-card" id="exportSceneBtn">
         <b>Save Scene PNG</b>
@@ -552,6 +597,22 @@
         <b>Save Sequence WebM</b>
         <span>Sequence = video of all cues playing with fade and hold timings.</span>
       </button>
+      <button class="export-card" id="exportSelectedVideoBtn">
+        <b>Save From Selected Cue WebM</b>
+        <span>Selected sequence = video starting at the cue you are editing.</span>
+      </button>
+      <button class="export-card" id="exportProjectBtn">
+        <b>Save Editable Project JSON</b>
+        <span>Project backup = cues, channels, performers, timing, and labels.</span>
+      </button>
+      <button class="export-card" id="exportCueSheetBtn">
+        <b>Save Cue Sheet CSV</b>
+        <span>Cue sheet = cue number, label, fade, hold, trigger, and notes.</span>
+      </button>
+      <button class="export-card" id="importProjectBtn">
+        <b>Import Project JSON</b>
+        <span>Restore an editable Lighting Design Lab project backup.</span>
+      </button>
     </div>
     <div class="m-actions">
       <button class="tbtn" id="closeExportBtn">Close</button>
@@ -560,6 +621,7 @@
 </div>
 
 <div id="toast"></div>
+<input id="projectImportInput" type="file" accept="application/json,.json" style="display:none">
 
 <script>
 'use strict';
@@ -631,10 +693,11 @@ const state = {
   selectedCueId: null,
   currentCueIndex: -1,
   command: [],
+  commandRaw: '',
   playback: null,
   autoRun: false,
-  performerStyle: 'model',
   viewZoom: 1,
+  viewPanX: 0,
   focusLocked: false,
   drag: null,
   pointer: {x:0,y:0}
@@ -692,8 +755,8 @@ function stateSnapshot(){
     selectedCueId:state.selectedCueId,
     currentCueIndex:state.currentCueIndex,
     autoRun:state.autoRun,
-    performerStyle:state.performerStyle,
     viewZoom:state.viewZoom,
+    viewPanX:state.viewPanX,
     focusLocked:state.focusLocked
   };
 }
@@ -706,8 +769,8 @@ function restoreStateSnapshot(snap){
   state.selectedCueId = snap.selectedCueId;
   state.currentCueIndex = snap.currentCueIndex;
   state.autoRun = !!snap.autoRun;
-  state.performerStyle = snap.performerStyle || 'model';
   state.viewZoom = snap.viewZoom || 1;
+  state.viewPanX = Number(snap.viewPanX) || 0;
   state.focusLocked = !!snap.focusLocked;
 }
 function pushUndo(){
@@ -908,6 +971,7 @@ function resetTrainer(){
   state.command = [];
   state.autoRun = false;
   state.viewZoom = 1;
+  state.viewPanX = 0;
   state.focusLocked = false;
   state.drag = null;
   $('exportModal').classList.remove('show');
@@ -917,7 +981,7 @@ function resetTrainer(){
   renderAll();
   resizeCanvas();
   save();
-  toast('Trainer reset.', 'good');
+  toast('Lab reset.', 'good');
 }
 function startFromScratch(){
   if (!confirm('Start from scratch with one empty cue? This keeps the plot but clears the current cue stack.')) return;
@@ -950,8 +1014,8 @@ function save(){
         selectedCueId: state.selectedCueId,
         currentCueIndex: state.currentCueIndex,
         autoRun: state.autoRun,
-        performerStyle: state.performerStyle,
         viewZoom: state.viewZoom,
+        viewPanX: state.viewPanX,
         focusLocked: state.focusLocked
       }));
       if ($('saveStatus')) $('saveStatus').innerHTML = 'Saved';
@@ -982,8 +1046,8 @@ function load(){
     state.selectedCueId = data.selectedCueId || (state.cues[0] && state.cues[0].id) || null;
     state.currentCueIndex = Number.isFinite(data.currentCueIndex) ? data.currentCueIndex : -1;
     state.autoRun = !!data.autoRun;
-    state.performerStyle = data.performerStyle === 'drawn' ? 'drawn' : 'model';
     state.viewZoom = clamp(Number(data.viewZoom) || 1, .58, 1.5);
+    state.viewPanX = clamp(Number(data.viewPanX) || 0, -34, 34);
     state.focusLocked = !!data.focusLocked;
     return true;
   } catch (_) {
@@ -1012,23 +1076,6 @@ function renderFocusLock(){
   $('focusLockBtn').classList.toggle('warn', locked);
   $('focusLockBtn').setAttribute('aria-pressed', String(locked));
   $('focusLockText').textContent = locked ? 'Light placement/focus locked' : 'Lock light placement/focus';
-}
-function renderPerformerStyle(){
-  const btn = $('performerStyleBtn');
-  const label = $('performerStyleText');
-  if (!btn || !label) return;
-  const isModel = state.performerStyle !== 'drawn';
-  btn.classList.toggle('active', isModel);
-  btn.setAttribute('aria-pressed', String(isModel));
-  label.textContent = isModel ? '3D Models' : 'Drawn';
-}
-function togglePerformerStyle(){
-  pushUndo();
-  state.performerStyle = state.performerStyle === 'drawn' ? 'model' : 'drawn';
-  renderPerformerStyle();
-  draw();
-  save();
-  toast(state.performerStyle === 'model' ? 'Using low-poly 3D-style performers.' : 'Using drawn mannequin performers.', 'good');
 }
 function toggleFocusLock(){
   state.focusLocked = !state.focusLocked;
@@ -1111,15 +1158,15 @@ function cuePreviewHtml(cue){
   return `<div class="cue-preview" style="background:linear-gradient(90deg,${bg[0]},${bg[1]},${bg[2]})"><span></span><span></span><span></span>${performers}</div>`;
 }
 function renderReadySummary(){
-  const f = selectedFixture();
+  $('readySummary').textContent = 'Suggested order: 1 Preset, 2 Actor Special, 3 Blue Transition, 4 Final Warm, 5 Blackout.';
+}
+function renderCueEditHint(){
   const cue = selectedCue();
-  const live = currentCue();
-  const next = state.cues[state.currentCueIndex + 1] || state.cues[0];
-  const selected = f ? `Selected channel ${f.channel} at ${Math.round(f.intensity)}%.` : 'No channel selected.';
-  const edit = cue ? `Editing cue ${cue.number}.` : 'No cue selected.';
-  const liveText = live ? `Live cue ${live.number}.` : 'No cue is live yet.';
-  const nextText = next ? `Next Go: cue ${next.number}.` : 'No next cue.';
-  $('readySummary').textContent = `${selected} ${edit} ${liveText} ${nextText}`;
+  const el = $('cueEditHint');
+  if (!el) return;
+  el.textContent = cue
+    ? `You are editing Cue ${cue.number}: ${cue.label || 'unlabeled'}. Use Update Selected Cue to save the current stage picture into it.`
+    : 'No cue selected.';
 }
 function updateTransportLabels(){
   const next = state.cues[state.currentCueIndex + 1] || state.cues[0];
@@ -1145,7 +1192,7 @@ function renderCueList(){
         ${live ? '<span class="cue-badge live">LIVE</span>' : ''}
         ${next ? '<span class="cue-badge next">NEXT</span>' : ''}
         ${on ? '<span class="cue-badge edit">EDIT</span>' : ''}
-        <button class="cue-trigger ${trigger}" data-go-cue="${cue.id}" title="Go to Cue ${escapeAttr(cue.number)}">${cue.trigger === 'auto' ? 'AUTO' : 'GO'}</button>
+        <span class="cue-trigger ${trigger}">${cue.trigger === 'auto' ? 'AUTO' : 'GO'}</span>
       </div>
     </div>`;
   }).join('');
@@ -1160,7 +1207,24 @@ function renderCueList(){
   const live = currentCue();
   $('liveCuePill').innerHTML = `Cue <b>${live ? escapeHtml(live.number) : '-'}</b>`;
   renderReadySummary();
+  renderCueEditHint();
+  renderStageManager();
   updateTransportLabels();
+}
+function renderStageManager(){
+  const el = $('stageManagerView');
+  if (!el) return;
+  const rows = state.cues.map((cue,index) => {
+    const cls = index === state.currentCueIndex ? ' live' : (index === state.currentCueIndex + 1 || (state.currentCueIndex < 0 && index === 0) ? ' next' : '');
+    return `<div class="sm-row${cls}">
+      <span>${escapeHtml(cue.number)}</span>
+      <b>${escapeHtml(cue.label || 'Cue')}</b>
+      <span>${Number(cue.fade||0).toFixed(1)}</span>
+      <span>${Number(cue.hold||0).toFixed(1)}</span>
+      <button data-go-cue="${cue.id}">Go</button>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="sm-row head"><span>Cue</span><span>Label</span><span>Fade</span><span>Hold</span><span>Go</span></div>${rows}`;
 }
 function renderPerformers(){
   $('performerList').innerHTML = state.performers.map(p => {
@@ -1218,7 +1282,6 @@ function renderPerformerEditor(){
 function renderAll(){
   buildFixtureSelect();
   renderFocusLock();
-  renderPerformerStyle();
   renderFixtureControls();
   renderChannelList();
   renderCueList();
@@ -1257,6 +1320,12 @@ function updateFixtureFromControls(pushCommand){
 function setCommandText(text){
   $('cmdText').textContent = text || '';
 }
+function setCommandHelp(text, type=''){
+  const el = $('cmdHelp');
+  if (!el) return;
+  el.textContent = text || 'Type commands like 1 @ 70, channel 1 at 70, record cue 2 time 3, cue 2 go, or blackout.';
+  el.classList.toggle('warn', type === 'warn');
+}
 function commandDisplayText(tokens){
   const parts = [];
   let num = '';
@@ -1275,14 +1344,69 @@ function commandDisplayText(tokens){
   return parts.join(' ');
 }
 function syncCommandDisplay(){
-  setCommandText(commandDisplayText(state.command));
+  setCommandText(state.commandRaw || commandDisplayText(state.command));
+  const tokens = commandTokens();
+  if (tokens.includes('Record') && tokens.includes('Thru') && !tokens.includes('Time')) {
+    setCommandHelp('That looks like a record-time command. Use Time, Shift+T, or type "record cue 2 time 3".', 'warn');
+  } else {
+    setCommandHelp('');
+  }
 }
 function clearEosLine(){
   state.command = [];
+  state.commandRaw = '';
   state.selectedFixtureId = null;
   setCommandText('');
+  setCommandHelp('');
   renderAll();
   save();
+}
+function tokenizeRawCommand(raw){
+  const source = String(raw || '').trim();
+  if (!source) return [];
+  if (/^blackout$/i.test(source) || /^black\s*out$/i.test(source)) return ['Blackout'];
+  if (/^[rqtfou\s]+$/i.test(source)) {
+    const map = {r:'Record',q:'Cue',t:'Time',f:'Full',o:'Out',u:'Update'};
+    return source.replace(/\s+/g,'').split('').map(ch => map[ch.toLowerCase()]).filter(Boolean);
+  }
+  const parts = source
+    .replace(/@/g,' At ')
+    .replace(/\+/g,' + ')
+    .replace(/\//g,' Thru ')
+    .replace(/\bthru\b/gi,' Thru ')
+    .replace(/\bthrough\b/gi,' Thru ')
+    .replace(/\bchannel\b/gi,' Chan ')
+    .replace(/\bchan\b/gi,' Chan ')
+    .replace(/\bat\b/gi,' At ')
+    .replace(/\bfull\b/gi,' Full ')
+    .replace(/\bout\b/gi,' Out ')
+    .replace(/\brecord\b/gi,' Record ')
+    .replace(/\bcue\b/gi,' Cue ')
+    .replace(/\btime\b/gi,' Time ')
+    .replace(/\bupdate\b/gi,' Update ')
+    .replace(/\bgo\s*to\b/gi,' Go ')
+    .replace(/\bgo\b/gi,' Go ')
+    .replace(/\blabel\b/gi,' Label ')
+    .split(/\s+/)
+    .filter(Boolean);
+  const tokens = [];
+  const shortcutParts = {r:'Record',q:'Cue',f:'Full',o:'Out',u:'Update',a:'At'};
+  parts.forEach(part => {
+    if (/^\d+(\.\d+)?$/.test(part)) {
+      String(part).split('').forEach(ch => tokens.push(ch));
+    } else if (['Chan','At','Full','Out','Thru','+','Record','Cue','Time','Update','Go','Label'].includes(part)) {
+      tokens.push(part);
+    } else if (part.toLowerCase() === 't') {
+      tokens.push(tokens.includes('Record') || tokens[0] === 'Cue' ? 'Time' : 'Thru');
+    } else if (shortcutParts[part.toLowerCase()]) {
+      tokens.push(shortcutParts[part.toLowerCase()]);
+    }
+  });
+  if (/^\s*r\s+q\s+/i.test(source)) tokens.splice(0, tokens.length, ...source.trim().split(/\s+/).flatMap(p => tokenizeRawCommand(({r:'record',q:'cue',t:'time',f:'full',o:'out'}[p.toLowerCase()] || p))));
+  return tokens;
+}
+function commandTokens(){
+  return state.commandRaw ? tokenizeRawCommand(state.commandRaw) : state.command.slice();
 }
 
 function readNumber(tokens, start){
@@ -1348,26 +1472,127 @@ function applyLevelToChannels(channels, level){
   if (firstFixture) state.selectedFixtureId = firstFixture.id;
   setCommandText(`${channels.join('+')} @ ${clamp(level,0,100)}`);
   state.command = [];
+  state.commandRaw = '';
   renderAll();
   save();
   toast(`Channel${channels.length > 1 ? 's' : ''} ${channels.join(', ')} set to ${Math.round(clamp(level,0,100))}%.`, 'good');
 }
+function setFixtureLevels(levels, colors={}){
+  state.fixtures.forEach(f => {
+    if (Object.prototype.hasOwnProperty.call(levels, f.channel)) f.intensity = clamp(Number(levels[f.channel]) || 0, 0, 100);
+    if (colors[f.channel]) f.color = colors[f.channel];
+  });
+}
+function blackoutAll(record=false){
+  pushUndo();
+  state.fixtures.forEach(f => { f.intensity = 0; });
+  setCommandText('Blackout');
+  state.command = [];
+  renderAll();
+  save();
+  toast(record ? 'Blackout ready to record.' : 'All channels out.', 'good');
+}
+function applyLookPreset(name){
+  pushUndo();
+  if (name === 'blackout') {
+    state.fixtures.forEach(f => { f.intensity = 0; });
+  } else if (name === 'warm') {
+    setFixtureLevels({1:70,2:18,7:25,9:12,17:0},{1:'#ffd7a6',2:'#b7d7ff',7:'#ffffff',9:'#ffb86c'});
+  } else if (name === 'blue') {
+    setFixtureLevels({1:12,2:30,3:55,4:55,8:35,13:65,14:10,15:22,16:45},{2:'#b7d7ff',3:'#7db7ff',4:'#9d7cff',8:'#3850c7',13:'#3b82f6'});
+  } else if (name === 'special') {
+    setFixtureLevels({1:28,2:8,7:15,17:70},{17:'#fff0bd'});
+  } else if (name === 'dance') {
+    setFixtureLevels({1:8,2:10,3:70,4:70,5:55,6:55,8:42,10:30},{3:'#8ab4ff',4:'#ff7ab8',5:'#63e6be',6:'#f6d365'});
+  } else if (name === 'cyc') {
+    setFixtureLevels({14:65,15:65,16:65},{14:'#ff4b5c',15:'#6ee7b7',16:'#60a5fa'});
+  }
+  autoLabelFromCurrent(name);
+  renderAll();
+  save();
+  toast(`${presetLabel(name)} look applied.`, 'good');
+}
+function presetLabel(name){
+  return ({warm:'Warm Front',blue:'Blue Look',special:'Center Special',dance:'Dance Sides',cyc:'Cyc Rainbow',blackout:'Blackout'})[name] || 'Preset';
+}
+function autoLabelFromCurrent(label){
+  const cue = selectedCue();
+  const text = presetLabel(label);
+  if ($('cueLabelInput') && (!cue || !$('cueLabelInput').value || /^Cue \d+$/.test($('cueLabelInput').value) || $('cueLabelInput').value === cue.label)) {
+    $('cueLabelInput').value = text;
+  }
+}
+function cueSnapshotFromLook(number,label,fade,hold,trigger,levels,colors,performers){
+  const prevLevels = state.fixtures.map(f => ({id:f.id,intensity:f.intensity,color:f.color}));
+  state.fixtures.forEach(f => { f.intensity = 0; });
+  setFixtureLevels(levels, colors || {});
+  const cue = makeCue(number, label, fade, hold, trigger || 'manual', state.fixtures.map(fixtureCueMutable), performers || state.performers.map(performerMutable));
+  prevLevels.forEach(prev => {
+    const f = fixtureById(prev.id);
+    if (f) { f.intensity = prev.intensity; f.color = prev.color; }
+  });
+  return cue;
+}
+function installPracticeStack(kind){
+  if (!confirm(`Replace the current cue stack with the ${kind === 'scene' ? 'Short Scene' : '3-Cue Practice'} template?`)) return;
+  pushUndo();
+  state.fixtures = clone(DEFAULT_FIXTURES);
+  state.performers = clone(START_PERFORMERS);
+  const basePerformers = state.performers.map(performerMutable);
+  if (kind === 'scene') {
+    state.cues = [
+      cueSnapshotFromLook(1,'Preset / House Warm',3,1,'manual',{1:55,2:18,7:22,9:8},{},basePerformers),
+      cueSnapshotFromLook(2,'Actor Special',2,1,'manual',{1:32,2:8,7:15,17:65},{17:'#fff0bd'},basePerformers.map((p,i)=>Object.assign({},p,{x:[35,50,65][i]||p.x,y:[39,34,39][i]||p.y,pose:i===1?'reach':p.pose}))),
+      cueSnapshotFromLook(3,'Blue Transition',4,1,'manual',{1:5,2:25,3:60,4:60,8:35,13:65,14:10,15:25,16:55},{},basePerformers.map((p,i)=>Object.assign({},p,{x:[30,50,70][i]||p.x,y:[43,35,29][i]||p.y,pose:['walk','open','reach'][i]||p.pose}))),
+      cueSnapshotFromLook(4,'Final Warm Look',3,0,'manual',{1:65,2:15,7:28,9:10,17:25},{},basePerformers)
+    ];
+  } else {
+    state.cues = [
+      cueSnapshotFromLook(1,'Warm Intro',3,1,'manual',{1:68,2:15,7:25,9:10,14:30,15:16,16:8},{14:'#ffb86c',15:'#ffd166',16:'#fff0bd'},basePerformers),
+      cueSnapshotFromLook(2,'Colorful Dance Look',2.5,1,'manual',{1:8,2:12,3:70,4:70,5:55,6:55,8:38,10:30,11:35,12:30,13:45,14:35,15:55,16:55},{},basePerformers.map((p,i)=>Object.assign({},p,{x:[30,50,70][i]||p.x,y:[42,34,42][i]||p.y,pose:['walk','reach','open'][i]||p.pose}))),
+      cueSnapshotFromLook(3,'Blackout',1,0,'manual',Object.fromEntries(state.fixtures.map(f=>[f.channel,0])),{},basePerformers)
+    ];
+  }
+  sortCues();
+  state.selectedCueId = state.cues[0].id;
+  state.currentCueIndex = -1;
+  applySnapshot(state.cues[0].snapshot);
+  renderAll();
+  save();
+  toast(`${kind === 'scene' ? 'Short Scene' : '3-Cue Practice'} template loaded.`, 'good');
+}
 function executeCommand(){
-  const tokens = state.command.slice();
+  const tokens = commandTokens();
   if (!tokens.length) return;
+  if (tokens[0] === 'Blackout') {
+    blackoutAll();
+    return;
+  }
   if (tokens.includes('Update')) {
     state.command = [];
+    state.commandRaw = '';
     updateSelectedCue();
     setCommandText('Update');
     return;
   }
   if (tokens.includes('Record')) {
+    if (tokens.includes('Thru') && !tokens.includes('Time')) {
+      setCommandHelp('Record command includes Thru but no Time. Type "record cue 2 time 3" or use Shift+T for Time.', 'warn');
+      toast('Use Time for cue fade time, not Thru.', 'warn');
+      return;
+    }
     const cueIdx = tokens.indexOf('Cue');
     const num = cueIdx >= 0 ? (readNumber(tokens, cueIdx + 1).value || nextCueNumber()) : ($('cueNumberInput').value || nextCueNumber());
     const timeIdx = tokens.indexOf('Time');
     const fade = timeIdx >= 0 ? (readNumber(tokens, timeIdx + 1).value ?? 3) : Number($('cueFadeInput').value || 3);
+    const labelIdx = tokens.indexOf('Label');
+    if (labelIdx >= 0 && state.commandRaw) {
+      const match = state.commandRaw.match(/\blabel\s+(.+)$/i);
+      if (match) $('cueLabelInput').value = match[1].trim();
+    }
     recordCue(String(num), fade);
     state.command = [];
+    state.commandRaw = '';
     setCommandText(`Record Cue ${num}${timeIdx >= 0 ? ` Time ${fade}` : ''}`);
     return;
   }
@@ -1376,6 +1601,7 @@ function executeCommand(){
     const index = state.cues.findIndex(c=>Number(c.number) === num);
     if (index >= 0) {
       state.command = [];
+      state.commandRaw = '';
       const timeIdx = tokens.indexOf('Time');
       if (timeIdx >= 0) {
         state.cues[index].fade = readNumber(tokens, timeIdx + 1).value ?? state.cues[index].fade;
@@ -1417,6 +1643,7 @@ function executeCommand(){
     return;
   }
   toast('Command not recognized.', 'warn');
+  setCommandHelp('Command not recognized. Try "1 @ 70", "record cue 2 time 3", "cue 2 go", or "blackout".', 'warn');
 }
 function keypadCommand(cmd){
   if (cmd === 'Clear') {
@@ -1427,6 +1654,7 @@ function keypadCommand(cmd){
     executeCommand();
     return;
   }
+  state.commandRaw = '';
   state.command.push(cmd);
   syncCommandDisplay();
 }
@@ -1449,25 +1677,36 @@ function commandTokenFromKey(event){
 }
 function handleCommandKey(event){
   if (event.ctrlKey || event.metaKey || event.altKey) return false;
-  if (event.key === 'Enter' && state.command.length) {
+  if (event.key === 'Enter' && (state.command.length || state.commandRaw)) {
     event.preventDefault();
     executeCommand();
     return true;
   }
-  if (event.key === 'Backspace' && state.command.length) {
+  if (event.key === 'Backspace' && (state.command.length || state.commandRaw)) {
     event.preventDefault();
-    state.command.pop();
+    if (state.commandRaw) state.commandRaw = state.commandRaw.slice(0,-1);
+    else state.command.pop();
     syncCommandDisplay();
     return true;
   }
-  if (event.code === 'Space' && state.command.length) {
+  if (event.code === 'Space' && (state.command.length || state.commandRaw)) {
     event.preventDefault();
+    state.commandRaw += ' ';
+    syncCommandDisplay();
     return true;
   }
   const token = commandTokenFromKey(event);
-  if (token) {
+  if (token && !state.commandRaw) {
     event.preventDefault();
     state.command.push(token);
+    syncCommandDisplay();
+    return true;
+  }
+  if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault();
+    if (!state.commandRaw && state.command.length) state.commandRaw = commandDisplayText(state.command) + event.key;
+    else state.commandRaw += event.key;
+    state.command = [];
     syncCommandDisplay();
     return true;
   }
@@ -1476,6 +1715,11 @@ function handleCommandKey(event){
 function handleTransportKey(event){
   if (event.ctrlKey || event.metaKey || event.altKey || state.command.length) return false;
   const key = event.key.toLowerCase();
+  if (event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    event.preventDefault();
+    setStagePan((state.viewPanX || 0) + (event.key === 'ArrowRight' ? 5 : -5));
+    return true;
+  }
   if (event.code === 'Space') {
     event.preventDefault();
     goNext();
@@ -1625,6 +1869,19 @@ function selectCue(id, apply){
   renderAll();
   save();
 }
+function previewCue(id){
+  const cue = cueById(id);
+  if (!cue) return;
+  state.selectedCueId = cue.id;
+  applySnapshot(cue.snapshot);
+  $('playHud').textContent = `Previewing cue ${cue.number}`;
+  renderAll();
+  save();
+}
+function editCue(id){
+  selectCue(id, false);
+  toast(`Editing Cue ${selectedCue()?.number || ''}.`, 'good');
+}
 
 function runCue(index){
   if (!state.cues[index]) return;
@@ -1633,14 +1890,16 @@ function runCue(index){
   state.selectedCueId = cue.id;
   state.playback = {
     index,
+    phase:'fade',
     from: makeSnapshot(),
     to: clone(cue.snapshot),
     start: performance.now(),
     fadeMs: Math.max(0.01, Number(cue.fade || 0)) * 1000,
     timer: null
   };
-  $('playHud').textContent = `Running cue ${cue.number}`;
+  $('playHud').textContent = `Fading: Cue ${cue.number}`;
   updatePlaybackProgress(0, true);
+  renderCueList();
   requestAnimationFrame(playbackFrame);
 }
 function runCueById(id){
@@ -1660,6 +1919,11 @@ function playbackFrame(ts){
   const p = state.playback;
   const t = clamp((ts - p.start) / p.fadeMs, 0, 1);
   updatePlaybackProgress(t, true);
+  const cue = state.cues[p.index];
+  if (cue) {
+    const left = Math.max(0, (p.fadeMs - (ts - p.start)) / 1000);
+    $('playHud').textContent = `Fading: Cue ${cue.number}, ${left.toFixed(1)}s left`;
+  }
   interpolateSnapshot(p.from, p.to, t);
   draw();
   renderFixtureControls();
@@ -1687,12 +1951,14 @@ function scheduleAutoAdvance(){
   if (state.autoRun || next.trigger === 'auto') {
     const holdMs = Math.max(0, Number(cue.hold || 0)) * 1000;
     const holdStart = performance.now();
-    state.playback = {timer:setTimeout(()=>runCue(state.currentCueIndex + 1), holdMs), hold:true};
-    $('playHud').textContent = `Holding cue ${cue.number}`;
+    state.playback = {timer:setTimeout(()=>runCue(state.currentCueIndex + 1), holdMs), hold:true, phase:'hold', cueNumber:cue.number, holdMs, holdStart};
+    $('playHud').textContent = `Holding: Cue ${cue.number}`;
     const tick = () => {
       if (!state.playback || !state.playback.hold) return;
-      updatePlaybackProgress(holdMs ? (performance.now() - holdStart) / holdMs : 1, true);
-      if (performance.now() - holdStart < holdMs) requestAnimationFrame(tick);
+      const elapsed = performance.now() - holdStart;
+      updatePlaybackProgress(holdMs ? elapsed / holdMs : 1, true);
+      $('playHud').textContent = `Holding: Cue ${cue.number}, ${Math.max(0,(holdMs-elapsed)/1000).toFixed(1)}s left`;
+      if (elapsed < holdMs) requestAnimationFrame(tick);
     };
     tick();
   }
@@ -1711,6 +1977,11 @@ function goNext(){
   if (state.playback && !state.playback.hold) return;
   const next = state.currentCueIndex < 0 ? 0 : Math.min(state.currentCueIndex + 1, state.cues.length - 1);
   runCue(next);
+}
+function runFromTop(){
+  if (!state.cues.length) return;
+  state.currentCueIndex = -1;
+  runCue(0);
 }
 function goPrev(){
   const prev = state.currentCueIndex <= 0 ? 0 : state.currentCueIndex - 1;
@@ -1757,6 +2028,8 @@ function resizeCanvas(){
 }
 function updateZoomHud(){
   $('zoomHud').innerHTML = `Zoom <b>${Math.round((state.viewZoom || 1) * 100)}%</b>`;
+  const pan = $('panHud');
+  if (pan) pan.querySelector('b').textContent = String(Math.round(state.viewPanX || 0));
 }
 function setStageZoom(value){
   state.viewZoom = clamp(value, .58, 1.5);
@@ -1764,9 +2037,20 @@ function setStageZoom(value){
   draw();
   save();
 }
+function setStagePan(value){
+  state.viewPanX = clamp(value, -34, 34);
+  updateZoomHud();
+  draw();
+  save();
+}
 function onStageWheel(event){
   if (event.ctrlKey) return;
   event.preventDefault();
+  if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+    const delta = event.shiftKey ? event.deltaY : event.deltaX;
+    setStagePan((state.viewPanX || 0) + (delta > 0 ? 2.5 : -2.5));
+    return;
+  }
   const step = event.deltaY > 0 ? -.08 : .08;
   setStageZoom((state.viewZoom || 1) + step);
 }
@@ -1783,7 +2067,8 @@ function computeLayout(width,height){
   const zoom = clamp(state.viewZoom || 1, .58, 1.5);
   w *= 1.5 * zoom;
   h *= 1.5 * zoom;
-  const x = (width - w) / 2;
+  const panPx = clamp(state.viewPanX || 0, -34, 34) * w / 100;
+  const x = (width - w) / 2 + panPx;
   const y = padTop + (availH - h) / 2;
   const focal = Math.min(w * .56, h * 1.95);
   layout = {
@@ -1856,7 +2141,7 @@ function sourceFor(f){
   if (f.direction === 'left') return {x:-10, y:f.targetY};
   if (f.direction === 'right') return {x:110, y:f.targetY};
   if (f.direction === 'foot') return {x:f.targetX, y:64};
-  return {x:f.targetX, y:-7};
+  return {x:f.targetX, y:-22, z:24};
 }
 function draw(){
   const rect = canvas.getBoundingClientRect();
@@ -2086,38 +2371,73 @@ function drawLightBeams(){
   state.fixtures.filter(f=>f.group !== 'Cyc' && f.intensity > 0).forEach(drawBeam);
   ctx.restore();
 }
+function fixtureConeGeometry(f){
+  const src = sourceFor(f);
+  const target = {x:Number(f.targetX) || 50, y:Number(f.targetY) || 35};
+  const vx = target.x - src.x;
+  const vy = target.y - src.y;
+  const len = Math.hypot(vx, vy) || 1;
+  const ux = vx / len;
+  const uy = vy / len;
+  const px = -uy;
+  const py = ux;
+  const spread = Number(f.spread) || 24;
+  return {src,target,len,ux,uy,px,py,nearWidth:Math.max(1.2, spread*.05),farWidth:Math.max(2, spread*.58)};
+}
+function fixtureConeAt(f, x, y){
+  if (!f || f.intensity <= 0 || f.group === 'Cyc') return 0;
+  const cone = fixtureConeGeometry(f);
+  const dx = x - cone.src.x;
+  const dy = y - cone.src.y;
+  const along = dx*cone.ux + dy*cone.uy;
+  if (along < 0 || along > cone.len) return 0;
+  const cross = Math.abs(dx*cone.uy - dy*cone.ux);
+  const t = clamp(along / cone.len, 0, 1);
+  const halfWidth = lerp(cone.nearWidth, cone.farWidth, Math.pow(t, .82));
+  const edge = clamp(1 - cross / halfWidth, 0, 1);
+  if (edge <= 0) return 0;
+  const throwFalloff = clamp(.38 + t * .9, .28, 1.08);
+  const focusBoost = Math.pow(clamp(1 - Math.hypot(x - cone.target.x, y - cone.target.y) / Math.max(4, (Number(f.spread)||24)*.72), 0, 1), 1.35) * .28;
+  return Math.pow(edge, 1.45) * throwFalloff * (1 + focusBoost) * (f.intensity/100);
+}
 function drawBeam(f){
+  const coneWorld = fixtureConeGeometry(f);
   const source = worldToScreen(sourceFor(f));
   const target = worldToScreen({x:f.targetX,y:f.targetY});
-  const radius = f.spread * target.scale * .95;
+  const edgeA = worldToScreen({x:coneWorld.target.x + coneWorld.px*coneWorld.farWidth, y:coneWorld.target.y + coneWorld.py*coneWorld.farWidth});
+  const edgeB = worldToScreen({x:coneWorld.target.x - coneWorld.px*coneWorld.farWidth, y:coneWorld.target.y - coneWorld.py*coneWorld.farWidth});
+  const radius = Math.max(6, Math.hypot(edgeA.x - target.x, edgeA.y - target.y));
   const alpha = clamp(f.intensity/100,0,1);
   const dx = target.x - source.x;
   const dy = target.y - source.y;
-  const len = Math.hypot(dx,dy) || 1;
-  const nx = -dy / len;
-  const ny = dx / len;
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(source.x,source.y);
-  ctx.lineTo(target.x + nx*radius*.82, target.y + ny*radius*.48);
-  ctx.lineTo(target.x - nx*radius*.82, target.y - ny*radius*.48);
+  ctx.lineTo(edgeA.x, edgeA.y);
+  ctx.lineTo(edgeB.x, edgeB.y);
   ctx.closePath();
   const cone = ctx.createLinearGradient(source.x,source.y,target.x,target.y);
-  cone.addColorStop(0, rgba(f.color, alpha*.15));
-  cone.addColorStop(1, rgba(f.color, alpha*.025));
+  cone.addColorStop(0, rgba(f.color, alpha*.26));
+  cone.addColorStop(.18, rgba(f.color, alpha*.18));
+  cone.addColorStop(1, rgba(f.color, alpha*.06));
   ctx.fillStyle = cone;
   ctx.fill();
-  ctx.translate(target.x,target.y);
-  ctx.rotate(Math.atan2(dy,dx)+Math.PI/2);
-  const pool = ctx.createRadialGradient(0,0,0,0,0,radius);
-  pool.addColorStop(0, rgba(f.color, alpha*.42));
-  pool.addColorStop(.62, rgba(f.color, alpha*.22));
-  pool.addColorStop(1, rgba(f.color, 0));
-  ctx.fillStyle = pool;
-  ctx.beginPath();
-  ctx.ellipse(0,0,radius*.9,radius*.46,0,0,Math.PI*2);
-  ctx.fill();
-  if (f.gobo && f.gobo !== 'open') drawGoboPattern(f, radius);
+  ctx.strokeStyle = rgba(f.color, alpha*.18);
+  ctx.lineWidth = Math.max(1, target.scale * 1.2);
+  ctx.stroke();
+  if (f.direction === 'top') {
+    ctx.clip();
+    ctx.translate(target.x,target.y);
+    const pool = ctx.createRadialGradient(0,0,0,0,0,radius);
+    pool.addColorStop(0, rgba(f.color, alpha*.42));
+    pool.addColorStop(.62, rgba(f.color, alpha*.22));
+    pool.addColorStop(1, rgba(f.color, 0));
+    ctx.fillStyle = pool;
+    ctx.beginPath();
+    ctx.ellipse(0,0,radius*.9,radius*.46,0,0,Math.PI*2);
+    ctx.fill();
+    if (f.gobo && f.gobo !== 'open') drawGoboPattern(f, radius);
+  }
   ctx.restore();
 }
 function drawGoboPattern(f, radius){
@@ -2175,10 +2495,7 @@ function lightAt(x,y){
   const acc = {r:28,g:30,b:38,a:.22};
   state.fixtures.forEach(f => {
     if (f.intensity <= 0 || f.group === 'Cyc') return;
-    const dx = (x - f.targetX) / Math.max(1, f.spread*.85);
-    const dy = (y - f.targetY) / Math.max(1, f.spread*.55);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const amount = Math.pow(clamp(1 - dist, 0, 1), 1.35) * (f.intensity/100);
+    const amount = fixtureConeAt(f, x, y);
     if (amount > 0) addLightColor(acc, f.color, amount);
   });
   return {
@@ -2191,10 +2508,7 @@ function performerVisibility(p){
   let level = 0;
   state.fixtures.forEach(f => {
     if (f.intensity <= 0 || f.group === 'Cyc') return;
-    const dx = (p.x - f.targetX) / Math.max(1, f.spread*.78);
-    const dy = (p.y - f.targetY) / Math.max(1, f.spread*.48);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const amount = Math.pow(clamp(1 - dist, 0, 1), 1.18) * (f.intensity/100);
+    const amount = fixtureConeAt(f, p.x, p.y);
     if (amount > .08) hits.push(f.channel);
     level += amount;
   });
@@ -2235,10 +2549,7 @@ function performerLighting(p){
     if (f.intensity <= 0) return;
     let amount = 0;
     if (f.group === 'Cyc') return;
-    const dx = (p.x - f.targetX) / Math.max(1, f.spread*.78);
-    const dy = (p.y - f.targetY) / Math.max(1, f.spread*.48);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    amount = Math.pow(clamp(1 - dist, 0, 1), 1.18) * (f.intensity/100) * 1.42;
+    amount = fixtureConeAt(f, p.x, p.y) * 1.42;
     if (amount <= 0) return;
     const src = sourceFor(f);
     const sx = src.x - p.x;
@@ -2434,15 +2745,11 @@ function drawPerformers(){
     .forEach(p => drawPerformer(p));
 }
 function drawPerformer(p){
-  if (state.performerStyle !== 'drawn') {
-    drawLowPolyPerformer(p);
-    return;
-  }
-  drawDrawnPerformer(p);
+  drawLowPolyPerformer(p);
 }
 function drawLowPolyPerformer(p){
   const s = worldToScreen({x:p.x,y:p.y});
-  const scale = s.scale * (p.size || 1) * .62;
+  const scale = s.scale * (p.size || 1) * .74;
   const light = performerLighting(p);
   const selected = p.id === state.selectedPerformerId;
   const pose = performerPose(p.pose || 'standing');
@@ -2654,7 +2961,7 @@ function drawPerformerLabel(p, s, scale){
 }
 function drawDrawnPerformer(p){
   const s = worldToScreen({x:p.x,y:p.y});
-  const scale = s.scale * (p.size || 1) * .58;
+  const scale = s.scale * (p.size || 1) * .69;
   const light = performerLighting(p);
   const skinFill = materialGradient(p.skin, light, -18, 18, .62);
   const costumeFill = materialGradient(p.costume, light, -18, 18, .74);
@@ -3163,13 +3470,14 @@ function animateExportFade(from, to, fadeMs){
     requestAnimationFrame(step);
   });
 }
-async function exportSequenceVideo(){
+async function exportSequenceVideo(startAtSelected=false){
   $('exportModal').classList.remove('show');
   if (!canvas.captureStream || !window.MediaRecorder) {
     toast('Video export is not supported in this browser.', 'bad');
     return;
   }
-  const suggestedName = `lighting-sequence-${nowFileStamp()}.webm`;
+  const startIndex = startAtSelected ? Math.max(0, state.cues.findIndex(c=>c.id === state.selectedCueId)) : 0;
+  const suggestedName = `${startAtSelected ? 'lighting-selected-sequence' : 'lighting-sequence'}-${nowFileStamp()}.webm`;
   const videoTypes = [{
     description:'WebM video',
     accept:{'video/webm':['.webm']}
@@ -3187,7 +3495,7 @@ async function exportSequenceVideo(){
   recorder.start();
   toast('Recording cue sequence...', 'warn');
   try {
-    for (let i=0; i<state.cues.length; i++) {
+    for (let i=startIndex; i<state.cues.length; i++) {
       const cue = state.cues[i];
       const from = makeSnapshot();
       await animateExportFade(from, cue.snapshot, Number(cue.fade || 0) * 1000);
@@ -3203,6 +3511,83 @@ async function exportSequenceVideo(){
   }
   const blob = new Blob(chunks, {type:'video/webm'});
   await saveBlob(blob, suggestedName, videoTypes, fileTarget);
+}
+async function exportProjectJson(){
+  $('exportModal').classList.remove('show');
+  const payload = {
+    app:'SDSCPA Lighting Design Lab',
+    version:1,
+    exportedAt:new Date().toISOString(),
+    fixtures:state.fixtures.map(fixtureMutable),
+    performers:state.performers.map(performerMutable),
+    cues:state.cues,
+    selectedCueId:state.selectedCueId,
+    currentCueIndex:state.currentCueIndex,
+    viewZoom:state.viewZoom,
+    viewPanX:state.viewPanX,
+    focusLocked:state.focusLocked
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  await saveBlob(blob, `lighting-project-${nowFileStamp()}.json`, [{
+    description:'JSON project',
+    accept:{'application/json':['.json']}
+  }]);
+}
+function csvCell(value){
+  const text = String(value ?? '');
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g,'""')}"` : text;
+}
+async function exportCueSheetCsv(){
+  $('exportModal').classList.remove('show');
+  const lines = [['Cue','Label','Fade','Hold','Trigger','Notes'].map(csvCell).join(',')];
+  state.cues.forEach((cue,index) => {
+    const next = state.cues[index+1];
+    const note = `${index === state.currentCueIndex ? 'LIVE ' : ''}${next ? `Next ${next.number}` : 'End of stack'}`;
+    lines.push([cue.number,cue.label,Number(cue.fade||0).toFixed(1),Number(cue.hold||0).toFixed(1),cue.trigger || 'manual',note].map(csvCell).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  await saveBlob(blob, `lighting-cue-sheet-${nowFileStamp()}.csv`, [{
+    description:'CSV cue sheet',
+    accept:{'text/csv':['.csv']}
+  }]);
+}
+function importProjectJsonFile(file){
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result || '{}'));
+      if (!data || !Array.isArray(data.fixtures) || !Array.isArray(data.cues)) throw new Error('Invalid project');
+      if (!confirm('Import this project and replace the current lab state?')) return;
+      pushUndo();
+      state.fixtures = DEFAULT_FIXTURES.map(def => mergeSavedFixture(def, data.fixtures.find(f=>f.id===def.id || f.channel===def.channel)));
+      state.performers = Array.isArray(data.performers) ? data.performers.map(p=>Object.assign({pose:'standing'}, p)) : clone(START_PERFORMERS);
+      state.cues = data.cues.map(c => {
+        const snap = normalizeSnapshot(c.snapshot);
+        return Object.assign({}, c, {
+          id:c.id || 'cue-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+          snapshot:{fixtures:snap.fixtures.map(fixtureCueMutable), performers:snap.performers.map(performerMutable)}
+        });
+      });
+      if (!state.cues.length) seedCues();
+      sortCues();
+      state.selectedFixtureId = data.selectedFixtureId || state.fixtures[0]?.id || null;
+      state.selectedPerformerId = data.selectedPerformerId || null;
+      state.selectedCueId = data.selectedCueId || state.cues[0]?.id || null;
+      state.currentCueIndex = Number.isFinite(data.currentCueIndex) ? data.currentCueIndex : -1;
+      state.viewZoom = clamp(Number(data.viewZoom) || 1, .58, 1.5);
+      state.viewPanX = clamp(Number(data.viewPanX) || 0, -34, 34);
+      state.focusLocked = !!data.focusLocked;
+      renderAll();
+      save();
+      toast('Project imported.', 'good');
+    } catch (err) {
+      toast('Could not import that project JSON.', 'bad');
+    } finally {
+      $('projectImportInput').value = '';
+    }
+  };
+  reader.readAsText(file);
 }
 async function chooseSaveTarget(suggestedName, types){
   if (window.showSaveFilePicker) {
@@ -3287,9 +3672,27 @@ function bindEvents(){
       runCueById(goBtn.dataset.goCue);
       return;
     }
+    const previewBtn = event.target.closest('[data-preview-cue]');
+    if (previewBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      previewCue(previewBtn.dataset.previewCue);
+      return;
+    }
+    const editBtn = event.target.closest('[data-edit-cue]');
+    if (editBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      editCue(editBtn.dataset.editCue);
+      return;
+    }
     const row = event.target.closest('[data-id]');
     if (!row) return;
     selectCue(row.dataset.id, false);
+  });
+  $('stageManagerView').addEventListener('click', event => {
+    const goBtn = event.target.closest('[data-go-cue]');
+    if (goBtn) runCueById(goBtn.dataset.goCue);
   });
   ['cueNumberInput','cueLabelInput','cueFadeInput','cueHoldInput','cueTriggerSelect'].forEach(id => {
     $(id).addEventListener('change', () => {
@@ -3305,11 +3708,18 @@ function bindEvents(){
       save();
     });
   });
-  $('recordCueBtn').addEventListener('click', () => recordCue($('cueNumberInput').value || nextCueNumber(), $('cueFadeInput').value || 3));
-  $('addCueBtn').addEventListener('click', addCue);
-  $('updateCueBtn').addEventListener('click', updateSelectedCue);
-  $('compareCueBtn').addEventListener('click', compareSelectedCue);
-  $('deleteCueBtn').addEventListener('click', deleteSelectedCue);
+  $('practiceStackBtn').addEventListener('click', () => installPracticeStack('practice'));
+  $('shortSceneBtn').addEventListener('click', () => installPracticeStack('scene'));
+  $('lookPresets').addEventListener('click', event => {
+    const btn = event.target.closest('[data-preset]');
+    if (btn) applyLookPreset(btn.dataset.preset);
+  });
+  $('workflowModes').addEventListener('click', event => {
+    const btn = event.target.closest('[data-mode]');
+    if (!btn) return;
+    $('workflowModes').querySelectorAll('.tbtn').forEach(item => item.classList.toggle('active', item === btn));
+    toast(btn.dataset.mode === 'performers' ? 'Move performers on the stage.' : btn.dataset.mode === 'focus' ? 'Select a light, then drag or set its focus.' : 'Record, preview, edit, and run cues.', 'good');
+  });
   $('performerList').addEventListener('click', event => {
     const row = event.target.closest('[data-id]');
     if (!row) return;
@@ -3319,7 +3729,6 @@ function bindEvents(){
     save();
   });
   $('addPerformerBtn').addEventListener('click', addPerformer);
-  $('performerStyleBtn').addEventListener('click', togglePerformerStyle);
   $('undoBtn').addEventListener('click', undoLastChange);
   $('startScratchBtn').addEventListener('click', startFromScratch);
   $('goBtn').addEventListener('click', goNext);
@@ -3327,6 +3736,9 @@ function bindEvents(){
   $('prevBtn').addEventListener('click', goPrev);
   $('stopBtn').addEventListener('click', stopPlayback);
   $('autoRun').addEventListener('change', e=>{ state.autoRun = e.target.checked; save(); });
+  $('panLeftBtn').addEventListener('click', () => setStagePan((state.viewPanX || 0) - 5));
+  $('panRightBtn').addEventListener('click', () => setStagePan((state.viewPanX || 0) + 5));
+  $('panResetBtn').addEventListener('click', () => setStagePan(0));
   $('focusLockBtn').addEventListener('click', toggleFocusLock);
   $('exportBtn').addEventListener('click', event => {
     event.preventDefault();
@@ -3350,6 +3762,29 @@ function bindEvents(){
     event.preventDefault();
     event.stopPropagation();
     exportSequenceVideo();
+  });
+  $('exportSelectedVideoBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    exportSequenceVideo(true);
+  });
+  $('exportProjectBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    exportProjectJson();
+  });
+  $('exportCueSheetBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    exportCueSheetCsv();
+  });
+  $('importProjectBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    $('projectImportInput').click();
+  });
+  $('projectImportInput').addEventListener('change', event => {
+    importProjectJsonFile(event.target.files && event.target.files[0]);
   });
   window.addEventListener('keydown', event => {
     const tag = (document.activeElement || {}).tagName;

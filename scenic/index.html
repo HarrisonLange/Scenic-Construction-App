@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDSCPA — Scenic Construction Studio</title>
+<title>SDSCPA — Scenic Construction Lab</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
 <style>
   :root{
@@ -49,6 +49,8 @@
   #topbar .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:16px;line-height:1}
   #topbar .brand-logo{height:22px;width:auto;display:block}
   #topbar .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  #topbar .back{font-size:11px;color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 9px;white-space:nowrap}
+  #topbar .back:hover{color:#fff;border-color:var(--accent)}
   #topbar .scale-badge{
     font-family:var(--mono);font-size:11px;color:var(--text-dim);
     border:1px solid var(--ui-dark3);border-radius:4px;padding:3px 6px 3px 8px;white-space:nowrap;
@@ -510,7 +512,8 @@
 <body>
 
 <div id="topbar">
-  <div class="brand" title="SDSCPA — Scenic Construction Studio">
+  <a class="back" href="../" title="Back to all labs">&lsaquo; Labs</a>
+  <div class="brand" title="SDSCPA — Scenic Construction Lab">
     <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
       <defs>
         <linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
@@ -526,7 +529,7 @@
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif"
             font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Scenic Construction Studio</div>
+    <div class="brand-tag">Scenic Construction Lab</div>
   </div>
   <label class="scale-badge" for="scaleSel" title="Drawing scale">SCALE
     <select id="scaleSel">
@@ -809,7 +812,7 @@
 <script>
 'use strict';
 /* ============================================================
-   Scenic Construction Studio  v2
+   Scenic Construction Lab  v2
    Scale: 1/4" = 1'-0" on letter paper (landscape).
    Minor grid cell = 8 px = 3" real; major line every 4 cells = 1'-0".
    PPF (pixels per world foot) = 32.  Page = 44' x 34' (11" x 8.5").
