@@ -185,17 +185,6 @@
   .cue-action:hover{border-color:var(--accent);background:#172033}
   .cue-action.go{color:#bbf7d0;border-color:#166534}
   .cue-action.preview{color:#fde68a;border-color:#92400e}
-  .stage-manager{display:grid;gap:5px;margin-top:8px}
-  .sm-row{
-    display:grid;grid-template-columns:34px minmax(0,1fr) 42px 42px 42px;gap:5px;align-items:center;
-    border:1px solid var(--ui-dark3);border-radius:6px;background:#101014;padding:6px;font-size:10.5px;
-  }
-  .sm-row.head{color:var(--text-dim);font-family:var(--mono);font-weight:800;background:#08080b}
-  .sm-row.live{border-color:var(--ok)}
-  .sm-row.next{border-color:var(--amber)}
-  .sm-row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .sm-row button{border:1px solid var(--ui-dark3);border-radius:4px;background:#18181b;color:#f4f4f5;font-size:10px;padding:4px;cursor:pointer}
-
   #stagePanel{position:relative;min-width:0;min-height:0;overflow:hidden;background:#050506}
   #stageCanvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;background:var(--stage)}
   #stageCanvas.dragging{cursor:grabbing}
@@ -233,6 +222,31 @@
   .visibility{font-family:var(--mono);font-size:10.5px;color:#a1a1aa}
   .visibility.warn{color:#fbbf24}
   .visibility.good{color:#bbf7d0}
+  #performerLightMatrix{
+    flex:0 0 auto;display:flex;align-items:stretch;gap:8px;overflow-x:auto;
+    border-top:1px solid #000;background:#08080b;padding:7px 12px;color:var(--text-dim);
+    font-size:10.5px;scrollbar-width:thin;
+  }
+  .matrix-card{
+    flex:0 0 330px;border:1px solid var(--ui-dark3);border-radius:7px;background:#101014;padding:7px;
+    display:grid;grid-template-columns:96px minmax(0,1fr);gap:7px;align-items:center;
+  }
+  .matrix-detail{display:grid;gap:5px;min-width:0}
+  .matrix-title{display:flex;justify-content:space-between;gap:8px;color:var(--text-light);font-weight:800;font-size:11px}
+  .matrix-title span{color:var(--text-dim);font-family:var(--mono);font-weight:700}
+  .matrix-hit{
+    display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:5px;align-items:center;
+    font-family:var(--mono);font-size:10px;color:#cbd5e1;
+  }
+  .matrix-swatch{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.55)}
+  .matrix-hit b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;color:#f4f4f5}
+  .matrix-meta{color:#a1a1aa;white-space:nowrap}
+  .matrix-empty{font-family:var(--mono);font-size:10px;color:#fbbf24}
+  .magic-compass{width:94px;height:94px;display:block}
+  .magic-compass text{font-family:var(--mono);font-size:6px;font-weight:800;fill:#a1a1aa}
+  .magic-compass .compass-ring{fill:#08080b;stroke:#3f3f46;stroke-width:1}
+  .magic-compass .compass-axis{stroke:#27272a;stroke-width:1}
+  .magic-compass .performer-dot{fill:#e5e7eb;stroke:#09090b;stroke-width:1.2}
   #shortcutHelp{
     flex:0 0 auto;min-height:38px;display:flex;align-items:center;gap:8px;overflow-x:auto;
     border-top:1px solid #000;background:#070707;padding:7px 12px;color:var(--text-dim);
@@ -312,6 +326,7 @@
     #topbar #exportBtn{order:2}
     #topbar .transport{order:3;width:100%;justify-content:center;flex-wrap:wrap}
     #main{display:flex;flex-direction:column;overflow:visible}
+    #performerLightMatrix{align-items:flex-start}
     #shortcutHelp{align-items:flex-start}
     .side{max-height:none;overflow:visible}
     #stagePanel{height:62vh;min-height:430px}
@@ -386,15 +401,6 @@
         </div>
         <div class="small-note">Try: <b>1 @ 70 Enter</b> then <b>Record Cue 2 Time 3 Enter</b>. The @ key sets brightness.</div>
         <div class="small-note">Ideas: preset, actor special, blue transition, final warm, blackout.</div>
-        <div class="mode-row" id="workflowModes">
-          <button class="tbtn active" data-mode="performers">Move</button>
-          <button class="tbtn" data-mode="focus">Focus</button>
-          <button class="tbtn" data-mode="cues">Cues</button>
-        </div>
-        <div class="quick-grid">
-          <button class="tbtn" id="practiceStackBtn">3-Cue Practice</button>
-          <button class="tbtn" id="shortSceneBtn">Short Scene</button>
-        </div>
         <button class="tbtn" id="startScratchBtn">Start from scratch</button>
       </div>
       <div class="term-grid">
@@ -437,12 +443,7 @@
 
     <section class="panel-section">
       <h2>Selected Channel</h2>
-      <div class="quick-grid" id="lookPresets">
-        <button class="tbtn" data-preset="warm">Warm Front</button>
-        <button class="tbtn" data-preset="blue">Blue Look</button>
-        <button class="tbtn" data-preset="special">Center Special</button>
-        <button class="tbtn" data-preset="dance">Dance Sides</button>
-        <button class="tbtn" data-preset="cyc">Cyc Rainbow</button>
+      <div class="quick-grid" id="lookPresets" style="grid-template-columns:1fr">
         <button class="tbtn danger" data-preset="blackout">Blackout All</button>
       </div>
       <div class="field full">
@@ -560,17 +561,14 @@
     </section>
 
     <section class="panel-section">
-      <h2>Stage Manager</h2>
-      <div class="stage-manager" id="stageManagerView"></div>
-    </section>
-
-    <section class="panel-section">
       <h2>Performers</h2>
       <div class="performer-list" id="performerList"></div>
       <div id="performerEditor" style="margin-top:9px"></div>
     </section>
   </aside>
 </main>
+
+<div id="performerLightMatrix" aria-label="Performer lighting matrix"></div>
 
 <footer id="shortcutHelp" aria-label="Lab keyboard shortcuts">
   <span class="shortcut-title">Build</span>
@@ -621,6 +619,10 @@
         <b>Save Cue Sheet CSV</b>
         <span>Cue sheet = cue number, label, fade, hold, trigger, and notes.</span>
       </button>
+      <button class="export-card" id="exportStageMagicBtn">
+        <b>Save Stage + Magic Sheets PNG</b>
+        <span>Stage and magic sheets = one image with the current stage and performer lighting diagrams.</span>
+      </button>
       <button class="export-card" id="importProjectBtn">
         <b>Import Project JSON</b>
         <span>Restore an editable Lighting Design Lab project backup.</span>
@@ -668,24 +670,24 @@ const GELS = [
 ];
 
 const DEFAULT_FIXTURES = [
-  {id:'f1', channel:1, name:'Front Warm', group:'Front', direction:'front', targetX:50, targetY:35, spread:34, color:'#ffd7a6', intensity:45, gobo:'open'},
-  {id:'f2', channel:2, name:'Front Cool', group:'Front', direction:'front', targetX:50, targetY:35, spread:34, color:'#b7d7ff', intensity:18, gobo:'open'},
-  {id:'f3', channel:3, name:'High Side L', group:'Dance', direction:'left', targetX:43, targetY:34, spread:24, color:'#8ab4ff', intensity:0, gobo:'open'},
-  {id:'f4', channel:4, name:'High Side R', group:'Dance', direction:'right', targetX:57, targetY:34, spread:24, color:'#ff7ab8', intensity:0, gobo:'open'},
-  {id:'f5', channel:5, name:'Low Side L', group:'Dance', direction:'left', targetX:38, targetY:42, spread:20, color:'#63e6be', intensity:0, gobo:'open'},
-  {id:'f6', channel:6, name:'Low Side R', group:'Dance', direction:'right', targetX:62, targetY:42, spread:20, color:'#f6d365', intensity:0, gobo:'open'},
-  {id:'f7', channel:7, name:'Top Light', group:'Dance', direction:'top', targetX:50, targetY:34, spread:29, color:'#ffffff', intensity:24, gobo:'open'},
-  {id:'f8', channel:8, name:'Back Light', group:'Dance', direction:'back', targetX:50, targetY:31, spread:31, color:'#9d7cff', intensity:12, gobo:'open'},
-  {id:'f9', channel:9, name:'Footlights', group:'Dance', direction:'foot', targetX:50, targetY:49, spread:38, color:'#ffb86c', intensity:10, gobo:'open'},
-  {id:'f10', channel:10, name:'Gobo Texture', group:'Gobo', direction:'top', targetX:50, targetY:34, spread:42, color:'#dbeafe', intensity:22, gobo:'breakup'},
-  {id:'f11', channel:11, name:'Red Wash', group:'Color Lab', direction:'top', targetX:35, targetY:36, spread:31, color:'#ff244a', intensity:0, gobo:'open'},
-  {id:'f12', channel:12, name:'Green Wash', group:'Color Lab', direction:'top', targetX:50, targetY:36, spread:31, color:'#2fe37c', intensity:0, gobo:'open'},
-  {id:'f13', channel:13, name:'Blue Wash', group:'Color Lab', direction:'top', targetX:65, targetY:36, spread:31, color:'#3b82f6', intensity:0, gobo:'open'},
-  {id:'f14', channel:14, name:'Cyc Left', group:'Cyc', direction:'back', targetX:16.7, targetY:7, spread:34, color:'#ff4b5c', intensity:0, gobo:'open'},
-  {id:'f15', channel:15, name:'Cyc Center', group:'Cyc', direction:'back', targetX:50, targetY:7, spread:34, color:'#6ee7b7', intensity:0, gobo:'open'},
-  {id:'f16', channel:16, name:'Cyc Right', group:'Cyc', direction:'back', targetX:83.3, targetY:7, spread:34, color:'#60a5fa', intensity:28, gobo:'open'},
-  {id:'f17', channel:17, name:'Center Special', group:'Specials', direction:'front', targetX:50, targetY:32, spread:17, color:'#fff0bd', intensity:0, gobo:'open'},
-  {id:'f18', channel:18, name:'Edge Special', group:'Specials', direction:'back', targetX:74, targetY:40, spread:16, color:'#ff5fa2', intensity:0, gobo:'open'}
+  {id:'f1', channel:1, name:'Front Left', group:'Front', direction:'front', targetX:32, targetY:36, spread:30, color:'#ffd7a6', intensity:35, gobo:'open'},
+  {id:'f2', channel:2, name:'Front Center', group:'Front', direction:'front', targetX:50, targetY:35, spread:30, color:'#ffd7a6', intensity:45, gobo:'open'},
+  {id:'f3', channel:3, name:'Front Right', group:'Front', direction:'front', targetX:68, targetY:36, spread:30, color:'#ffd7a6', intensity:35, gobo:'open'},
+  {id:'f4', channel:4, name:'Stage Left High Side', group:'Stage Left Side', direction:'left', targetX:34, targetY:28, spread:24, color:'#8ab4ff', intensity:0, gobo:'open'},
+  {id:'f5', channel:5, name:'Stage Left Mid Side', group:'Stage Left Side', direction:'left', targetX:42, targetY:38, spread:24, color:'#7db7ff', intensity:0, gobo:'open'},
+  {id:'f6', channel:6, name:'Stage Left Low Side', group:'Stage Left Side', direction:'left', targetX:48, targetY:48, spread:22, color:'#63e6be', intensity:0, gobo:'open'},
+  {id:'f7', channel:7, name:'Stage Right High Side', group:'Stage Right Side', direction:'right', targetX:66, targetY:28, spread:24, color:'#ff7ab8', intensity:0, gobo:'open'},
+  {id:'f8', channel:8, name:'Stage Right Mid Side', group:'Stage Right Side', direction:'right', targetX:58, targetY:38, spread:24, color:'#ffd166', intensity:0, gobo:'open'},
+  {id:'f9', channel:9, name:'Stage Right Low Side', group:'Stage Right Side', direction:'right', targetX:52, targetY:48, spread:22, color:'#f6d365', intensity:0, gobo:'open'},
+  {id:'f10', channel:10, name:'Top Left', group:'Top', direction:'top', targetX:35, targetY:34, spread:29, color:'#ffffff', intensity:18, gobo:'open'},
+  {id:'f11', channel:11, name:'Top Center', group:'Top', direction:'top', targetX:50, targetY:34, spread:29, color:'#ffffff', intensity:24, gobo:'open'},
+  {id:'f12', channel:12, name:'Top Right', group:'Top', direction:'top', targetX:65, targetY:34, spread:29, color:'#ffffff', intensity:18, gobo:'open'},
+  {id:'f13', channel:13, name:'Back Left', group:'Back', direction:'back', targetX:34, targetY:31, spread:31, color:'#9d7cff', intensity:10, gobo:'open'},
+  {id:'f14', channel:14, name:'Back Center', group:'Back', direction:'back', targetX:50, targetY:31, spread:31, color:'#9d7cff', intensity:12, gobo:'open'},
+  {id:'f15', channel:15, name:'Back Right', group:'Back', direction:'back', targetX:66, targetY:31, spread:31, color:'#9d7cff', intensity:10, gobo:'open'},
+  {id:'f16', channel:16, name:'Cyc Left', group:'Cyc', direction:'back', targetX:16.7, targetY:7, spread:34, color:'#ff4b5c', intensity:0, gobo:'open'},
+  {id:'f17', channel:17, name:'Cyc Center', group:'Cyc', direction:'back', targetX:50, targetY:7, spread:34, color:'#6ee7b7', intensity:0, gobo:'open'},
+  {id:'f18', channel:18, name:'Cyc Right', group:'Cyc', direction:'back', targetX:83.3, targetY:7, spread:34, color:'#60a5fa', intensity:28, gobo:'open'}
 ];
 
 const START_PERFORMERS = [
@@ -843,18 +845,10 @@ function performerMutable(p){
   };
 }
 function mergeSavedFixture(def, saved){
-  const fixture = Object.assign({}, def, saved || {});
-  if (def.group === 'Cyc') {
-    fixture.name = def.name;
-    fixture.group = def.group;
-    fixture.direction = def.direction;
-    fixture.targetX = def.targetX;
-    fixture.targetY = def.targetY;
-    fixture.spread = def.spread;
-    fixture.gobo = def.gobo;
-    if (!saved || !saved.color) fixture.color = def.color;
-  }
-  return fixture;
+  return Object.assign({}, def, {
+    intensity:saved && saved.intensity != null ? Number(saved.intensity) || 0 : def.intensity,
+    color:saved && saved.color ? saved.color : def.color
+  });
 }
 function makeSnapshot(){
   return {
@@ -940,35 +934,38 @@ function makeCue(number, label, fade, hold, trigger, overrides, performerLayout)
 function seedCues(){
   state.cues = [
     makeCue(1,'Warm dance wash',3,1.2,'manual',[
-      {channel:1,intensity:55},{channel:2,intensity:20},{channel:7,intensity:24},{channel:9,intensity:12},
-      {channel:14,intensity:12,color:'#ff7a4d'},{channel:15,intensity:16,color:'#ffb86c'},{channel:16,intensity:18,color:'#60a5fa'}
+      {channel:1,intensity:38},{channel:2,intensity:55},{channel:3,intensity:38},{channel:10,intensity:18},{channel:11,intensity:24},{channel:12,intensity:18},{channel:14,intensity:12},
+      {channel:16,intensity:12,color:'#ff7a4d'},{channel:17,intensity:16,color:'#ffb86c'},{channel:18,intensity:18,color:'#60a5fa'}
     ],[
       {id:'p1',x:36,y:39},{id:'p2',x:50,y:34},{id:'p3',x:64,y:39}
     ]),
     makeCue(2,'Blue sidelight texture',4,1,'manual',[
-      {channel:3,intensity:68,color:'#7db7ff',targetX:40,targetY:36,spread:25},
-      {channel:4,intensity:62,color:'#b56dff',targetX:60,targetY:36,spread:25},
-      {channel:8,intensity:24,color:'#3850c7'},
-      {channel:10,intensity:42,gobo:'breakup',direction:'top',targetX:50,targetY:36,spread:44,color:'#dbeafe'},
-      {channel:14,intensity:18,color:'#3358ff'},{channel:15,intensity:34,color:'#60a5fa'},{channel:16,intensity:42,color:'#8b5cf6'}
+      {channel:4,intensity:68,color:'#7db7ff'},
+      {channel:5,intensity:58,color:'#8ab4ff'},
+      {channel:7,intensity:62,color:'#b56dff'},
+      {channel:8,intensity:52,color:'#ff7ab8'},
+      {channel:13,intensity:24,color:'#3850c7'},
+      {channel:11,intensity:42,color:'#dbeafe'},
+      {channel:16,intensity:18,color:'#3358ff'},{channel:17,intensity:34,color:'#60a5fa'},{channel:18,intensity:42,color:'#8b5cf6'}
     ],[
       {id:'p1',x:35,y:45},{id:'p2',x:50,y:37},{id:'p3',x:65,y:29}
     ]),
     makeCue(3,'Color lab split',2.5,1.5,'auto',[
-      {channel:5,intensity:48,color:'#2fe37c',targetX:37,targetY:39},
-      {channel:6,intensity:48,color:'#ffd166',targetX:63,targetY:39},
-      {channel:11,intensity:30,targetX:31,targetY:35},
-      {channel:12,intensity:22,targetX:50,targetY:35},
-      {channel:13,intensity:38,targetX:69,targetY:35},
-      {channel:14,intensity:34,color:'#ff244a'},{channel:15,intensity:30,color:'#2fe37c'},{channel:16,intensity:38,color:'#3b82f6'}
+      {channel:5,intensity:48,color:'#2fe37c'},
+      {channel:8,intensity:48,color:'#ffd166'},
+      {channel:10,intensity:30,color:'#ff244a'},
+      {channel:11,intensity:22,color:'#2fe37c'},
+      {channel:12,intensity:38,color:'#3b82f6'},
+      {channel:16,intensity:34,color:'#ff244a'},{channel:17,intensity:30,color:'#2fe37c'},{channel:18,intensity:38,color:'#3b82f6'}
     ],[
       {id:'p1',x:29,y:35},{id:'p2',x:50,y:42},{id:'p3',x:71,y:35}
     ]),
     makeCue(4,'Backlight silhouette',3.5,1,'manual',[
-      {channel:8,intensity:78,color:'#9d7cff',targetX:50,targetY:30,spread:35},
-      {channel:10,intensity:35,gobo:'window',direction:'back',targetX:51,targetY:35,spread:38,color:'#5fd3ff'},
-      {channel:14,intensity:20,color:'#1e1b4b'},{channel:15,intensity:18,color:'#312e81'},{channel:16,intensity:64,color:'#60a5fa'},
-      {channel:17,intensity:34,color:'#fff0bd',targetX:50,targetY:34,spread:15}
+      {channel:13,intensity:62,color:'#9d7cff'},
+      {channel:14,intensity:78,color:'#b56dff'},
+      {channel:15,intensity:62,color:'#9d7cff'},
+      {channel:11,intensity:20,color:'#dbeafe'},
+      {channel:16,intensity:20,color:'#1e1b4b'},{channel:17,intensity:18,color:'#312e81'},{channel:18,intensity:64,color:'#60a5fa'}
     ],[
       {id:'p1',x:42,y:38},{id:'p2',x:50,y:33},{id:'p3',x:58,y:38}
     ])
@@ -1066,7 +1063,7 @@ function load(){
     state.selectedCueId = data.selectedCueId || (state.cues[0] && state.cues[0].id) || null;
     state.currentCueIndex = Number.isFinite(data.currentCueIndex) ? data.currentCueIndex : -1;
     state.autoRun = !!data.autoRun;
-    state.viewZoom = clamp(Number(data.viewZoom) || 1, .58, 1.5);
+    state.viewZoom = clamp(Number(data.viewZoom) || 1, .46, 1.5);
     state.viewPanX = clamp(Number(data.viewPanX) || 0, -34, 34);
     state.focusLocked = !!data.focusLocked;
     return true;
@@ -1168,7 +1165,7 @@ function renderChannelList(){
 }
 function cuePreviewHtml(cue){
   const snap = normalizeSnapshot(cue.snapshot);
-  const cyc = [14,15,16].map(ch => snap.fixtures.find(f=>f.channel===ch) || {color:'#111111', intensity:0});
+  const cyc = [16,17,18].map(ch => snap.fixtures.find(f=>f.channel===ch) || {color:'#111111', intensity:0});
   const bg = cyc.map(f => mixColor('#08080b', f.color || '#ffffff', clamp((Number(f.intensity)||0)/100,0,.85)));
   const performers = snap.performers.map(p => {
     const x = clamp(Number(p.x)||50, 8, 92);
@@ -1212,7 +1209,7 @@ function renderCueList(){
         ${live ? '<span class="cue-badge live">LIVE</span>' : ''}
         ${next ? '<span class="cue-badge next">NEXT</span>' : ''}
         ${on ? '<span class="cue-badge edit">EDIT</span>' : ''}
-        <span class="cue-trigger ${trigger}">${cue.trigger === 'auto' ? 'AUTO' : 'GO'}</span>
+        <button type="button" class="cue-trigger ${trigger}" data-go-cue="${cue.id}" title="Go to Cue ${escapeAttr(cue.number)}">${cue.trigger === 'auto' ? 'AUTO' : 'GO'}</button>
       </div>
     </div>`;
   }).join('');
@@ -1228,23 +1225,7 @@ function renderCueList(){
   $('liveCuePill').innerHTML = `Cue <b>${live ? escapeHtml(live.number) : '-'}</b>`;
   renderReadySummary();
   renderCueEditHint();
-  renderStageManager();
   updateTransportLabels();
-}
-function renderStageManager(){
-  const el = $('stageManagerView');
-  if (!el) return;
-  const rows = state.cues.map((cue,index) => {
-    const cls = index === state.currentCueIndex ? ' live' : (index === state.currentCueIndex + 1 || (state.currentCueIndex < 0 && index === 0) ? ' next' : '');
-    return `<div class="sm-row${cls}">
-      <span>${escapeHtml(cue.number)}</span>
-      <b>${escapeHtml(cue.label || 'Cue')}</b>
-      <span>${Number(cue.fade||0).toFixed(1)}</span>
-      <span>${Number(cue.hold||0).toFixed(1)}</span>
-      <button data-go-cue="${cue.id}">Go</button>
-    </div>`;
-  }).join('');
-  el.innerHTML = `<div class="sm-row head"><span>Cue</span><span>Label</span><span>Fade</span><span>Hold</span><span>Go</span></div>${rows}`;
 }
 function renderPerformers(){
   $('performerList').innerHTML = state.performers.map(p => {
@@ -1261,6 +1242,32 @@ function renderPerformers(){
     </div>`;
   }).join('');
   renderPerformerEditor();
+  renderPerformerLightMatrix();
+}
+function renderPerformerLightMatrix(){
+  const el = $('performerLightMatrix');
+  if (!el) return;
+  el.innerHTML = state.performers.map(p => {
+    const hits = performerLightHits(p);
+    const rows = hits.length
+      ? hits.slice(0, 6).map(hit => {
+        const f = hit.fixture;
+        const color = (f.color || '#ffffff').toUpperCase();
+        return `<div class="matrix-hit">
+          <span class="matrix-swatch" style="background:${escapeAttr(color)}"></span>
+          <b>Ch ${f.channel} ${escapeHtml(f.name)}</b>
+          <span class="matrix-meta">${escapeHtml(hit.angle)} &middot; ${escapeHtml(color)} &middot; ${Math.round(hit.effective)}%</span>
+        </div>`;
+      }).join('')
+      : '<div class="matrix-empty">No beams hitting performer.</div>';
+    return `<section class="matrix-card">
+      ${performerCompassSvg(p, hits)}
+      <div class="matrix-detail">
+        <div class="matrix-title"><b>${escapeHtml(p.name)}</b></div>
+        ${rows}
+      </div>
+    </section>`;
+  }).join('');
 }
 function renderPerformerEditor(){
   const p = performerById(state.selectedPerformerId);
@@ -1333,6 +1340,7 @@ function updateFixtureFromControls(pushCommand){
   if (pushCommand) setCommandText(`Chan ${f.channel} At ${Math.round(f.intensity)}`);
   renderFixtureControls();
   renderChannelList();
+  renderPerformers();
   renderReadySummary();
   draw();
   save();
@@ -1517,15 +1525,15 @@ function applyLookPreset(name){
   if (name === 'blackout') {
     state.fixtures.forEach(f => { f.intensity = 0; });
   } else if (name === 'warm') {
-    setFixtureLevels({1:70,2:18,7:25,9:12,17:0},{1:'#ffd7a6',2:'#b7d7ff',7:'#ffffff',9:'#ffb86c'});
+    setFixtureLevels({1:50,2:70,3:50,10:18,11:25,12:18},{1:'#ffd7a6',2:'#ffd7a6',3:'#ffd7a6',10:'#ffffff',11:'#ffffff',12:'#ffffff'});
   } else if (name === 'blue') {
-    setFixtureLevels({1:12,2:30,3:55,4:55,8:35,13:65,14:10,15:22,16:45},{2:'#b7d7ff',3:'#7db7ff',4:'#9d7cff',8:'#3850c7',13:'#3b82f6'});
+    setFixtureLevels({1:12,2:20,3:12,4:55,5:48,7:55,8:48,13:35,14:35,15:35,18:45},{1:'#b7d7ff',2:'#b7d7ff',3:'#b7d7ff',4:'#7db7ff',7:'#9d7cff',13:'#3850c7',14:'#3850c7',15:'#3850c7',18:'#3b82f6'});
   } else if (name === 'special') {
-    setFixtureLevels({1:28,2:8,7:15,17:70},{17:'#fff0bd'});
+    setFixtureLevels({2:70,11:15},{2:'#fff0bd',11:'#ffffff'});
   } else if (name === 'dance') {
-    setFixtureLevels({1:8,2:10,3:70,4:70,5:55,6:55,8:42,10:30},{3:'#8ab4ff',4:'#ff7ab8',5:'#63e6be',6:'#f6d365'});
+    setFixtureLevels({1:8,2:10,3:8,4:70,5:55,6:42,7:70,8:55,9:42,13:35,14:42,15:35},{4:'#8ab4ff',5:'#63e6be',6:'#2de3c4',7:'#ff7ab8',8:'#f6d365',9:'#ffd166'});
   } else if (name === 'cyc') {
-    setFixtureLevels({14:65,15:65,16:65},{14:'#ff4b5c',15:'#6ee7b7',16:'#60a5fa'});
+    setFixtureLevels({16:65,17:65,18:65},{16:'#ff4b5c',17:'#6ee7b7',18:'#60a5fa'});
   }
   autoLabelFromCurrent(name);
   renderAll();
@@ -1561,15 +1569,15 @@ function installPracticeStack(kind){
   const basePerformers = state.performers.map(performerMutable);
   if (kind === 'scene') {
     state.cues = [
-      cueSnapshotFromLook(1,'Preset / House Warm',3,1,'manual',{1:55,2:18,7:22,9:8},{},basePerformers),
-      cueSnapshotFromLook(2,'Actor Special',2,1,'manual',{1:32,2:8,7:15,17:65},{17:'#fff0bd'},basePerformers.map((p,i)=>Object.assign({},p,{x:[35,50,65][i]||p.x,y:[39,34,39][i]||p.y,pose:i===1?'reach':p.pose}))),
-      cueSnapshotFromLook(3,'Blue Transition',4,1,'manual',{1:5,2:25,3:60,4:60,8:35,13:65,14:10,15:25,16:55},{},basePerformers.map((p,i)=>Object.assign({},p,{x:[30,50,70][i]||p.x,y:[43,35,29][i]||p.y,pose:['walk','open','reach'][i]||p.pose}))),
-      cueSnapshotFromLook(4,'Final Warm Look',3,0,'manual',{1:65,2:15,7:28,9:10,17:25},{},basePerformers)
+      cueSnapshotFromLook(1,'Preset / House Warm',3,1,'manual',{1:45,2:55,3:45,10:18,11:22,12:18},{},basePerformers),
+      cueSnapshotFromLook(2,'Actor Special',2,1,'manual',{1:28,2:62,3:28,11:20},{2:'#fff0bd'},basePerformers.map((p,i)=>Object.assign({},p,{x:[35,50,65][i]||p.x,y:[39,34,39][i]||p.y,pose:i===1?'reach':p.pose}))),
+      cueSnapshotFromLook(3,'Blue Transition',4,1,'manual',{1:5,2:18,3:5,4:60,5:52,7:60,8:52,13:35,14:45,15:35,18:55},{4:'#7db7ff',7:'#9d7cff',13:'#3850c7',14:'#3850c7',15:'#3850c7',18:'#3b82f6'},basePerformers.map((p,i)=>Object.assign({},p,{x:[30,50,70][i]||p.x,y:[43,35,29][i]||p.y,pose:['walk','open','reach'][i]||p.pose}))),
+      cueSnapshotFromLook(4,'Final Warm Look',3,0,'manual',{1:55,2:65,3:55,10:20,11:28,12:20,17:25},{17:'#ffb86c'},basePerformers)
     ];
   } else {
     state.cues = [
-      cueSnapshotFromLook(1,'Warm Intro',3,1,'manual',{1:68,2:15,7:25,9:10,14:30,15:16,16:8},{14:'#ffb86c',15:'#ffd166',16:'#fff0bd'},basePerformers),
-      cueSnapshotFromLook(2,'Colorful Dance Look',2.5,1,'manual',{1:8,2:12,3:70,4:70,5:55,6:55,8:38,10:30,11:35,12:30,13:45,14:35,15:55,16:55},{},basePerformers.map((p,i)=>Object.assign({},p,{x:[30,50,70][i]||p.x,y:[42,34,42][i]||p.y,pose:['walk','reach','open'][i]||p.pose}))),
+      cueSnapshotFromLook(1,'Warm Intro',3,1,'manual',{1:48,2:68,3:48,10:18,11:25,12:18,16:30,17:16,18:8},{16:'#ffb86c',17:'#ffd166',18:'#fff0bd'},basePerformers),
+      cueSnapshotFromLook(2,'Colorful Dance Look',2.5,1,'manual',{1:8,2:12,3:8,4:70,5:55,6:42,7:70,8:55,9:42,10:30,11:35,12:30,13:35,14:45,15:35,16:35,17:55,18:55},{},basePerformers.map((p,i)=>Object.assign({},p,{x:[30,50,70][i]||p.x,y:[42,34,42][i]||p.y,pose:['walk','reach','open'][i]||p.pose}))),
       cueSnapshotFromLook(3,'Blackout',1,0,'manual',Object.fromEntries(state.fixtures.map(f=>[f.channel,0])),{},basePerformers)
     ];
   }
@@ -1631,7 +1639,7 @@ function executeCommand(){
         setCommandText(`Cue ${num} Time ${state.cues[index].fade}`);
         toast(`Cue ${num} time updated.`, 'good');
       } else {
-        runCue(index);
+        runCue(index, {askRecord:true});
         setCommandText(`Cue ${num}`);
       }
     } else {
@@ -1878,6 +1886,39 @@ function compareSelectedCue(){
     .map(p=>p.name);
   toast(`Cue ${prev.number} -> ${cue.number}: channels ${changedChannels.slice(0,6).join(', ') || 'none'}; performers ${moved.slice(0,4).join(', ') || 'none'}.`, 'good');
 }
+function snapshotDiffersFromLive(cue){
+  if (!cue || !cue.snapshot) return false;
+  const saved = normalizeSnapshot(cue.snapshot);
+  const live = normalizeSnapshot(makeSnapshot());
+  const fixturesChanged = live.fixtures.some(f => {
+    const savedFixture = saved.fixtures.find(item => item.id === f.id || item.channel === f.channel);
+    return savedFixture && (Math.abs((Number(savedFixture.intensity)||0) - (Number(f.intensity)||0)) > .5 || (savedFixture.color || '').toLowerCase() !== (f.color || '').toLowerCase());
+  });
+  if (fixturesChanged) return true;
+  return live.performers.some(p => {
+    const savedPerformer = saved.performers.find(item => item.id === p.id);
+    if (!savedPerformer) return true;
+    return Math.hypot((Number(savedPerformer.x)||0) - (Number(p.x)||0), (Number(savedPerformer.y)||0) - (Number(p.y)||0)) > .5 ||
+      Math.abs((Number(savedPerformer.size)||1) - (Number(p.size)||1)) > .01 ||
+      (savedPerformer.pose || 'standing') !== (p.pose || 'standing') ||
+      (savedPerformer.skin || '') !== (p.skin || '') ||
+      (savedPerformer.costume || '') !== (p.costume || '');
+  });
+}
+function maybeRecordLiveCueBeforeMove(targetIndex){
+  if (state.playback || state.currentCueIndex < 0 || targetIndex === state.currentCueIndex) return;
+  const liveCue = state.cues[state.currentCueIndex];
+  const targetCue = state.cues[targetIndex];
+  if (!liveCue || !targetCue || !snapshotDiffersFromLive(liveCue)) return;
+  const shouldRecord = confirm(`Cue ${liveCue.number} has changes that are not recorded.\n\nRecord the current stage picture into Cue ${liveCue.number} before going to Cue ${targetCue.number}?\n\nOK = Record changes\nCancel = Go without recording`);
+  if (!shouldRecord) return;
+  pushUndo();
+  liveCue.snapshot = makeSnapshot();
+  state.selectedCueId = liveCue.id;
+  renderCueList();
+  save();
+  toast(`Recorded changes into Cue ${liveCue.number}.`, 'good');
+}
 function selectCue(id, apply){
   const cue = cueById(id);
   if (!cue) return;
@@ -1903,8 +1944,9 @@ function editCue(id){
   toast(`Editing Cue ${selectedCue()?.number || ''}.`, 'good');
 }
 
-function runCue(index){
+function runCue(index, options={}){
   if (!state.cues[index]) return;
+  if (options.askRecord) maybeRecordLiveCueBeforeMove(index);
   clearPlaybackTimers();
   const cue = state.cues[index];
   state.selectedCueId = cue.id;
@@ -1925,7 +1967,7 @@ function runCue(index){
 function runCueById(id){
   const index = state.cues.findIndex(c => c.id === id);
   if (index < 0) return;
-  runCue(index);
+  runCue(index, {askRecord:true});
 }
 function updatePlaybackProgress(value, show=true){
   const bar = $('playProgress');
@@ -1996,16 +2038,17 @@ function stopPlayback(){
 function goNext(){
   if (state.playback && !state.playback.hold) return;
   const next = state.currentCueIndex < 0 ? 0 : Math.min(state.currentCueIndex + 1, state.cues.length - 1);
-  runCue(next);
+  runCue(next, {askRecord:true});
 }
 function runFromTop(){
   if (!state.cues.length) return;
+  maybeRecordLiveCueBeforeMove(0);
   state.currentCueIndex = -1;
   runCue(0);
 }
 function goPrev(){
   const prev = state.currentCueIndex <= 0 ? 0 : state.currentCueIndex - 1;
-  runCue(prev);
+  runCue(prev, {askRecord:true});
 }
 
 function addPerformer(){
@@ -2052,7 +2095,7 @@ function updateZoomHud(){
   if (pan) pan.querySelector('b').textContent = String(Math.round(state.viewPanX || 0));
 }
 function setStageZoom(value){
-  state.viewZoom = clamp(value, .58, 1.5);
+  state.viewZoom = clamp(value, .46, 1.5);
   updateZoomHud();
   draw();
   save();
@@ -2084,9 +2127,11 @@ function computeLayout(width,height){
   let w = availW;
   let h = w / ratio;
   if (h > availH) { h = availH; w = h * ratio; }
-  const zoom = clamp(state.viewZoom || 1, .58, 1.5);
-  w *= 1.5 * zoom;
-  h *= 1.5 * zoom;
+  const zoom = clamp(state.viewZoom || 1, .46, 1.5);
+  const fitScale = clamp((width - padX * 2) / Math.max(1, width), .72, .9);
+  const stageMagnification = width < 760 ? fitScale : width < 1120 ? 1.08 : 1.5;
+  w *= stageMagnification * zoom;
+  h *= stageMagnification * zoom;
   const panPx = clamp(state.viewPanX || 0, -34, 34) * w / 100;
   const x = (width - w) / 2 + panPx;
   const y = padTop + (availH - h) / 2;
@@ -2141,6 +2186,13 @@ function worldToScreen(pt){
   const scale = clamp((layout.focal || layout.w*.5) / Math.max(.2, p.depth) / 14, .24, 2.6);
   return {x:p.x, y:p.y, scale, depth};
 }
+function keepScreenPointVisible(point, margin=22){
+  const rect = canvas.getBoundingClientRect();
+  return Object.assign({}, point, {
+    x:clamp(point.x, margin, Math.max(margin, rect.width - margin)),
+    y:clamp(point.y, margin, Math.max(margin, rect.height - margin))
+  });
+}
 function screenToWorld(pt){
   let lo = 0, hi = 60;
   for (let i=0; i<16; i++) {
@@ -2158,8 +2210,8 @@ function screenToWorld(pt){
 function sourceFor(f){
   if (f.direction === 'front') return {x:f.targetX, y:70};
   if (f.direction === 'back') return {x:f.targetX, y:-9};
-  if (f.direction === 'left') return {x:-10, y:f.targetY};
-  if (f.direction === 'right') return {x:110, y:f.targetY};
+  if (f.direction === 'left') return {x:-4, y:f.targetY};
+  if (f.direction === 'right') return {x:104, y:f.targetY};
   if (f.direction === 'foot') return {x:f.targetX, y:64};
   return {x:f.targetX, y:-22, z:24};
 }
@@ -2173,6 +2225,7 @@ function draw(){
   drawBackground(width,height);
   drawStageBase();
   drawCyc();
+  drawStageDressings();
   drawLightBeams();
   drawPerformers();
   drawFixturePlan();
@@ -2211,7 +2264,7 @@ function stageZone(x1,x2,y1,y2){
 function drawStageBase(){
   const upL=worldToScreen({x:0,y:0}), upR=worldToScreen({x:100,y:0});
   const dnL=worldToScreen({x:0,y:60}), dnR=worldToScreen({x:100,y:60});
-  const wall = stageQuad(0,18);
+  const backdrop = stageQuad(0,60);
   const floor = stageQuad(18,60);
   ctx.save();
   ctx.fillStyle = '#07070a';
@@ -2220,31 +2273,26 @@ function drawStageBase(){
   const portalTop = layout.backY - layout.h*.12;
   ctx.fillStyle = '#020203';
   ctx.fillRect(layout.x-48, portalTop, layout.w+96, layout.apronY-portalTop);
-  ctx.fillStyle = '#111118';
-  ctx.fillRect(layout.cx-layout.frontW*.57, portalTop, layout.frontW*1.14, 16);
-  ctx.fillStyle = '#050506';
-  ctx.fillRect(upL.x-34, portalTop+10, 22, layout.apronY-portalTop-2);
-  ctx.fillRect(upR.x+12, portalTop+10, 22, layout.apronY-portalTop-2);
 
   ctx.beginPath();
-  pathPoints(wall);
-  const wallGrad = ctx.createLinearGradient(0,wall[0].y,0,wall[2].y);
-  wallGrad.addColorStop(0,'#f5f6f8');
-  wallGrad.addColorStop(.55,'#e7e9ee');
-  wallGrad.addColorStop(1,'#d7dae1');
+  pathPoints(backdrop);
+  const wallGrad = ctx.createLinearGradient(0,upL.y,0,dnL.y);
+  wallGrad.addColorStop(0,'#fbfaf4');
+  wallGrad.addColorStop(.48,'#f2f0e7');
+  wallGrad.addColorStop(1,'#dedbd0');
   ctx.fillStyle = wallGrad;
   ctx.fill();
-  ctx.strokeStyle = 'rgba(20,20,28,.28)';
+  ctx.strokeStyle = 'rgba(20,20,28,.18)';
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  pathPoints(wall);
+  pathPoints(backdrop);
   ctx.stroke();
 
   ctx.beginPath();
   pathPoints(floor);
   const floorGrad = ctx.createLinearGradient(0,floor[0].y,0,floor[2].y);
-  floorGrad.addColorStop(0,'#15151a');
-  floorGrad.addColorStop(.45,'#111118');
+  floorGrad.addColorStop(0,'rgba(22,22,27,.88)');
+  floorGrad.addColorStop(.45,'rgba(17,17,24,.94)');
   floorGrad.addColorStop(1,'#09090d');
   ctx.fillStyle = floorGrad;
   ctx.fill();
@@ -2261,11 +2309,32 @@ function drawStageBase(){
   ctx.fillRect(layout.x,layout.y,layout.w,layout.h);
   ctx.restore();
 
-  ctx.strokeStyle = '#2f3038';
-  ctx.lineWidth = 2.2;
-  ctx.beginPath();
-  pathPoints(stageQuad(0,60));
-  ctx.stroke();
+  ctx.save();
+  ctx.fillStyle = '#030304';
+  const borderTopH = Math.max(14, layout.h*.045);
+  ctx.fillRect(layout.cx-layout.frontW*.62, portalTop, layout.frontW*1.24, borderTopH);
+  const legTop = portalTop + borderTopH*.75;
+  const legBottom = layout.apronY + 2;
+  const legPairs = [
+    {xl:upL.x-42, xr:upL.x-18, slant:16},
+    {xl:upL.x+18, xr:upL.x+36, slant:8},
+    {xl:upR.x-36, xr:upR.x-18, slant:-8},
+    {xl:upR.x+18, xr:upR.x+42, slant:-16}
+  ];
+  legPairs.forEach(leg => {
+    ctx.beginPath();
+    pathPoints([
+      {x:leg.xl,y:legTop},
+      {x:leg.xr,y:legTop},
+      {x:leg.xr+leg.slant,y:legBottom},
+      {x:leg.xl+leg.slant,y:legBottom}
+    ]);
+    ctx.fill();
+  });
+  ctx.fillStyle = '#09090d';
+  ctx.fillRect(layout.cx-layout.frontW*.56, portalTop + borderTopH*.96, layout.frontW*1.12, Math.max(8, borderTopH*.42));
+  ctx.restore();
+
   ctx.strokeStyle = 'rgba(20,20,28,.26)';
   ctx.beginPath();
   ctx.moveTo(worldToScreen({x:0,y:18}).x, worldToScreen({x:0,y:18}).y);
@@ -2305,8 +2374,14 @@ function drawStageBase(){
     {x:dnL.x-30,y:layout.apronY}
   ]);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.12)';
-  ctx.beginPath(); ctx.moveTo(dnL.x-8,dnL.y+6); ctx.lineTo(dnR.x+8,dnR.y+6); ctx.stroke();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#2f3038';
+  ctx.beginPath(); ctx.moveTo(dnL.x-10,dnL.y+5); ctx.lineTo(dnR.x+10,dnR.y+5); ctx.stroke();
+  ctx.lineWidth = 1.3;
+  ctx.strokeStyle = 'rgba(255,255,255,.32)';
+  ctx.beginPath(); ctx.moveTo(dnL.x-8,dnL.y+2); ctx.lineTo(dnR.x+8,dnR.y+2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.beginPath(); ctx.moveTo(dnL.x-22,layout.apronY-2); ctx.lineTo(dnR.x+22,layout.apronY-2); ctx.stroke();
 
   const centerGlow = ctx.createRadialGradient(layout.cx, layout.backY+layout.h*.18, 0, layout.cx, layout.backY+layout.h*.18, layout.w*.5);
   centerGlow.addColorStop(0,'rgba(255,255,255,.045)');
@@ -2321,6 +2396,43 @@ function drawStageBase(){
   ctx.fillText('DOWNSTAGE', dnL.x+16, dnL.y-13);
   ctx.restore();
 }
+function drawStageDressings(){
+  const upL=worldToScreen({x:0,y:0}), upR=worldToScreen({x:100,y:0});
+  const dnL=worldToScreen({x:0,y:60}), dnR=worldToScreen({x:100,y:60});
+  const portalTop = layout.backY - layout.h*.12;
+  const borderTopH = Math.max(14, layout.h*.045);
+  const legTop = portalTop + borderTopH*.75;
+  const legBottom = layout.apronY + 2;
+  ctx.save();
+  ctx.fillStyle = '#030304';
+  ctx.fillRect(layout.cx-layout.frontW*.62, portalTop, layout.frontW*1.24, borderTopH);
+  [
+    {xl:upL.x-42, xr:upL.x-18, slant:16},
+    {xl:upL.x+18, xr:upL.x+36, slant:8},
+    {xl:upR.x-36, xr:upR.x-18, slant:-8},
+    {xl:upR.x+18, xr:upR.x+42, slant:-16}
+  ].forEach(leg => {
+    ctx.beginPath();
+    pathPoints([
+      {x:leg.xl,y:legTop},
+      {x:leg.xr,y:legTop},
+      {x:leg.xr+leg.slant,y:legBottom},
+      {x:leg.xl+leg.slant,y:legBottom}
+    ]);
+    ctx.fill();
+  });
+  ctx.fillStyle = '#09090d';
+  ctx.fillRect(layout.cx-layout.frontW*.56, portalTop + borderTopH*.96, layout.frontW*1.12, Math.max(8, borderTopH*.42));
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#2f3038';
+  ctx.beginPath(); ctx.moveTo(dnL.x-10,dnL.y+5); ctx.lineTo(dnR.x+10,dnR.y+5); ctx.stroke();
+  ctx.lineWidth = 1.3;
+  ctx.strokeStyle = 'rgba(255,255,255,.32)';
+  ctx.beginPath(); ctx.moveTo(dnL.x-8,dnL.y+2); ctx.lineTo(dnR.x+8,dnR.y+2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.beginPath(); ctx.moveTo(dnL.x-22,layout.apronY-2); ctx.lineTo(dnR.x+22,layout.apronY-2); ctx.stroke();
+  ctx.restore();
+}
 function drawCyc(){
   const cyc = state.fixtures.filter(f=>f.group === 'Cyc').sort((a,b)=>a.targetX-b.targetX);
   if (!cyc.length) return;
@@ -2329,17 +2441,17 @@ function drawCyc(){
   ctx.globalCompositeOperation = 'source-over';
   cyc.forEach((f, index) => {
     const seg = segments[index] || [index*100/cyc.length, (index+1)*100/cyc.length];
-    const zone = stageZone(seg[0], seg[1], 0, 18);
+    const zone = stageZone(seg[0], seg[1], 0, 60);
     const alpha = clamp(f.intensity/100, 0, 1);
     if (alpha <= 0) return;
     const top = worldToScreen({x:(seg[0]+seg[1])/2,y:0});
-    const bottom = worldToScreen({x:(seg[0]+seg[1])/2,y:18});
+    const bottom = worldToScreen({x:(seg[0]+seg[1])/2,y:60});
     ctx.beginPath();
     pathPoints(zone);
     const grad = ctx.createLinearGradient(0, top.y, 0, bottom.y);
-    grad.addColorStop(0, rgba(f.color, alpha*.66));
-    grad.addColorStop(.52, rgba(f.color, alpha*.42));
-    grad.addColorStop(1, rgba(f.color, alpha*.18));
+    grad.addColorStop(0, rgba(f.color, alpha*.5));
+    grad.addColorStop(.48, rgba(f.color, alpha*.35));
+    grad.addColorStop(1, rgba(f.color, alpha*.16));
     ctx.fillStyle = grad;
     ctx.fill();
 
@@ -2348,25 +2460,25 @@ function drawCyc(){
     pathPoints(zone);
     ctx.clip();
     ctx.globalCompositeOperation = 'lighter';
-    const p = worldToScreen({x:(seg[0]+seg[1])/2,y:8});
-    const glow = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,layout.w*.22);
-    glow.addColorStop(0, rgba(f.color, alpha*.24));
+    const p = worldToScreen({x:(seg[0]+seg[1])/2,y:24});
+    const glow = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,layout.w*.34);
+    glow.addColorStop(0, rgba(f.color, alpha*.18));
     glow.addColorStop(1, rgba(f.color, 0));
     ctx.fillStyle = glow;
-    ctx.fillRect(layout.x,layout.y,layout.w,layout.h*.36);
+    ctx.fillRect(layout.x,layout.y,layout.w,layout.h);
     ctx.restore();
   });
   ctx.strokeStyle = 'rgba(255,255,255,.12)';
   ctx.lineWidth = 1;
   [33.333,66.667].forEach(x => {
     const a = worldToScreen({x,y:0});
-    const b = worldToScreen({x,y:18});
+    const b = worldToScreen({x,y:60});
     ctx.beginPath();
     ctx.moveTo(a.x,a.y);
     ctx.lineTo(b.x,b.y);
     ctx.stroke();
   });
-  const label = worldToScreen({x:50,y:8});
+  const label = worldToScreen({x:50,y:23});
   const labelSize = Math.max(34, Math.min(92, layout.w * .13));
   ctx.save();
   ctx.translate(label.x, label.y);
@@ -2560,6 +2672,99 @@ function performerVisibility(p){
       : `Dark warning: move performer or raise a light`,
     status: readable ? 'good' : 'warn'
   };
+}
+function fixtureAngleToPerformer(f, p){
+  const src = sourceFor(f);
+  const dx = p.x - src.x;
+  const dy = p.y - src.y;
+  const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  if (f.direction === 'top') return `top ${Math.round(deg)}deg`;
+  const label = {
+    front:'front',
+    back:'back',
+    left:'SL side',
+    right:'SR side',
+    foot:'foot'
+  }[f.direction] || f.direction;
+  return `${label} ${Math.round(deg)}deg`;
+}
+function fixtureSourceBearing(f, p){
+  const src = sourceFor(f);
+  const dx = src.x - p.x;
+  const dy = src.y - p.y;
+  const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  const label = compassLabel(deg);
+  return {deg, label, dx, dy};
+}
+function compassLabel(deg){
+  const labels = ['SR','DSR','DS','DSL','SL','USL','US','USR'];
+  return labels[Math.round((((deg % 360) + 360) % 360) / 45) % labels.length];
+}
+function performerCompassSvg(p, hits, size=94){
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = size * .39;
+  const topHits = hits.filter(hit => hit.fixture.direction === 'top').slice(0, 5);
+  const beams = hits.filter(hit => hit.fixture.direction !== 'top').slice(0, 10).map(hit => {
+    const bearing = hit.bearing || fixtureSourceBearing(hit.fixture, p);
+    const rad = bearing.deg * Math.PI / 180;
+    const startR = radius;
+    const endR = 9;
+    const sx = cx + Math.cos(rad) * startR;
+    const sy = cy + Math.sin(rad) * startR;
+    const ex = cx + Math.cos(rad) * endR;
+    const ey = cy + Math.sin(rad) * endR;
+    const color = (hit.fixture.color || '#ffffff').toUpperCase();
+    const width = 1.7 + clamp(hit.effective, 0, 100) / 22;
+    const opacity = clamp(.3 + hit.effective / 115, .3, .95);
+    const lx = cx + Math.cos(rad) * (radius + 5);
+    const ly = cy + Math.sin(rad) * (radius + 5);
+    return `<g>
+      <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${escapeAttr(color)}" stroke-width="${width.toFixed(1)}" stroke-linecap="round" opacity="${opacity.toFixed(2)}"/>
+      <circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${(2.2 + hit.effective/42).toFixed(1)}" fill="${escapeAttr(color)}" opacity="${opacity.toFixed(2)}"/>
+      <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${hit.fixture.channel}</text>
+    </g>`;
+  }).join('');
+  const topDots = topHits.map((hit, index) => {
+    const color = (hit.fixture.color || '#ffffff').toUpperCase();
+    const offset = (index - (topHits.length - 1) / 2) * (size * .075);
+    const x = cx + offset;
+    const y = cy - size * .105;
+    const r = 3.8 + clamp(hit.effective, 0, 100) / 28;
+    const opacity = clamp(.36 + hit.effective / 105, .36, .98);
+    return `<g>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${escapeAttr(color)}" stroke="rgba(255,255,255,.78)" stroke-width="1" opacity="${opacity.toFixed(2)}"/>
+      <text x="${x.toFixed(1)}" y="${(y-r-3).toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${hit.fixture.channel}</text>
+    </g>`;
+  }).join('');
+  return `<svg class="magic-compass" viewBox="0 0 ${size} ${size}" role="img" aria-label="${escapeAttr(p.name)} light direction compass">
+    <circle class="compass-ring" cx="${cx}" cy="${cy}" r="${radius}"/>
+    <line class="compass-axis" x1="${cx}" y1="${cy-radius}" x2="${cx}" y2="${cy+radius}"/>
+    <line class="compass-axis" x1="${cx-radius}" y1="${cy}" x2="${cx+radius}" y2="${cy}"/>
+    <text x="${cx}" y="${cy-radius-5}" text-anchor="middle">US</text>
+    <text x="${cx}" y="${cy+radius+7}" text-anchor="middle">DS</text>
+    <text x="${cx-radius-7}" y="${cy+2}" text-anchor="middle">SL</text>
+    <text x="${cx+radius+7}" y="${cy+2}" text-anchor="middle">SR</text>
+    ${beams}
+    <circle class="performer-dot" cx="${cx}" cy="${cy}" r="6.5"/>
+    ${topDots}
+  </svg>`;
+}
+function performerLightHits(p){
+  return state.fixtures
+    .filter(f => f.group !== 'Cyc' && f.intensity > 0)
+    .map(f => {
+      const amount = fixtureConeAt(f, p.x, p.y);
+      return {
+        fixture:f,
+        amount,
+        effective:clamp(amount * 100, 0, 100),
+        angle:fixtureAngleToPerformer(f, p),
+        bearing:fixtureSourceBearing(f, p)
+      };
+    })
+    .filter(hit => hit.amount > .04)
+    .sort((a,b)=>b.amount-a.amount);
 }
 function accColor(acc, fallback){
   if (!acc.a) return fallback;
@@ -3355,7 +3560,7 @@ function drawSource4LedSymbol(f, src, target, active){
 }
 function drawFixturePlan(){
   state.fixtures.forEach(f => {
-    const src = worldToScreen(sourceFor(f));
+    const src = keepScreenPointVisible(worldToScreen(sourceFor(f)), 24);
     const target = worldToScreen({x:f.targetX,y:f.targetY});
     const active = f.id === state.selectedFixtureId;
     ctx.save();
@@ -3400,7 +3605,7 @@ function hitFixtureSource(screen){
   let best = null;
   let bestD = Infinity;
   state.fixtures.forEach(f => {
-    const s = worldToScreen(sourceFor(f));
+    const s = keepScreenPointVisible(worldToScreen(sourceFor(f)), 24);
     const d = Math.hypot(screen.x - s.x, screen.y - s.y);
     if (d < bestD) { best = f; bestD = d; }
   });
@@ -3443,6 +3648,7 @@ function onPointerDown(event){
   activeFixture.targetY = clamp(world.y,8,56);
   canvas.setPointerCapture(event.pointerId);
   renderFixtureControls();
+  renderPerformerLightMatrix();
   draw();
 }
 function onPointerMove(event){
@@ -3464,6 +3670,7 @@ function onPointerMove(event){
       f.targetX = clamp(world.x,8,92);
       f.targetY = clamp(world.y,8,56);
       renderFixtureControls();
+      renderPerformerLightMatrix();
       draw();
     }
   }
@@ -3525,6 +3732,226 @@ function sequencePreviewText(startAtSelected=false){
   return `${cues.length} cue${cues.length === 1 ? '' : 's'}\nStart: ${cues[0] ? `Cue ${cues[0].number} ${cues[0].label || ''}` : 'No cues'}\nApprox. duration: ${total.toFixed(1)}s\n\n` +
     cues.map(cue => `Cue ${cue.number}: ${cue.label || 'Cue'} | Fade ${Number(cue.fade||0).toFixed(1)} | Hold ${Number(cue.hold||0).toFixed(1)} | ${cue.trigger || 'manual'}`).join('\n');
 }
+function magicSheetRows(){
+  return state.performers.map(p => {
+    const hits = performerLightHits(p);
+    return {
+      performer:p,
+      compass:performerCompassSvg(p, hits, 180),
+      hits:hits.map(hit => ({
+        channel:hit.fixture.channel,
+        fixture:hit.fixture.name,
+        group:hit.fixture.group,
+        angle:hit.angle,
+        source:hit.bearing.label,
+        color:(hit.fixture.color || '#ffffff').toUpperCase(),
+        boardIntensity:Math.round(hit.fixture.intensity),
+        hitIntensity:Math.round(hit.effective)
+      }))
+    };
+  });
+}
+function magicSheetText(){
+  return magicSheetRows().map(sheet => {
+    const p = sheet.performer;
+    const lines = [`${p.name}  X ${Math.round(p.x)}  Y ${Math.round(p.y)}`];
+    if (!sheet.hits.length) {
+      lines.push('No active beams hitting this performer.');
+      return lines.join('\n');
+    }
+    sheet.hits.forEach(hit => {
+      lines.push(`Ch ${hit.channel} ${hit.fixture} | from ${hit.source} | ${hit.angle} | ${hit.color} | board ${hit.boardIntensity}% | hit ${hit.hitIntensity}%`);
+    });
+    return lines.join('\n');
+  }).join('\n\n');
+}
+function magicSheetPreviewHtml(){
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">
+    ${magicSheetRows().map(sheet => `<div style="border:1px solid #3f3f46;border-radius:6px;padding:8px;background:#08080b">
+      <div style="font-size:11px;font-weight:800;color:#f4f4f5;margin-bottom:5px">${escapeHtml(sheet.performer.name)}</div>
+      ${sheet.compass}
+    </div>`).join('')}
+  </div>`;
+}
+function drawRoundedRect(g, x, y, w, h, r){
+  g.beginPath();
+  g.moveTo(x+r, y);
+  g.lineTo(x+w-r, y);
+  g.quadraticCurveTo(x+w, y, x+w, y+r);
+  g.lineTo(x+w, y+h-r);
+  g.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  g.lineTo(x+r, y+h);
+  g.quadraticCurveTo(x, y+h, x, y+h-r);
+  g.lineTo(x, y+r);
+  g.quadraticCurveTo(x, y, x+r, y);
+  g.closePath();
+}
+function drawSheetText(g, text, x, y, maxWidth){
+  let value = String(text || '');
+  while (value.length && g.measureText(value).width > maxWidth) value = value.slice(0, -1);
+  if (value !== String(text || '')) value = value.slice(0, Math.max(0, value.length - 1)) + '...';
+  g.fillText(value, x, y);
+}
+function drawStageMagicCompass(g, p, hits, x, y, size){
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const radius = size * .37;
+  g.save();
+  g.fillStyle = '#f8fafc';
+  g.strokeStyle = '#737373';
+  g.lineWidth = 2;
+  g.beginPath(); g.arc(cx, cy, radius, 0, Math.PI*2); g.fill(); g.stroke();
+  g.strokeStyle = '#d4d4d4';
+  g.lineWidth = 1.4;
+  g.beginPath();
+  g.moveTo(cx, cy-radius); g.lineTo(cx, cy+radius);
+  g.moveTo(cx-radius, cy); g.lineTo(cx+radius, cy);
+  g.stroke();
+  g.fillStyle = '#525252';
+  g.font = '700 14px Arial, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('US', cx, cy-radius-17);
+  g.fillText('DS', cx, cy+radius+17);
+  g.fillText('SL', cx-radius-20, cy);
+  g.fillText('SR', cx+radius+20, cy);
+  hits.filter(hit => hit.fixture.direction !== 'top').slice(0, 10).forEach(hit => {
+    const bearing = hit.bearing || fixtureSourceBearing(hit.fixture, p);
+    const rad = bearing.deg * Math.PI / 180;
+    const color = (hit.fixture.color || '#ffffff').toUpperCase();
+    const sx = cx + Math.cos(rad) * radius;
+    const sy = cy + Math.sin(rad) * radius;
+    const ex = cx + Math.cos(rad) * (size * .1);
+    const ey = cy + Math.sin(rad) * (size * .1);
+    g.save();
+    g.globalAlpha = clamp(.35 + hit.effective / 110, .35, .95);
+    g.strokeStyle = color;
+    g.lineWidth = 3 + clamp(hit.effective, 0, 100) / 16;
+    g.lineCap = 'round';
+    g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke();
+    g.fillStyle = color;
+    g.beginPath(); g.arc(sx, sy, 4 + hit.effective/32, 0, Math.PI*2); g.fill();
+    g.restore();
+    g.fillStyle = '#171717';
+    g.font = '800 12px Arial, sans-serif';
+    g.fillText(String(hit.fixture.channel), cx + Math.cos(rad)*(radius+13), cy + Math.sin(rad)*(radius+13));
+  });
+  const topHits = hits.filter(hit => hit.fixture.direction === 'top').slice(0, 5);
+  topHits.forEach((hit, index) => {
+    const color = (hit.fixture.color || '#ffffff').toUpperCase();
+    const offset = (index - (topHits.length - 1) / 2) * (size * .07);
+    const px = cx + offset;
+    const py = cy - size * .1;
+    g.save();
+    g.globalAlpha = clamp(.4 + hit.effective / 105, .4, .98);
+    g.fillStyle = color;
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(px, py, 7 + hit.effective/24, 0, Math.PI*2); g.fill(); g.stroke();
+    g.restore();
+    g.fillStyle = '#171717';
+    g.font = '800 12px Arial, sans-serif';
+    g.fillText(String(hit.fixture.channel), px, py - 18);
+  });
+  g.fillStyle = '#171717';
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 2;
+  g.beginPath(); g.arc(cx, cy, 11, 0, Math.PI*2); g.fill(); g.stroke();
+  g.restore();
+}
+function stageMagicImageCanvas(){
+  draw();
+  const sheets = state.performers.map(p => ({performer:p, hits:performerLightHits(p)}));
+  const cue = currentCue();
+  const cueLabel = cue ? `Cue ${cue.number} ${cue.label || ''}`.trim() : 'Live look';
+  const out = document.createElement('canvas');
+  const width = 1500;
+  const margin = 48;
+  const gap = 24;
+  const stageW = width - margin*2;
+  const stageH = Math.round(stageW * (canvas.height || 720) / Math.max(1, canvas.width || 1280));
+  const cols = sheets.length > 1 ? 2 : 1;
+  const cardW = (stageW - gap * (cols - 1)) / cols;
+  const cardH = 286;
+  const rows = Math.max(1, Math.ceil(sheets.length / cols));
+  const headerH = 92;
+  const sectionGap = 34;
+  const footerH = 32;
+  out.width = width;
+  out.height = headerH + stageH + sectionGap + rows*cardH + (rows-1)*gap + footerH + margin;
+  const g = out.getContext('2d');
+  g.fillStyle = '#f6f4ef';
+  g.fillRect(0,0,out.width,out.height);
+  g.fillStyle = '#171717';
+  g.font = '900 34px Arial, sans-serif';
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  g.fillText('Lighting Stage and Magic Sheets', margin, 54);
+  g.font = '700 17px Arial, sans-serif';
+  g.fillStyle = '#525252';
+  g.fillText(cueLabel, margin, 78);
+  g.textAlign = 'right';
+  g.font = '600 15px Arial, sans-serif';
+  g.fillText(new Date().toLocaleString(), width - margin, 54);
+  g.fillText('SDSCPA Lighting Design Lab', width - margin, 78);
+  g.strokeStyle = '#171717';
+  g.lineWidth = 3;
+  g.beginPath(); g.moveTo(margin, headerH-12); g.lineTo(width-margin, headerH-12); g.stroke();
+  g.fillStyle = '#08080b';
+  g.fillRect(margin, headerH, stageW, stageH);
+  g.drawImage(canvas, margin, headerH, stageW, stageH);
+  const cardsY = headerH + stageH + sectionGap;
+  sheets.forEach((sheet, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const x = margin + col * (cardW + gap);
+    const y = cardsY + row * (cardH + gap);
+    g.save();
+    g.fillStyle = '#ffffff';
+    g.strokeStyle = '#d4d4d4';
+    g.lineWidth = 2;
+    drawRoundedRect(g, x, y, cardW, cardH, 10);
+    g.fill(); g.stroke();
+    g.fillStyle = '#171717';
+    g.font = '900 23px Arial, sans-serif';
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    drawSheetText(g, sheet.performer.name, x+18, y+34, cardW-36);
+    g.fillStyle = '#525252';
+    g.font = '700 13px Arial, sans-serif';
+    g.fillText(`X ${Math.round(sheet.performer.x)} / Y ${Math.round(sheet.performer.y)} / ${sheet.performer.pose || 'standing'}`, x+18, y+56);
+    drawStageMagicCompass(g, sheet.performer, sheet.hits, x+18, y+76, 168);
+    const tx = x + 206;
+    let ty = y + 88;
+    g.font = '800 13px Arial, sans-serif';
+    g.fillStyle = '#171717';
+    g.fillText('Source / Color / Intensity', tx, ty);
+    ty += 22;
+    g.font = '600 12px Arial, sans-serif';
+    if (!sheet.hits.length) {
+      g.fillStyle = '#92400e';
+      g.fillText('No active beams hitting performer.', tx, ty);
+    } else {
+      sheet.hits.slice(0, 7).forEach(hit => {
+        const color = (hit.fixture.color || '#ffffff').toUpperCase();
+        const bearing = hit.bearing || fixtureSourceBearing(hit.fixture, sheet.performer);
+        g.fillStyle = color;
+        g.fillRect(tx, ty-11, 12, 12);
+        g.strokeStyle = '#737373';
+        g.lineWidth = 1;
+        g.strokeRect(tx, ty-11, 12, 12);
+        g.fillStyle = '#171717';
+        const source = hit.fixture.direction === 'top' ? 'Top dot' : bearing.label;
+        drawSheetText(g, `Ch ${hit.fixture.channel} ${hit.fixture.name}`, tx+18, ty, cardW-230);
+        g.fillStyle = '#525252';
+        drawSheetText(g, `${source} / ${color} / ${Math.round(hit.effective)}% hit / ${Math.round(hit.fixture.intensity)}% board`, tx+18, ty+16, cardW-230);
+        ty += 38;
+      });
+    }
+    g.restore();
+  });
+  return out;
+}
 function prepareExportPreview(kind){
   pendingExportKind = kind;
   const titleMap = {
@@ -3532,7 +3959,8 @@ function prepareExportPreview(kind){
     video:'Save Sequence WebM',
     selectedVideo:'Save From Selected Cue WebM',
     project:'Save Editable Project JSON',
-    cueSheet:'Save Cue Sheet CSV'
+    cueSheet:'Save Cue Sheet CSV',
+    stageMagic:'Save Stage + Magic Sheets PNG'
   };
   $('exportPreviewTitle').textContent = titleMap[kind] || 'Preview';
   if (kind === 'scene') {
@@ -3547,6 +3975,9 @@ function prepareExportPreview(kind){
   } else if (kind === 'cueSheet') {
     $('exportPreviewCopy').textContent = 'This CSV cue sheet can be opened in a spreadsheet.';
     $('exportPreviewBody').innerHTML = `<pre>${escapeHtml(cueSheetCsvText())}</pre>`;
+  } else if (kind === 'stageMagic') {
+    $('exportPreviewCopy').textContent = 'This PNG image includes the current stage view and performer magic sheet diagrams.';
+    $('exportPreviewBody').innerHTML = `<img alt="Stage and magic sheets preview" src="${stageMagicImageCanvas().toDataURL('image/png')}"><pre>${escapeHtml(magicSheetText())}</pre>`;
   }
   setExportPickerMode(true);
 }
@@ -3557,6 +3988,7 @@ function savePreviewedExport(){
   if (kind === 'selectedVideo') return exportSequenceVideo(true);
   if (kind === 'project') return exportProjectJson();
   if (kind === 'cueSheet') return exportCueSheetCsv();
+  if (kind === 'stageMagic') return exportStageMagicImage();
 }
 
 async function exportSceneImage(){
@@ -3655,6 +4087,20 @@ async function exportCueSheetCsv(){
     accept:{'text/csv':['.csv']}
   }]);
 }
+async function exportStageMagicImage(){
+  $('exportModal').classList.remove('show');
+  const exportCanvas = stageMagicImageCanvas();
+  exportCanvas.toBlob(async blob => {
+    if (!blob) {
+      toast('Stage and magic sheet image export failed.', 'bad');
+      return;
+    }
+    await saveBlob(blob, `lighting-stage-magic-sheets-${nowFileStamp()}.png`, [{
+      description:'PNG image',
+      accept:{'image/png':['.png']}
+    }]);
+  }, 'image/png');
+}
 function importProjectJsonFile(file){
   if (!file) return;
   const reader = new FileReader();
@@ -3679,7 +4125,7 @@ function importProjectJsonFile(file){
       state.selectedPerformerId = data.selectedPerformerId || null;
       state.selectedCueId = data.selectedCueId || state.cues[0]?.id || null;
       state.currentCueIndex = Number.isFinite(data.currentCueIndex) ? data.currentCueIndex : -1;
-      state.viewZoom = clamp(Number(data.viewZoom) || 1, .58, 1.5);
+      state.viewZoom = clamp(Number(data.viewZoom) || 1, .46, 1.5);
       state.viewPanX = clamp(Number(data.viewPanX) || 0, -34, 34);
       state.focusLocked = !!data.focusLocked;
       renderAll();
@@ -3794,10 +4240,6 @@ function bindEvents(){
     if (!row) return;
     selectCue(row.dataset.id, false);
   });
-  $('stageManagerView').addEventListener('click', event => {
-    const goBtn = event.target.closest('[data-go-cue]');
-    if (goBtn) runCueById(goBtn.dataset.goCue);
-  });
   ['cueNumberInput','cueLabelInput','cueFadeInput','cueHoldInput','cueTriggerSelect'].forEach(id => {
     $(id).addEventListener('change', () => {
       const cue = selectedCue();
@@ -3812,17 +4254,9 @@ function bindEvents(){
       save();
     });
   });
-  $('practiceStackBtn').addEventListener('click', () => installPracticeStack('practice'));
-  $('shortSceneBtn').addEventListener('click', () => installPracticeStack('scene'));
   $('lookPresets').addEventListener('click', event => {
     const btn = event.target.closest('[data-preset]');
     if (btn) applyLookPreset(btn.dataset.preset);
-  });
-  $('workflowModes').addEventListener('click', event => {
-    const btn = event.target.closest('[data-mode]');
-    if (!btn) return;
-    $('workflowModes').querySelectorAll('.tbtn').forEach(item => item.classList.toggle('active', item === btn));
-    toast(btn.dataset.mode === 'performers' ? 'Move performers on the stage.' : btn.dataset.mode === 'focus' ? 'Select a light, then drag or set its focus.' : 'Record, preview, edit, and run cues.', 'good');
   });
   $('performerList').addEventListener('click', event => {
     const row = event.target.closest('[data-id]');
@@ -3891,6 +4325,11 @@ function bindEvents(){
     event.preventDefault();
     event.stopPropagation();
     prepareExportPreview('cueSheet');
+  });
+  $('exportStageMagicBtn').addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    prepareExportPreview('stageMagic');
   });
   $('importProjectBtn').addEventListener('click', event => {
     event.preventDefault();
