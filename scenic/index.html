@@ -539,6 +539,21 @@
   #prClose{background:transparent;color:var(--text-dim)}
   #prRetry{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
   #prShot{background:var(--ui-dark);color:var(--text-light)}
+
+  @media (max-width:1400px){
+    #topbar{
+      height:auto;min-height:52px;flex:0 0 auto;flex-wrap:wrap;
+      align-content:center;gap:7px;padding:8px 12px;
+    }
+    #topbar .brand{margin-right:8px}
+    #topbar .brand-logo{height:20px}
+    #topbar .brand-tag{font-size:7.5px;letter-spacing:1.2px}
+    #topbar .spacer{display:none}
+    .tbtn{padding:6px 9px;font-size:12px;gap:5px}
+    label.toggle{font-size:12px}
+    #zoomLabel{min-width:auto}
+    #captureBtn{margin-left:auto}
+  }
 </style>
 </head>
 <body>
