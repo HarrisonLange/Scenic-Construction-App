@@ -885,7 +885,7 @@
         <h2>Test Checklist</h2>
         <div class="check-row"><span>Power</span><span id="powerCheck" class="check-dot">-</span></div>
         <div class="check-row"><span>Audio path</span><span id="audioCheck" class="check-dot">-</span></div>
-        <div class="check-row"><span>Speaker coverage</span><span id="coverageCheck" class="check-dot">-</span></div>
+        <div class="check-row"><span>Audience zone</span><span id="coverageCheck" class="check-dot">-</span></div>
         <div class="check-row"><span>Cable safety</span><span id="cableCheck" class="check-dot">-</span></div>
       </div>
       <div class="hud">
@@ -1920,7 +1920,11 @@
       });
       state.devices.push(device);
       state.selected = { type: "device", id: device.id };
-      setStatus(definition.label + " placed.", "good");
+      if (definition.currentDraw > 0 && getIncomingConnections(device, "power").length === 0) {
+        setStatus(definition.label + " placed — connect an IEC power cable from the wall outlet to its power input.", "");
+      } else {
+        setStatus(definition.label + " placed.", "good");
+      }
       updateAll();
     }
 
@@ -2080,7 +2084,8 @@
         const incompatible = !portMatchesCable(state.activeCableType, port);
         const disabledText = disabled || incompatible ? " disabled" : "";
         const label = getStudentPortLabel(port);
-        const meta = state.skill === "basic" ? port.label : port.type + " | " + port.direction;
+        // Basic mode hides the rear-panel jargon (e.g. "IEC power input") — the friendly label is enough.
+        const meta = state.skill === "basic" ? "" : port.type + " | " + port.direction;
         return "<button type=\"button\" class=\"port-btn\" data-device=\"" + device.id + "\" data-port=\"" + port.id + "\" data-phase=\"" + phase + "\"" + disabledText + "><span>" + label + "</span><span class=\"port-meta\">" + meta + "</span></button>";
       }).join("");
       dom.portPopup.innerHTML = "<h3>" + title + "</h3><div class=\"port-grid\">" + portRows + "</div>";
@@ -2109,10 +2114,10 @@
         return port.label;
       }
       if (port.direction === "power-in") {
-        return "Power in";
+        return "AC power in";
       }
       if (port.direction === "power-out") {
-        return "Wall power";
+        return "AC wall power";
       }
       if (port.direction === "audio-in") {
         return "Audio in";
@@ -2255,7 +2260,7 @@
           issues.push({
             severity: "bad",
             category: "power",
-            message: source.label + " overloaded: " + load.toFixed(1) + "A on " + rating + "A circuit."
+            message: source.label + " overloaded: " + load.toFixed(1) + "A on " + rating + "A circuit (" + describePowerLoad(sourceId) + ")."
           });
           cutPowerFromSource(sourceId);
         }
@@ -2263,6 +2268,11 @@
       state.devices.forEach(function reportUnpowered(device) {
         const definition = getDefinition(device);
         if (definition.currentDraw > 0 && !device.powered) {
+          // Mixers and powered speakers get a more specific message from the
+          // downstream signal check — don't double-report the same missing cable.
+          if (definition.mixer || (definition.speaker && definition.speaker.powered)) {
+            return;
+          }
           issues.push({
             severity: "bad",
             category: "power",
@@ -2271,6 +2281,29 @@
         }
       });
       return { issues: issues, sourceLoads: sourceLoads };
+    }
+
+    // Summarise the powered devices tracing back to a given source, e.g. "7× Powered speaker + Mixer".
+    function describePowerLoad(sourceId) {
+      const order = [];
+      const counts = {};
+      state.devices.forEach(function tally(device) {
+        const definition = getDefinition(device);
+        if (definition.currentDraw <= 0) {
+          return;
+        }
+        if (findPowerSourceForDevice(device.id) !== sourceId) {
+          return;
+        }
+        if (!Object.prototype.hasOwnProperty.call(counts, definition.label)) {
+          counts[definition.label] = 0;
+          order.push(definition.label);
+        }
+        counts[definition.label] += 1;
+      });
+      return order.map(function formatEntry(label) {
+        return counts[label] > 1 ? counts[label] + "× " + label : label;
+      }).join(" + ");
     }
 
     function hasPowerPorts(definition) {
@@ -2345,8 +2378,12 @@
       });
       microphones.forEach(function evaluateMic(mic) {
         const micOuts = getOutgoingConnections(mic, "mic");
-        if (micOuts.length === 0) {
-          issues.push({ severity: "bad", category: "audio", message: state.skill === "basic" ? "The microphone needs an XLR audio cable to the mixer." : mic.label + " is not connected to a mixer input." });
+        const reachesMixer = micOuts.some(function toMixer(connection) {
+          const destination = findDevice(connection.toDeviceId);
+          return destination && Boolean(getDefinition(destination).mixer);
+        });
+        if (!reachesMixer) {
+          issues.push({ severity: "bad", category: "audio", message: "Wired Microphone must connect to a mixer input — not directly to a speaker." });
         }
       });
       mixers.forEach(function evaluateMixer(mixer) {
@@ -2412,6 +2449,9 @@
       });
       const coverage = audienceZones.map(function mapZone(zone) {
         let score = 0;
+        let nearestDist = Infinity;
+        let nearestOffAxis = 0;
+        let hasNearest = false;
         speakers.forEach(function scoreSpeaker(speaker) {
           const definition = getDefinition(speaker);
           const speakerData = definition.speaker;
@@ -2419,13 +2459,19 @@
           const zoneCenter = getZoneCenter(zone);
           const dist = distance(speakerCenter, zoneCenter);
           const horizontalCoverage = speaker.monitorMode ? 70 : speakerData.coverageH;
-          const angle = angleBetweenDegrees(speaker.rotation, Math.atan2(zoneCenter.y - speakerCenter.y, zoneCenter.x - speakerCenter.x) * 180 / Math.PI);
+          const bearing = Math.atan2(zoneCenter.y - speakerCenter.y, zoneCenter.x - speakerCenter.x) * 180 / Math.PI;
+          const angle = angleBetweenDegrees(speaker.rotation, bearing);
           const insideCone = angle <= horizontalCoverage / 2;
           const throwRatio = Math.max(0, 1 - dist / speakerData.throwFt);
           if (insideCone) {
             score += 55 + throwRatio * 55;
           } else if (angle <= horizontalCoverage) {
             score += 28 + throwRatio * 28;
+          }
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestOffAxis = angle;
+            hasNearest = true;
           }
         });
         let status = "too quiet";
@@ -2435,7 +2481,7 @@
         if (score > 135) {
           status = "too loud";
         }
-        return { zoneId: zone.id, score: score, status: status };
+        return { zoneId: zone.id, score: score, status: status, offAxis: nearestOffAxis, hasNearest: hasNearest };
       });
       state.coverage = coverage;
       const issues = coverage.filter(function filterBad(item) {
@@ -2444,10 +2490,19 @@
         const zone = state.zones.find(function findZone(candidate) {
           return candidate.id === item.zoneId;
         });
+        const label = zone ? zone.label : "Audience zone";
+        let message;
+        if (item.status === "too quiet") {
+          message = item.hasNearest
+            ? label + " is too quiet — nearest speaker is " + Math.round(item.offAxis) + "° off-axis. Rotate or reposition it to face the audience."
+            : label + " is too quiet — add a powered speaker aimed at the audience.";
+        } else {
+          message = label + " is too loud — speaker may be too close or aimed directly at front row.";
+        }
         return {
           severity: item.status === "too quiet" ? "bad" : "warn",
           category: "coverage",
-          message: (zone ? zone.label : "Audience zone") + " is " + item.status + "."
+          message: message
         };
       });
       return issues;
@@ -2535,40 +2590,53 @@
       };
     }
 
-    function updateBasicChecklist(result) {
-      if (state.skill !== "basic") {
+    // Live pre-test checklist (Basic Mode). Reads as a to-do list: grey dot = not
+    // done yet, green = done. Shown as soon as one device is on the canvas.
+    function updateBasicChecklist() {
+      if (state.skill !== "basic" || state.devices.length === 0) {
         dom.basicChecklist.hidden = true;
         return;
       }
       dom.basicChecklist.hidden = false;
-      setChecklistItem(dom.powerCheck, getCategoryStatus(result.issues, "power"));
-      setChecklistItem(dom.audioCheck, getCategoryStatus(result.issues, "audio"));
-      setChecklistItem(dom.coverageCheck, getCategoryStatus(result.issues, "coverage"));
-      setChecklistItem(dom.cableCheck, getCategoryStatus(result.issues, "cable"));
+      setChecklistItem(dom.powerCheck, checkPowerWired());
+      setChecklistItem(dom.audioCheck, checkAudioChain());
+      setChecklistItem(dom.coverageCheck, checkAudienceZone());
+      setChecklistItem(dom.cableCheck, checkNoInvalidCables());
     }
 
-    function getCategoryStatus(issues, category) {
-      const categoryIssues = issues.filter(function filterCategory(issue) {
-        return issue.category === category;
+    function checkPowerWired() {
+      const needPower = state.devices.filter(function needsPower(device) {
+        return getDefinition(device).currentDraw > 0;
       });
-      if (categoryIssues.some(function hasBad(issue) { return issue.severity === "bad"; })) {
-        return "bad";
-      }
-      if (categoryIssues.length > 0) {
-        return "warn";
-      }
-      return "good";
+      return needPower.length > 0 && needPower.every(function wired(device) {
+        return findPowerSourceForDevice(device.id) !== null;
+      });
     }
 
-    function setChecklistItem(element, status) {
-      element.className = "check-dot " + status;
-      if (status === "good") {
-        element.textContent = "OK";
-      } else if (status === "warn") {
-        element.textContent = "!";
-      } else {
-        element.textContent = "X";
-      }
+    function checkAudioChain() {
+      return state.devices.some(function isFedMixer(device) {
+        if (!getDefinition(device).mixer) {
+          return false;
+        }
+        return getIncomingConnections(device, "mic").length > 0 && getOutgoingConnections(device, "line").length > 0;
+      });
+    }
+
+    function checkAudienceZone() {
+      return state.zones.some(function isAudience(zone) {
+        return zone.type === "audience";
+      });
+    }
+
+    function checkNoInvalidCables() {
+      return state.connections.length > 0 && state.connections.every(function isValid(connection) {
+        return connection.valid;
+      });
+    }
+
+    function setChecklistItem(element, done) {
+      element.className = "check-dot" + (done ? " good" : "");
+      element.textContent = done ? "OK" : "";
     }
 
     function hasMinimumSystem() {
@@ -2652,7 +2720,7 @@
 
     function runSystemTest() {
       const result = evaluateSystem();
-      updateBasicChecklist(result);
+      updateBasicChecklist();
       state.animation = {
         running: true,
         start: performance.now(),
@@ -3111,7 +3179,7 @@
         return state.quiz.activeScenario.inventory.includes(cable.id);
       }) : cableEntries;
       dom.cableButtons.innerHTML = filtered.map(function mapCable(cable) {
-        const label = state.skill === "basic" ? cable.basicLabel : cable.label;
+        const label = getCableDisplayLabel(cable);
         return "<button type=\"button\" class=\"cable-btn\" data-cable=\"" + cable.id + "\" aria-pressed=\"false\"><span class=\"icon\" style=\"background:" + cable.color + ";color:#fff\">" + getCableCue(cable) + "</span><span>" + label + "</span></button>";
       }).join("");
     }
@@ -3408,6 +3476,7 @@
       updateInspector();
       updateMetrics();
       updateScenarioProgress();
+      updateBasicChecklist();
       render();
       saveToStorage();
     }
@@ -3442,6 +3511,13 @@
 
     function render() {
       drawGrid();
+      // Live coverage heatmap: recompute each frame so audience-zone tint tracks
+      // speakers as the student moves them. Only meaningful once a speaker exists.
+      if (state.devices.some(function hasSpeaker(device) { return Boolean(getDefinition(device).speaker); })) {
+        evaluateCoverage();
+      } else {
+        state.coverage = [];
+      }
       drawZones();
       drawCoverage();
       drawConnections();
@@ -3483,12 +3559,12 @@
         return baseColor;
       }
       if (coverageStatus.status === "covered") {
-        return "rgba(53, 159, 107, 0.28)";
+        return "rgba(34, 197, 94, 0.30)";   // green — good coverage (65–135)
       }
       if (coverageStatus.status === "too loud") {
-        return "rgba(179, 49, 49, 0.22)";
+        return "rgba(251, 191, 36, 0.28)";  // amber — too loud (>135)
       }
-      return "rgba(198, 132, 0, 0.22)";
+      return "rgba(239, 68, 68, 0.26)";     // red — too quiet (<65)
     }
 
     function drawCoverage() {
@@ -3577,7 +3653,11 @@
     }
 
     function getCableDisplayLabel(cable) {
-      return state.skill === "basic" ? cable.basicLabel : cable.label;
+      if (state.skill === "basic") {
+        // Plain-language name for the AC power lead (cableType stays "iec" internally).
+        return cable.id === "iec" ? "AC Power Cable" : cable.basicLabel;
+      }
+      return cable.label;
     }
 
     function drawCableWarnings(connection, route) {
