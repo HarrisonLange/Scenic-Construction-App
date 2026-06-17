@@ -2906,9 +2906,6 @@ function normalizePoly(poly){
     h: maxY-minY
   };
 }
-function rotateNestShape(shape){
-  return normalizePoly(shape.poly.map(([x,y])=>[y, shape.w-x]));
-}
 function glowforgeLocalPolyIn(p){
   const m = MATS[p.type];
   if (!m || p.type === 'sh-luan') return null;
@@ -2921,7 +2918,7 @@ function glowforgeLocalPolyIn(p){
   if (m.kind === 'fab') return localPolyIn(p);
   if (m.kind === 'lumber'){
     const L = p.lengthIn || 0;
-    const W = m.face; // on-edge lumber is laid on its side for the laser nest
+    const W = pieceW(p); // cut the same face/on-edge profile shown in the drawing
     const miterL = p.miterL == null ? 90 : p.miterL;
     const miterR = p.miterR == null ? 90 : p.miterR;
     let dxL = 0, dxR = 0;
@@ -2939,7 +2936,7 @@ function glowforgeLocalPolyIn(p){
 function glowforgeItemLabel(p, index){
   const m = MATS[p.type] || {name:p.type};
   if (p.type === 'sh-ply') return `${index}. ${m.name} ${fmtIn(p.lengthIn||0)} x ${fmtIn(p.widthIn||pieceW(p))}`;
-  if (m.kind === 'lumber') return `${index}. ${m.name} ${fmtIn(p.lengthIn||0)} side profile`;
+  if (m.kind === 'lumber') return `${index}. ${m.name} ${fmtIn(p.lengthIn||0)} ${p.orientation==='edge'?'on edge':'face'}`;
   return `${index}. ${m.name}`;
 }
 function glowforgeItems(){
@@ -2965,16 +2962,7 @@ function glowforgeItems(){
   return {items, skipped};
 }
 function chooseNestShape(item, remainingW){
-  const normal = {poly:item.poly, w:item.w, h:item.h, rotated:false};
-  const rotated = Object.assign(rotateNestShape(item), {rotated:true});
-  const maxW = GLOWFORGE_NEST.w - 2*GLOWFORGE_NEST.margin;
-  const maxH = GLOWFORGE_NEST.h - 2*GLOWFORGE_NEST.margin;
-  const candidates = [normal, rotated].filter(o=>o.w <= maxW && o.h <= maxH);
-  const usable = candidates.length ? candidates : [normal, rotated];
-  const inRow = usable.filter(o=>o.w <= remainingW);
-  const pool = inRow.length ? inRow : usable;
-  pool.sort((a,b)=>(a.h-b.h) || (a.w-b.w));
-  return pool[0];
+  return {poly:item.poly, w:item.w, h:item.h, rotated:false};
 }
 function packGlowforgeItems(items){
   const cfg = GLOWFORGE_NEST;
@@ -3023,11 +3011,11 @@ function generateGlowforgeSvg(){
     generated:new Date().toISOString(),
     cuttablePieces:made.items.length,
     skipped:made.skipped,
-    note:'Luan is omitted. Plywood sheets are included. On-edge lumber is laid on its face/side profile.'
+    note:'Luan is omitted. Plywood sheets are included. Lumber is cut in the same face/on-edge orientation shown in the drawing.'
   };
   const paths = pack.placed.map((pl, i)=>{
     const id = 'cut-' + safeFilePart(pl.item.type).toLowerCase() + '-' + (i+1);
-    const title = pl.item.label + (pl.rotated ? ' rotated in nest' : '');
+    const title = pl.item.label;
     return `  <g id="${xmlEsc(id)}"><title>${xmlEsc(title)}</title><path d="${glowforgePath(pl.poly, pl.x, pl.y)}"/></g>`;
   }).join('\n');
   const svg =
