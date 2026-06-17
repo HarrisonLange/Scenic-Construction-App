@@ -448,9 +448,10 @@
 
   /* ── Fractional-inch quiz ─────────────────── */
   #fracQuizBack .modal{width:440px;max-width:94vw}
-  .fq-top{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;
+  .fq-top{display:flex;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:11.5px;
     color:var(--text-dim);margin-bottom:14px}
   .fq-top #fqScore{color:var(--tape)}
+  .fq-top #fqTimer{color:var(--amber)}
   .fq-q{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text-light);
     text-align:center;margin:6px 0 16px;letter-spacing:.5px}
   .fq-inrow{display:flex;gap:8px}
@@ -471,13 +472,37 @@
   #fqQuit:hover{color:#fff;background:var(--ui-dark3)}
   #fqNext{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
 
+  /* practice quiz lesson */
+  #practiceTrainingBack .modal{width:520px;max-width:94vw}
+  .pt-kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:4px}
+  .pt-step{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:12px}
+  .pt-body{font-size:12.5px;line-height:1.55;color:var(--text-light)}
+  .pt-body p{margin:0 0 10px}
+  .pt-body ul{margin:0 0 10px;padding-left:18px}
+  .pt-body li{margin:3px 0}
+  .pt-rule{font-family:var(--mono);background:var(--ui-dark);border:1px solid var(--ui-dark3);
+    border-radius:7px;padding:9px 10px;margin-top:10px;color:var(--tape)}
+  .pt-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .pt-actions button{border-radius:6px;padding:8px 14px;font-size:12.5px;cursor:pointer;
+    font-family:inherit;border:1px solid var(--ui-dark3)}
+  #ptBack{background:transparent;color:var(--text-dim)}
+  #ptBack:hover:not(:disabled){color:#fff;background:var(--ui-dark3)}
+  #ptBack:disabled{opacity:.35;cursor:default}
+  #ptStart{background:transparent;color:var(--text-dim)}
+  #ptStart:hover{color:#fff;background:var(--ui-dark3)}
+  #ptNext{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+
   /* ── Tape-measure quiz panel + read-only tape ─ */
   #tapeQuizPanel{
-    position:absolute;top:14px;left:18px;z-index:97;display:none;width:300px;
+    align-self:center;z-index:97;display:none;width:320px;max-width:calc(100vw - 32px);margin:10px auto 8px;
     background:rgba(28,28,30,.96);border:1px solid var(--amber);border-radius:10px;
     padding:13px 15px;box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   #tapeOverlay.tape-quiz #tapeQuizPanel{display:block}
+  #tapeQuizPanel .tq-top{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);
+    font-size:11px;color:var(--text-dim);margin-bottom:8px}
+  #tapeQuizPanel .tq-top #tqTimer{color:var(--amber)}
+  #tapeQuizPanel .tq-top #tqScore{color:var(--tape)}
   #tapeQuizPanel .tq-head{font-size:10.5px;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase}
   #tapeQuizPanel .tq-head b{color:var(--amber)}
   #tapeQuizPanel .tq-target{font-family:var(--mono);font-size:13px;color:var(--text-dim);margin-top:8px}
@@ -501,12 +526,19 @@
   #practiceResultsBack h3{font-size:17px;margin-bottom:2px}
   #practiceResultsBack .pr-sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-bottom:14px}
   #prScore{font-family:var(--mono);font-size:40px;font-weight:700;color:var(--tape);margin:4px 0}
-  #prScoreLbl{font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:18px}
+  #prScoreLbl{font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+  #prTime{font-family:var(--mono);font-size:12px;color:var(--amber);margin-bottom:14px}
+  .result-name{display:flex;flex-direction:column;gap:5px;text-align:left;margin:12px 0 16px;
+    font-size:11px;color:var(--text-dim);font-family:var(--mono)}
+  .result-name input{background:var(--ui-dark);color:var(--text-light);border:1px solid var(--ui-dark3);
+    border-radius:6px;padding:8px 10px;font-family:inherit;font-size:13px;outline:none}
+  .result-name input:focus{border-color:var(--amber)}
   #practiceResultsBack .pr-actions{display:flex;gap:8px;justify-content:center}
   #practiceResultsBack .pr-actions button{border-radius:6px;padding:8px 16px;font-size:12.5px;
     cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
   #prClose{background:transparent;color:var(--text-dim)}
   #prRetry{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+  #prShot{background:var(--ui-dark);color:var(--text-light)}
 </style>
 </head>
 <body>
@@ -691,6 +723,13 @@
     <div id="tapeHint">SCROLL to pull tape out &middot; hover for magnifier &middot; CLICK a mark to set &middot; or type a length &middot; Esc cancels</div>
     <button id="tapeCancel">Cancel (Esc)</button>
   </div>
+  <div id="tapeQuizPanel">
+    <div class="tq-top"><span id="tqProgress">1 / 10</span><span id="tqTimer">0:00</span><span id="tqScore">Score 0</span></div>
+    <div class="tq-head"><b>Find the length</b></div>
+    <div class="tq-target">Click this mark:<b id="tqTarget">&mdash;</b></div>
+    <div class="tq-feedback" id="tqFeedback"></div>
+    <button id="tqQuit">Quit</button>
+  </div>
   <canvas id="tapeCv" height="280"></canvas>
 </div>
 
@@ -736,9 +775,12 @@
     <div id="quizAvg">0:00</div>
     <div id="quizAvgLbl">Average time per build</div>
     <table id="quizTimesTbl"></table>
+    <label class="result-name" for="quizStudentName">Student name
+      <input id="quizStudentName" type="text" placeholder="Name for score picture" autocomplete="name">
+    </label>
     <div class="qr-actions">
       <button id="quizResultsClose">Close</button>
-      <button id="quizShot">Download results PNG</button>
+      <button id="quizShot">Save score PNG</button>
     </div>
   </div>
 </div>
@@ -772,10 +814,25 @@
   </div>
 </div>
 
+<!-- Practice quiz training -->
+<div class="modal-back" id="practiceTrainingBack">
+  <div class="modal">
+    <div class="pt-kicker" id="ptKicker">Training</div>
+    <h3 id="ptTitle">Practice Training</h3>
+    <div class="pt-step" id="ptStep">Step 1 / 4</div>
+    <div class="pt-body" id="ptBody"></div>
+    <div class="pt-actions">
+      <button id="ptBack">Back</button>
+      <button id="ptStart">Start quiz</button>
+      <button id="ptNext">Next</button>
+    </div>
+  </div>
+</div>
+
 <!-- Fractional-inch quiz -->
 <div class="modal-back" id="fracQuizBack">
   <div class="modal">
-    <div class="fq-top"><span id="fqProgress">1 / 20</span><span id="fqScore">Score 0</span></div>
+    <div class="fq-top"><span id="fqProgress">1 / 20</span><span id="fqTimer">0:00</span><span id="fqScore">Score 0</span></div>
     <div class="fq-q" id="fqQuestion">—</div>
     <div class="fq-inrow">
       <input id="fqAnswer" type="text" placeholder="answer, e.g. 3' 10 1/8&quot;" autocomplete="off">
@@ -796,8 +853,13 @@
     <div class="pr-sub" id="prSub"></div>
     <div id="prScore">0 / 0</div>
     <div id="prScoreLbl">Correct</div>
+    <div id="prTime">Time 0:00</div>
+    <label class="result-name" for="prStudentName">Student name
+      <input id="prStudentName" type="text" placeholder="Name for score picture" autocomplete="name">
+    </label>
     <div class="pr-actions">
       <button id="prClose">Close</button>
+      <button id="prShot">Save score PNG</button>
       <button id="prRetry">Try again</button>
     </div>
   </div>
@@ -3130,6 +3192,62 @@ function fmtClock(ms){
   const s = Math.floor(ms/1000);
   return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
 }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function localDateStamp(d){
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+function localTimeStamp(d){ return pad2(d.getHours()) + pad2(d.getMinutes()); }
+function safeFilePart(value){
+  return String(value || 'Student').trim()
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48) || 'Student';
+}
+const STUDENT_NAME_KEY = 'scenicQuizStudentName';
+function storedStudentName(){
+  try{ return localStorage.getItem(STUDENT_NAME_KEY) || ''; }catch(_){ return ''; }
+}
+function seedResultStudent(inputId){
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const saved = storedStudentName();
+  if (saved && !el.value.trim()) el.value = saved;
+}
+function getResultStudent(inputId){
+  const el = document.getElementById(inputId);
+  const typed = el ? el.value.trim() : '';
+  if (typed){ try{ localStorage.setItem(STUDENT_NAME_KEY, typed); }catch(_){} }
+  return typed || storedStudentName() || 'Student';
+}
+function downloadCanvasPng(canvas, filename){
+  const a=document.createElement('a');
+  a.href=canvas.toDataURL('image/png');
+  a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function timerElapsedMs(state){
+  return (typeof state.startedAt === 'number') ? performance.now() - state.startedAt : (state.elapsedMs || 0);
+}
+function startElapsedTimer(state, timerId){
+  stopElapsedTimer(state, timerId);
+  state.startedAt = performance.now();
+  state.elapsedMs = 0;
+  const tick = ()=>{
+    const el = document.getElementById(timerId);
+    if (el) el.textContent = fmtClock(timerElapsedMs(state));
+  };
+  tick();
+  state.timer = setInterval(tick, 200);
+}
+function stopElapsedTimer(state, timerId){
+  if (state.timer){ clearInterval(state.timer); state.timer = null; }
+  if (typeof state.startedAt === 'number'){
+    state.elapsedMs = performance.now() - state.startedAt;
+    state.startedAt = null;
+  }
+  const el = document.getElementById(timerId);
+  if (el) el.textContent = fmtClock(state.elapsedMs || 0);
+}
 function quizPickQuestion(){
   // Advanced mode adds the door & window flats to the pool.
   const keys = Object.keys(QUIZ_STYLES).filter(k=> advancedMode || !QUIZ_STYLES[k].adv);
@@ -3211,6 +3329,7 @@ function quizFinish(){
     : '<span style="color:#4ade80">Standard mode</span>';
   document.getElementById('quizTimesTbl').innerHTML =
     quiz.times.map((t,i)=>`<tr><td>Build ${i+1}</td><td>${fmtClock(t)}</td></tr>`).join('');
+  seedResultStudent('quizStudentName');
   document.getElementById('quizResultsBack').classList.add('show');
 }
 function quizExit(restore){
@@ -3253,28 +3372,28 @@ document.getElementById('quizResultsClose').addEventListener('click', ()=>{
 });
 /* Screenshot of the results card (drawn to an offscreen canvas) */
 document.getElementById('quizShot').addEventListener('click', ()=>{
-  const W=440, H=120 + quiz.times.length*22 + 70;
+  const name = getResultStudent('quizStudentName');
+  const when = new Date();
+  const W=500, H=160 + quiz.times.length*22 + 70;
   const c=document.createElement('canvas'); c.width=W*2; c.height=H*2;
   const g=c.getContext('2d'); g.scale(2,2);
   g.fillStyle='#1C1C1E'; g.fillRect(0,0,W,H);
   g.fillStyle='#E8E6E1'; g.font='bold 18px '+MONO; g.textAlign='left';
-  g.fillText('Scenic Construction — Quiz Results', 22, 34);
+  g.fillText('Scenic Construction - Build Quiz Results', 22, 34);
   g.fillStyle='#9B9893'; g.font='11px '+MONO;
-  g.fillText(QUIZ_TOTAL+' builds verified · '+(quiz.easyUsed?'Easy mode':'Standard mode'), 22, 52);
-  g.fillText(new Date().toLocaleString(), 22, 67);
+  g.fillText(QUIZ_TOTAL+' builds verified - '+(quiz.easyUsed?'Easy mode':'Standard mode'), 22, 52);
+  g.fillText('Student: '+name, 22, 70);
+  g.fillText('Date: '+when.toLocaleDateString(), 22, 86);
   const avg = quiz.times.reduce((a,b)=>a+b,0)/quiz.times.length;
   g.fillStyle='#facc15'; g.font='bold 30px '+MONO; g.textAlign='center';
-  g.fillText('avg '+fmtClock(avg), W/2, 96);
+  g.fillText('Average '+fmtClock(avg), W/2, 122);
   g.textAlign='left'; g.font='12px '+MONO;
   quiz.times.forEach((t,i)=>{
-    const y=130+i*22;
+    const y=158+i*22;
     g.fillStyle='#9B9893'; g.fillText('Build '+(i+1), 30, y);
     g.fillStyle='#E8E6E1'; g.textAlign='right'; g.fillText(fmtClock(t), W-30, y); g.textAlign='left';
   });
-  const a=document.createElement('a');
-  a.href=c.toDataURL('image/png');
-  a.download='quiz-results-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png';
-  document.body.appendChild(a); a.click(); a.remove();
+  downloadCanvasPng(c, 'build-quiz-results-'+safeFilePart(name)+'-'+localDateStamp(when)+'-'+localTimeStamp(when)+'.png');
 });
 
 /* ============================================================
@@ -3299,10 +3418,116 @@ quizMenuBack.querySelectorAll('.qm-opt').forEach(btn=>{
     closeQuizMenu();
     if (q==='normal')    quizStart({easy:false});
     else if (q==='easy') quizStart({easy:true});
-    else if (q==='frac') fracQuizStart();
-    else if (q==='tape') tapeQuizStart();
+    else if (q==='frac') openPracticeTraining('frac');
+    else if (q==='tape') openPracticeTraining('tape');
   });
 });
+
+/* practice-quiz lessons: short walkthroughs before the drills */
+const practiceTrainingBack = document.getElementById('practiceTrainingBack');
+const practiceTraining = { mode:null, step:0 };
+const PRACTICE_LESSONS = {
+  frac: {
+    kicker:'Fractional inches',
+    title:'Add and subtract fractional inches',
+    startLabel:'Start fractional quiz',
+    start: fracQuizStart,
+    steps:[
+      {
+        title:'Read the parts',
+        body:`<p>A shop length is read as <b>feet</b>, then <b>whole inches</b>, then the <b>fraction of an inch</b>.</p>
+              <div class="pt-rule">3'-10 1/8&quot; = 3 feet + 10 inches + 1/8 inch</div>`
+      },
+      {
+        title:'Make the fractions match',
+        body:`<p>Use a common denominator before adding. In this lab, the smallest mark is 1/16&quot;, so sixteenths always work.</p>
+              <ul><li>1/4&quot; = 4/16&quot;</li><li>3/8&quot; = 6/16&quot;</li><li>1/2&quot; = 8/16&quot;</li></ul>
+              <div class="pt-rule">2 3/8&quot; + 1 7/16&quot; = 2 6/16&quot; + 1 7/16&quot; = 3 13/16&quot;</div>`
+      },
+      {
+        title:'Borrow when subtracting',
+        body:`<p>If the top fraction is smaller, borrow one whole inch. One inch is 16/16&quot;.</p>
+              <div class="pt-rule">5 1/8&quot; - 2 3/4&quot;<br>4 18/16&quot; - 2 12/16&quot; = 2 6/16&quot; = 2 3/8&quot;</div>`
+      },
+      {
+        title:'Answer in shop notation',
+        body:`<p>Type the result the way you would say it in the shop. The quiz accepts feet-and-inches or total inches.</p>
+              <div class="pt-rule">3' 10 1/8&quot; &nbsp; or &nbsp; 46 1/8&quot;</div>`
+      }
+    ]
+  },
+  tape: {
+    kicker:'Tape measure',
+    title:'Read a tape measure',
+    startLabel:'Start tape quiz',
+    start: tapeQuizStart,
+    steps:[
+      {
+        title:'Use mark length as a clue',
+        body:`<p>The longest marks are whole inches. Half-inch marks are next longest, then quarters, eighths, and sixteenths.</p>
+              <div class="pt-rule">1/2&quot; marks split the inch in 2<br>1/4&quot; marks split it in 4<br>1/16&quot; marks split it in 16</div>`
+      },
+      {
+        title:'Start at the last whole inch',
+        body:`<p>Find the whole-inch number to the left of the mark, then count the small marks to the right.</p>
+              <div class="pt-rule">At 3 inches + 5 small marks = 3 5/16&quot;</div>`
+      },
+      {
+        title:'Simplify the fraction',
+        body:`<p>If the mark lands on an even sixteenth, reduce the fraction to the name a carpenter would say.</p>
+              <ul><li>8/16&quot; becomes 1/2&quot;</li><li>4/16&quot; becomes 1/4&quot;</li><li>12/16&quot; becomes 3/4&quot;</li></ul>`
+      },
+      {
+        title:'Read feet after 12 inches',
+        body:`<p>Every 12 inches is one foot. In the quiz, scroll the tape out, hover to use the magnifier, and click the exact mark requested.</p>
+              <div class="pt-rule">1'-2 3/4&quot; = 14 3/4&quot; from the hook</div>`
+      }
+    ]
+  }
+};
+function openPracticeTraining(mode){
+  const lesson = PRACTICE_LESSONS[mode];
+  if (!lesson) return;
+  if (quiz.active){ toast('Finish the build quiz first.', {warn:true}); return; }
+  if (typeof training !== 'undefined' && training.active){ toast('Exit Training first, then start this quiz.', {warn:true}); return; }
+  practiceTraining.mode = mode;
+  practiceTraining.step = 0;
+  renderPracticeTraining();
+  practiceTrainingBack.classList.add('show');
+}
+function closePracticeTraining(){
+  practiceTrainingBack.classList.remove('show');
+  practiceTraining.mode = null;
+}
+function renderPracticeTraining(){
+  const lesson = PRACTICE_LESSONS[practiceTraining.mode];
+  if (!lesson) return;
+  const step = lesson.steps[practiceTraining.step];
+  document.getElementById('ptKicker').textContent = lesson.kicker;
+  document.getElementById('ptTitle').textContent = lesson.title;
+  document.getElementById('ptStep').textContent = 'Step ' + (practiceTraining.step+1) + ' / ' + lesson.steps.length + ' - ' + step.title;
+  document.getElementById('ptBody').innerHTML = step.body;
+  document.getElementById('ptBack').disabled = practiceTraining.step === 0;
+  document.getElementById('ptStart').textContent = lesson.startLabel;
+  document.getElementById('ptNext').textContent = (practiceTraining.step >= lesson.steps.length-1) ? lesson.startLabel : 'Next';
+}
+function startPracticeTrainingQuiz(){
+  const lesson = PRACTICE_LESSONS[practiceTraining.mode];
+  if (!lesson) return;
+  closePracticeTraining();
+  lesson.start();
+}
+document.getElementById('ptBack').addEventListener('click', ()=>{
+  if (practiceTraining.step > 0){ practiceTraining.step--; renderPracticeTraining(); }
+});
+document.getElementById('ptNext').addEventListener('click', ()=>{
+  const lesson = PRACTICE_LESSONS[practiceTraining.mode];
+  if (!lesson) return;
+  if (practiceTraining.step >= lesson.steps.length-1) startPracticeTrainingQuiz();
+  else { practiceTraining.step++; renderPracticeTraining(); }
+});
+document.getElementById('ptStart').addEventListener('click', startPracticeTrainingQuiz);
+practiceTrainingBack.addEventListener('click', e=>{ if (e.target===practiceTrainingBack) closePracticeTraining(); });
 
 /* shared RNG helpers ─────────────────────────── */
 function randInt(lo, hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
@@ -3322,7 +3547,7 @@ function randFracSix(){
    with the same length parser the tape uses and compared exactly.
    ============================================================ */
 const FRAC_TOTAL = 20;
-const fracQuiz = { active:false, n:0, score:0, answerSix:0, answered:false };
+const fracQuiz = { active:false, n:0, score:0, answerSix:0, answered:false, timer:null, startedAt:null, elapsedMs:0 };
 const fracBack = document.getElementById('fracQuizBack');
 
 /* one operand in total sixteenths: 0–4 ft, 0–11 in, optional fraction */
@@ -3344,6 +3569,7 @@ function makeFracQuestion(){
 function fracQuizStart(){
   fracQuiz.active = true; fracQuiz.n = 0; fracQuiz.score = 0;
   fracBack.classList.add('show');
+  startElapsedTimer(fracQuiz, 'fqTimer');
   fracQuizNext();
 }
 function fracQuizNext(){
@@ -3380,18 +3606,22 @@ function fracQuizCheck(){
                    '</span> (you said <span class="fq-corr">' + fmtSix(six) + '</span>).';
   }
   document.getElementById('fqScore').textContent = 'Score ' + fracQuiz.score;
+  if (fracQuiz.n >= FRAC_TOTAL) stopElapsedTimer(fracQuiz, 'fqTimer');
   document.getElementById('fqCheck').style.display='none';
   const next = document.getElementById('fqNext');
   next.style.display=''; next.textContent = (fracQuiz.n >= FRAC_TOTAL) ? 'See results ›' : 'Next ›';
   setTimeout(()=>next.focus(),0);
 }
 function fracQuizFinish(){
+  stopElapsedTimer(fracQuiz, 'fqTimer');
   fracQuiz.active = false;
   fracBack.classList.remove('show');
   showPracticeResults({ title:'Fractional-Inch Quiz', sub:FRAC_TOTAL+' add & subtract problems',
-                        score:fracQuiz.score, total:FRAC_TOTAL, retry:fracQuizStart });
+                        score:fracQuiz.score, total:FRAC_TOTAL, elapsedMs:fracQuiz.elapsedMs,
+                        kind:'fractional-inch-quiz', retry:fracQuizStart });
 }
 function fracQuizQuit(){
+  stopElapsedTimer(fracQuiz, 'fqTimer');
   fracQuiz.active = false;
   fracBack.classList.remove('show');
 }
@@ -3412,7 +3642,7 @@ document.getElementById('fqAnswer').addEventListener('keydown', e=>{
    matching mark. Wrong answers reveal the correct mark in green.
    ============================================================ */
 const TAPE_TOTAL = 10;
-const tapeQuiz = { active:false, n:0, score:0, target:0, locked:false };
+const tapeQuiz = { active:false, n:0, score:0, target:0, locked:false, timer:null, startedAt:null, elapsedMs:0 };
 
 /* a random target in sixteenths, ~2"–47", usually landing on a fraction */
 function randTapeTargetSix(){
@@ -3421,6 +3651,7 @@ function randTapeTargetSix(){
 function tapeQuizStart(){
   if (quiz.active){ toast('Finish the build quiz first.', {warn:true}); return; }
   tapeQuiz.active = true; tapeQuiz.n = 0; tapeQuiz.score = 0;
+  startElapsedTimer(tapeQuiz, 'tqTimer');
   // drive the tape canvas in read-only quiz mode
   T.active = true; T.quiz = true; T.type = 'lum-1x3';
   T.stage = 'length'; T.values = {};
@@ -3441,6 +3672,7 @@ function tapeQuizNext(){
   T.offsetIn = -1.5; T.hoverSix = null; T.hoverX = null; T.revealSix = null;
   document.getElementById('tqProgress').textContent = tapeQuiz.n + ' / ' + TAPE_TOTAL;
   document.getElementById('tqTarget').textContent = fmtSix(tapeQuiz.target);
+  document.getElementById('tqScore').textContent = 'Score ' + tapeQuiz.score;
   const fb = document.getElementById('tqFeedback'); fb.className='tq-feedback'; fb.innerHTML='';
   tapeDraw();
 }
@@ -3457,17 +3689,22 @@ function tapeQuizAnswer(six){
     fb.innerHTML = '✗ You clicked ' + fmtSix(six) + ' — the green mark is the answer.';
     T.revealSix = tapeQuiz.target;
   }
+  document.getElementById('tqScore').textContent = 'Score ' + tapeQuiz.score;
+  if (tapeQuiz.n >= TAPE_TOTAL) stopElapsedTimer(tapeQuiz, 'tqTimer');
   tapeDraw();
   setTimeout(()=>{ if (tapeQuiz.active) tapeQuizNext(); }, correct ? 850 : 1900);
 }
 function tapeQuizFinish(){
+  stopElapsedTimer(tapeQuiz, 'tqTimer');
   tapeQuiz.active = false;
   T.active = false; T.quiz = false; T.revealSix = null;
   tapeOverlay.classList.remove('show','tape-quiz');
   showPracticeResults({ title:'Tape-Measure Quiz', sub:TAPE_TOTAL+' measurements read',
-                        score:tapeQuiz.score, total:TAPE_TOTAL, retry:tapeQuizStart });
+                        score:tapeQuiz.score, total:TAPE_TOTAL, elapsedMs:tapeQuiz.elapsedMs,
+                        kind:'tape-measure-quiz', retry:tapeQuizStart });
 }
 function tapeQuizQuit(){
+  stopElapsedTimer(tapeQuiz, 'tqTimer');
   tapeQuiz.active = false;
   T.active = false; T.quiz = false; T.revealSix = null;
   tapeOverlay.classList.remove('show','tape-quiz');
@@ -3476,11 +3713,15 @@ document.getElementById('tqQuit').addEventListener('click', tapeQuizQuit);
 
 /* ── Practice-quiz results (fractional / tape) ── */
 let practiceRetry = null;
-function showPracticeResults({title, sub, score, total, retry}){
+let practiceResult = null;
+function showPracticeResults({title, sub, score, total, elapsedMs, kind, retry}){
   practiceRetry = retry || null;
+  practiceResult = {title, sub, score, total, elapsedMs:elapsedMs || 0, kind:kind || 'practice-quiz'};
   document.getElementById('prTitle').textContent = title + ' 🎉';
   document.getElementById('prSub').textContent = sub;
   document.getElementById('prScore').textContent = score + ' / ' + total;
+  document.getElementById('prTime').textContent = 'Time ' + fmtClock(practiceResult.elapsedMs);
+  seedResultStudent('prStudentName');
   document.getElementById('practiceResultsBack').classList.add('show');
 }
 document.getElementById('prClose').addEventListener('click', ()=>{
@@ -3489,6 +3730,28 @@ document.getElementById('prClose').addEventListener('click', ()=>{
 document.getElementById('prRetry').addEventListener('click', ()=>{
   document.getElementById('practiceResultsBack').classList.remove('show');
   if (practiceRetry) practiceRetry();
+});
+document.getElementById('prShot').addEventListener('click', ()=>{
+  if (!practiceResult) return;
+  const name = getResultStudent('prStudentName');
+  const when = new Date();
+  const W=500, H=250;
+  const c=document.createElement('canvas'); c.width=W*2; c.height=H*2;
+  const g=c.getContext('2d'); g.scale(2,2);
+  g.fillStyle='#1C1C1E'; g.fillRect(0,0,W,H);
+  g.fillStyle='#E8E6E1'; g.font='bold 18px '+MONO; g.textAlign='left';
+  g.fillText('Scenic Construction - '+practiceResult.title, 22, 34);
+  g.fillStyle='#9B9893'; g.font='11px '+MONO;
+  g.fillText(practiceResult.sub, 22, 54);
+  g.fillText('Student: '+name, 22, 76);
+  g.fillText('Date: '+when.toLocaleDateString(), 22, 92);
+  g.fillStyle='#facc15'; g.font='bold 42px '+MONO; g.textAlign='center';
+  g.fillText(practiceResult.score+' / '+practiceResult.total, W/2, 150);
+  g.fillStyle='#9B9893'; g.font='12px '+MONO;
+  g.fillText('Correct', W/2, 171);
+  g.fillStyle='#E8E6E1'; g.font='bold 22px '+MONO;
+  g.fillText('Time '+fmtClock(practiceResult.elapsedMs), W/2, 208);
+  downloadCanvasPng(c, practiceResult.kind+'-'+safeFilePart(name)+'-'+localDateStamp(when)+'-'+localTimeStamp(when)+'.png');
 });
 
 /* ============================================================
