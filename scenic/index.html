@@ -2869,9 +2869,17 @@ function load(){
    ============================================================ */
 const exportModal = document.getElementById('exportModal');
 let exportDataUrl = null, exportName = '';
-const GLOWFORGE_SCALE = 1 / 48; // 1/4" = 1'-0"; real shop inches -> model inches
 const GLOWFORGE_NEST = {w:19, h:11, margin:0.25, gap:0.08, bedGap:0.5};
 
+function glowforgeScaleDef(){
+  return SCALES[scaleKey] || SCALES['1'];
+}
+function glowforgeScaleFactor(){
+  return glowforgeScaleDef().paperIn / 12; // real shop inches -> worksheet inches
+}
+function glowforgeScaleFilePart(){
+  return scaleKey.replace(/\//g, '-');
+}
 function xmlEsc(value){
   return String(value == null ? '' : value)
     .replace(/&/g,'&amp;')
@@ -2937,11 +2945,12 @@ function glowforgeItemLabel(p, index){
 function glowforgeItems(){
   const skipped = {luan:0, other:0};
   const items = [];
+  const scale = glowforgeScaleFactor();
   pieces.forEach((p, index)=>{
     if (p.type === 'sh-luan'){ skipped.luan++; return; }
     const polyIn = glowforgeLocalPolyIn(p);
     if (!polyIn){ skipped.other++; return; }
-    const scaled = polyIn.map(([x,y])=>[x*GLOWFORGE_SCALE, y*GLOWFORGE_SCALE]);
+    const scaled = polyIn.map(([x,y])=>[x*scale, y*scale]);
     const shape = normalizePoly(scaled);
     if (!(shape.w > 0) || !(shape.h > 0)){ skipped.other++; return; }
     items.push({
@@ -3008,8 +3017,9 @@ function generateGlowforgeSvg(){
   const made = glowforgeItems();
   if (!made.items.length) return null;
   const pack = packGlowforgeItems(made.items);
+  const scaleLabel = glowforgeScaleDef().label;
   const meta = {
-    scale:'1/4 inch = 1 foot',
+    scale:scaleLabel,
     generated:new Date().toISOString(),
     cuttablePieces:made.items.length,
     skipped:made.skipped,
@@ -3024,7 +3034,7 @@ function generateGlowforgeSvg(){
 `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${svgNum(pack.width)}in" height="${svgNum(pack.height)}in" viewBox="0 0 ${svgNum(pack.width)} ${svgNum(pack.height)}">
   <metadata>${xmlEsc(JSON.stringify(meta))}</metadata>
-  <desc>Scenic Construction Lab Glowforge cut file. Red paths are cut outlines at quarter-inch architectural scale. No kerf compensation is applied.</desc>
+  <desc>Scenic Construction Lab Glowforge cut file. Red paths are cut outlines at the active worksheet scale (${xmlEsc(scaleLabel)}). No kerf compensation is applied.</desc>
   <g id="cut-lines" fill="none" stroke="#ff0000" stroke-width="0.005" stroke-linejoin="round" stroke-linecap="round">
 ${paths}
   </g>
@@ -3065,7 +3075,7 @@ document.getElementById('gfDownload').addEventListener('click', ()=>{
     return;
   }
   const now = new Date();
-  const name = 'scenic-glowforge-quarter-scale-' + localDateStamp(now) + '-' + localTimeStamp(now) + '.svg';
+  const name = 'scenic-glowforge-' + glowforgeScaleFilePart() + '-scale-' + localDateStamp(now) + '-' + localTimeStamp(now) + '.svg';
   downloadTextFile(out.svg, name, 'image/svg+xml');
   const skipped = [];
   if (out.skipped.luan) skipped.push('skipped ' + out.skipped.luan + ' luan');
