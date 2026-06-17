@@ -741,6 +741,7 @@
     <img id="exportPreview" alt="Drawing preview">
     <div class="m-actions">
       <button class="m-cancel" id="exClose">Close</button>
+      <button class="m-ok" id="gfDownload">Download Glowforge SVG</button>
       <button class="m-ok" id="exDownload">Download PNG</button>
     </div>
   </div>
@@ -2868,6 +2869,169 @@ function load(){
    ============================================================ */
 const exportModal = document.getElementById('exportModal');
 let exportDataUrl = null, exportName = '';
+const GLOWFORGE_SCALE = 1 / 48; // 1/4" = 1'-0"; real shop inches -> model inches
+const GLOWFORGE_NEST = {w:19, h:11, margin:0.25, gap:0.08, bedGap:0.5};
+
+function xmlEsc(value){
+  return String(value == null ? '' : value)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function svgNum(n){ return (Math.round(n*10000)/10000).toString(); }
+function downloadTextFile(text, filename, type){
+  const blob = new Blob([text], {type:type || 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 500);
+}
+function normalizePoly(poly){
+  const xs = poly.map(p=>p[0]), ys = poly.map(p=>p[1]);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const maxX = Math.max(...xs), maxY = Math.max(...ys);
+  return {
+    poly: poly.map(([x,y])=>[x-minX, y-minY]),
+    w: maxX-minX,
+    h: maxY-minY
+  };
+}
+function rotateNestShape(shape){
+  return normalizePoly(shape.poly.map(([x,y])=>[y, shape.w-x]));
+}
+function glowforgeLocalPolyIn(p){
+  const m = MATS[p.type];
+  if (!m || p.type === 'sh-luan') return null;
+  if (m.kind === 'sheet'){
+    if (p.type !== 'sh-ply') return null;
+    const L = p.lengthIn || 0;
+    const W = p.widthIn || m.face;
+    return [[-L/2,-W/2],[L/2,-W/2],[L/2,W/2],[-L/2,W/2]];
+  }
+  if (m.kind === 'fab') return localPolyIn(p);
+  if (m.kind === 'lumber'){
+    const L = p.lengthIn || 0;
+    const W = m.face; // on-edge lumber is laid on its side for the laser nest
+    const miterL = p.miterL == null ? 90 : p.miterL;
+    const miterR = p.miterR == null ? 90 : p.miterR;
+    let dxL = 0, dxR = 0;
+    if (Math.abs(miterL - 90) > 0.01) dxL = W / Math.tan(rad(miterL));
+    if (Math.abs(miterR - 90) > 0.01) dxR = W / Math.tan(rad(miterR));
+    return [
+      [-L/2,      -W/2],
+      [ L/2,      -W/2],
+      [ L/2-dxR,   W/2],
+      [-L/2+dxL,   W/2]
+    ];
+  }
+  return null;
+}
+function glowforgeItemLabel(p, index){
+  const m = MATS[p.type] || {name:p.type};
+  if (p.type === 'sh-ply') return `${index}. ${m.name} ${fmtIn(p.lengthIn||0)} x ${fmtIn(p.widthIn||pieceW(p))}`;
+  if (m.kind === 'lumber') return `${index}. ${m.name} ${fmtIn(p.lengthIn||0)} side profile`;
+  return `${index}. ${m.name}`;
+}
+function glowforgeItems(){
+  const skipped = {luan:0, other:0};
+  const items = [];
+  pieces.forEach((p, index)=>{
+    if (p.type === 'sh-luan'){ skipped.luan++; return; }
+    const polyIn = glowforgeLocalPolyIn(p);
+    if (!polyIn){ skipped.other++; return; }
+    const scaled = polyIn.map(([x,y])=>[x*GLOWFORGE_SCALE, y*GLOWFORGE_SCALE]);
+    const shape = normalizePoly(scaled);
+    if (!(shape.w > 0) || !(shape.h > 0)){ skipped.other++; return; }
+    items.push({
+      id:index+1,
+      type:p.type,
+      label:glowforgeItemLabel(p, index+1),
+      poly:shape.poly,
+      w:shape.w,
+      h:shape.h
+    });
+  });
+  return {items, skipped};
+}
+function chooseNestShape(item, remainingW){
+  const normal = {poly:item.poly, w:item.w, h:item.h, rotated:false};
+  const rotated = Object.assign(rotateNestShape(item), {rotated:true});
+  const maxW = GLOWFORGE_NEST.w - 2*GLOWFORGE_NEST.margin;
+  const maxH = GLOWFORGE_NEST.h - 2*GLOWFORGE_NEST.margin;
+  const candidates = [normal, rotated].filter(o=>o.w <= maxW && o.h <= maxH);
+  const usable = candidates.length ? candidates : [normal, rotated];
+  const inRow = usable.filter(o=>o.w <= remainingW);
+  const pool = inRow.length ? inRow : usable;
+  pool.sort((a,b)=>(a.h-b.h) || (a.w-b.w));
+  return pool[0];
+}
+function packGlowforgeItems(items){
+  const cfg = GLOWFORGE_NEST;
+  const sorted = items.slice().sort((a,b)=>
+    Math.max(b.w,b.h) - Math.max(a.w,a.h) || b.h - a.h || b.w - a.w
+  );
+  let bed = 0, x = cfg.margin, y = cfg.margin, rowH = 0, maxX = 0, maxY = 0;
+  const placed = [];
+  sorted.forEach(item=>{
+    let shape = chooseNestShape(item, cfg.w - cfg.margin - x);
+    if (x > cfg.margin && shape.w > cfg.w - cfg.margin - x){
+      x = cfg.margin; y += rowH + cfg.gap; rowH = 0;
+      shape = chooseNestShape(item, cfg.w - cfg.margin - x);
+    }
+    if (y > cfg.margin && y + shape.h > cfg.h - cfg.margin){
+      bed++; x = cfg.margin; y = cfg.margin; rowH = 0;
+      shape = chooseNestShape(item, cfg.w - cfg.margin - x);
+    }
+    const px = bed * (cfg.w + cfg.bedGap) + x;
+    const py = y;
+    placed.push(Object.assign({item, x:px, y:py, bed}, shape));
+    x += shape.w + cfg.gap;
+    rowH = Math.max(rowH, shape.h);
+    maxX = Math.max(maxX, px + shape.w);
+    maxY = Math.max(maxY, py + shape.h);
+  });
+  return {
+    placed,
+    beds: bed + 1,
+    width: Math.max(1, maxX + cfg.margin),
+    height: Math.max(1, maxY + cfg.margin)
+  };
+}
+function glowforgePath(poly, ox, oy){
+  return poly.map(([x,y], i)=>
+    (i ? 'L ' : 'M ') + svgNum(ox+x) + ' ' + svgNum(oy+y)
+  ).join(' ') + ' Z';
+}
+function generateGlowforgeSvg(){
+  const made = glowforgeItems();
+  if (!made.items.length) return null;
+  const pack = packGlowforgeItems(made.items);
+  const meta = {
+    scale:'1/4 inch = 1 foot',
+    generated:new Date().toISOString(),
+    cuttablePieces:made.items.length,
+    skipped:made.skipped,
+    note:'Luan is omitted. Plywood sheets are included. On-edge lumber is laid on its face/side profile.'
+  };
+  const paths = pack.placed.map((pl, i)=>{
+    const id = 'cut-' + safeFilePart(pl.item.type).toLowerCase() + '-' + (i+1);
+    const title = pl.item.label + (pl.rotated ? ' rotated in nest' : '');
+    return `  <g id="${xmlEsc(id)}"><title>${xmlEsc(title)}</title><path d="${glowforgePath(pl.poly, pl.x, pl.y)}"/></g>`;
+  }).join('\n');
+  const svg =
+`<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${svgNum(pack.width)}in" height="${svgNum(pack.height)}in" viewBox="0 0 ${svgNum(pack.width)} ${svgNum(pack.height)}">
+  <metadata>${xmlEsc(JSON.stringify(meta))}</metadata>
+  <desc>Scenic Construction Lab Glowforge cut file. Red paths are cut outlines at quarter-inch architectural scale. No kerf compensation is applied.</desc>
+  <g id="cut-lines" fill="none" stroke="#ff0000" stroke-width="0.005" stroke-linejoin="round" stroke-linecap="round">
+${paths}
+  </g>
+</svg>
+`;
+  return {svg, count:made.items.length, skipped:made.skipped, beds:pack.beds};
+}
 document.getElementById('captureBtn').addEventListener('click', ()=>{
   const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   exportName = `scenic-drawing-${ts}.png`;
@@ -2893,6 +3057,21 @@ document.getElementById('exDownload').addEventListener('click', ()=>{
   const a = document.createElement('a');
   a.href = exportDataUrl; a.download = exportName;
   document.body.appendChild(a); a.click(); a.remove();
+});
+document.getElementById('gfDownload').addEventListener('click', ()=>{
+  const out = generateGlowforgeSvg();
+  if (!out){
+    toast('No cuttable plywood pieces found. Luan is intentionally skipped.', {warn:true, ms:3000});
+    return;
+  }
+  const now = new Date();
+  const name = 'scenic-glowforge-quarter-scale-' + localDateStamp(now) + '-' + localTimeStamp(now) + '.svg';
+  downloadTextFile(out.svg, name, 'image/svg+xml');
+  const skipped = [];
+  if (out.skipped.luan) skipped.push('skipped ' + out.skipped.luan + ' luan');
+  if (out.skipped.other) skipped.push('skipped ' + out.skipped.other + ' non-plywood sheet' + (out.skipped.other===1?'':'s'));
+  toast('Glowforge SVG exported: ' + out.count + ' cut piece' + (out.count===1?'':'s') +
+        (skipped.length ? ' · ' + skipped.join(' · ') : ''), {ms:4200});
 });
 exportModal.addEventListener('click', e=>{ if(e.target===exportModal) exportModal.classList.remove('show'); });
 
