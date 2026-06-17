@@ -636,11 +636,26 @@ function projLine(c,view,cam,x1,y1,z1,x2,y2,z2,style,lw){
   c.strokeStyle=style||rgba('#3b82f6',.12);c.lineWidth=lw||1;
   c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();
 }
-/* brightness of an upright face from its world-space normal, so lighting is
+/* parse '#hex' or 'rgb()/rgba()' to {r,g,b} */
+function toRGB(s){
+  if(typeof s!=='string') return {r:128,g:128,b:128};
+  if(s[0]==='#') return hexToRgb(s);
+  const m=s.match(/rgba?\(([^)]+)\)/); if(m){const p=m[1].split(',').map(Number);return {r:p[0]||0,g:p[1]||0,b:p[2]||0};}
+  return {r:128,g:128,b:128};
+}
+function mix(a,b,t){const ca=toRGB(a),cb=toRGB(b);const m=(x,y)=>Math.round(x+(y-x)*t);return `rgb(${m(ca.r,cb.r)},${m(ca.g,cb.g)},${m(ca.b,cb.b)})`;}
+/* apply a lighting level to a material colour without crushing dark colours to
+   black: highlights blend toward white, shadows toward a dark grey (not black),
+   so every face keeps visible form regardless of base colour. L≈0.6 = neutral. */
+function litColor(hex,L){
+  if(L>=0.6) return mix(hex,'#ffffff', clamp((L-0.6)*0.72,0,0.36));
+  return mix(hex,'#1c1c20', clamp((0.6-L)*0.72,0,0.42));
+}
+/* lighting level of an upright face from its world-space normal, so lighting is
    consistent at any rotation: faces toward the house (−y) are lit, away dim. */
-function faceShadeW(ax,ay,bx,by, cx,cy){
+function faceLevelW(ax,ay,bx,by, cx,cy){
   const mx=(ax+bx)/2-cx, my=(ay+by)/2-cy, len=Math.hypot(mx,my)||1;
-  return clamp(0.64 - 0.34*(my/len) + 0.05*(mx/len), 0.3, 1.04);
+  return clamp(0.6 - 0.32*(my/len) + 0.05*(mx/len), 0.2, 0.95);
 }
 /* a rectangular sub-volume of a piece, given in LOCAL FEET (object-centred,
    pre-rotation). wz0/wz1 are absolute world heights (incl. elevation). */
@@ -654,12 +669,12 @@ function pushBox(o,view,cam,out, lx0,lx1,ly0,ly1, wz0,wz1, color, opts){
   if(bot.some(p=>!p)||top.some(p=>!p))return;
   for(let i=0;i<4;i++){
     const j=(i+1)%4, pts=[bot[i],bot[j],top[j],top[i]];
-    const f=faceShadeW(cn[i].x,cn[i].y,cn[j].x,cn[j].y, pcx,pcy);
-    const fill=opts.glass?'rgba(150,192,224,.42)':shade(color,f);
-    out.push({pts,fill,stroke:opts.glass?'rgba(214,238,255,.55)':shade(color,.4),depth:avgDepth(pts),obj:o});
+    const f=faceLevelW(cn[i].x,cn[i].y,cn[j].x,cn[j].y, pcx,pcy);
+    const fill=opts.glass?'rgba(150,192,224,.42)':litColor(color,f);
+    out.push({pts,fill,stroke:opts.glass?'rgba(214,238,255,.55)':litColor(color,.34),depth:avgDepth(pts),obj:o});
   }
   if(opts.cap!==false)
-    out.push({pts:top,fill:opts.glass?'rgba(180,210,235,.5)':shade(color,opts.flatTop?.95:1.16),stroke:shade(color,.5),depth:avgDepth(top)-.05,obj:o});
+    out.push({pts:top,fill:opts.glass?'rgba(180,210,235,.5)':litColor(color,opts.flatTop?.82:1.05),stroke:litColor(color,.4),depth:avgDepth(top)-.05,obj:o});
 }
 /* an upright cylinder / prism approximated with n facets (round pieces). */
 function pushPrism(o,view,cam,out, lcx,lcy,lrx,lry, wz0,wz1, color, opts){
@@ -676,9 +691,9 @@ function pushPrism(o,view,cam,out, lcx,lcy,lrx,lry, wz0,wz1, color, opts){
   for(let k=0;k<n;k++){
     const j=(k+1)%n, amid=(k+0.5)/n*Math.PI*2 + r;   // facet normal in world space
     const f=0.6+0.32*Math.cos(amid+Math.PI/2);       // brighter toward the house (−y)
-    out.push({pts:[bot[k],bot[j],top[j],top[k]],fill:shade(color,clamp(f,.3,1.04)),stroke:shade(color,.4),depth:avgDepth([bot[k],bot[j],top[j],top[k]]),obj:o});
+    out.push({pts:[bot[k],bot[j],top[j],top[k]],fill:litColor(color,clamp(f,.2,.95)),stroke:litColor(color,.34),depth:avgDepth([bot[k],bot[j],top[j],top[k]]),obj:o});
   }
-  if(opts.cap!==false) out.push({pts:top,fill:shade(color,1.12),stroke:shade(color,.5),depth:avgDepth(top)-.05,obj:o});
+  if(opts.cap!==false) out.push({pts:top,fill:litColor(color,1.0),stroke:litColor(color,.4),depth:avgDepth(top)-.05,obj:o});
 }
 /* a sloped wedge (ramp): front edge low, back edge high. */
 function pushWedge(o,view,cam,out, lx0,lx1,ly0,ly1, wzBase,wzFront,wzBack, color){
@@ -692,12 +707,12 @@ function pushWedge(o,view,cam,out, lx0,lx1,ly0,ly1, wzBase,wzFront,wzBack, color
   };
   if(Object.values(pts).some(p=>!p))return;
   const cx=(fl.x+fr.x+bl.x+br.x)/4, cy=(fl.y+fr.y+bl.y+br.y)/4;
-  const quad=(a,b,c2,d,f)=>out.push({pts:[a,b,c2,d],fill:shade(color,f),stroke:shade(color,.42),depth:avgDepth([a,b,c2,d]),obj:o});
-  quad(pts.tfl,pts.tfr,pts.tbr,pts.tbl,1.1);   // sloped top (faces up — always bright)
-  quad(pts.bfl,pts.bfr,pts.tfr,pts.tfl, faceShadeW(fl.x,fl.y,fr.x,fr.y,cx,cy));   // front riser
-  quad(pts.bbl,pts.bbr,pts.tbr,pts.tbl, faceShadeW(bl.x,bl.y,br.x,br.y,cx,cy));   // back
-  out.push({pts:[pts.bfl,pts.tfl,pts.tbl,pts.bbl],fill:shade(color,faceShadeW(fl.x,fl.y,bl.x,bl.y,cx,cy)),stroke:shade(color,.42),depth:avgDepth([pts.bfl,pts.tfl,pts.tbl]),obj:o});
-  out.push({pts:[pts.bfr,pts.tfr,pts.tbr,pts.bbr],fill:shade(color,faceShadeW(fr.x,fr.y,br.x,br.y,cx,cy)),stroke:shade(color,.42),depth:avgDepth([pts.bfr,pts.tfr,pts.tbr]),obj:o});
+  const quad=(a,b,c2,d,L)=>out.push({pts:[a,b,c2,d],fill:litColor(color,L),stroke:litColor(color,.4),depth:avgDepth([a,b,c2,d]),obj:o});
+  quad(pts.tfl,pts.tfr,pts.tbr,pts.tbl,0.96);   // sloped top (faces up — bright)
+  quad(pts.bfl,pts.bfr,pts.tfr,pts.tfl, faceLevelW(fl.x,fl.y,fr.x,fr.y,cx,cy));   // front riser
+  quad(pts.bbl,pts.bbr,pts.tbr,pts.tbl, faceLevelW(bl.x,bl.y,br.x,br.y,cx,cy));   // back
+  out.push({pts:[pts.bfl,pts.tfl,pts.tbl,pts.bbl],fill:litColor(color,faceLevelW(fl.x,fl.y,bl.x,bl.y,cx,cy)),stroke:litColor(color,.4),depth:avgDepth([pts.bfl,pts.tfl,pts.tbl]),obj:o});
+  out.push({pts:[pts.bfr,pts.tfr,pts.tbr,pts.bbr],fill:litColor(color,faceLevelW(fr.x,fr.y,br.x,br.y,cx,cy)),stroke:litColor(color,.4),depth:avgDepth([pts.bfr,pts.tfr,pts.tbr]),obj:o});
 }
 /* a soft round canopy (tree / plant foliage) as a camera-facing blob. */
 function pushFoliage(o,view,cam,out, offX,offY,wz, rFeet, color){
