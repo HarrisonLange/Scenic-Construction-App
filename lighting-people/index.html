@@ -145,14 +145,42 @@
   #viewbar{
     height:46px;flex:0 0 46px;display:flex;align-items:center;gap:7px;padding:6px 10px;background:#09090b;border-bottom:1px solid #000;
   }
-  #viewbar .seg{width:240px}
+  #viewbar .seg{width:320px;grid-template-columns:repeat(4,minmax(0,1fr))}
   #viewport{position:relative;flex:1;min-height:0;overflow:hidden}
   #stageCanvas,#threeCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#111116}
-  #stageCanvas{cursor:grab}
+  #stageCanvas{cursor:default}
   #stageCanvas.dragging{cursor:grabbing}
+  #threeCanvas{cursor:grab}
+  #threeCanvas.dragging{cursor:grabbing}
   #threeCanvas{display:none}
   .three-on #stageCanvas{display:none}
   .three-on #threeCanvas{display:block}
+  #lightOverlay{position:absolute;inset:0;display:none;pointer-events:none;z-index:18}
+  #lightOverlay.show{display:block}
+  .light-handle{
+    position:absolute;width:48px;height:32px;
+    border:2px solid currentColor;border-radius:7px;background:rgba(16,16,20,.88);color:#fff;
+    box-shadow:0 0 28px rgba(255,255,255,.14);cursor:grab;pointer-events:auto;z-index:2;
+    transform:translate(-50%,-50%) rotate(var(--aim,0deg));
+  }
+  .light-handle:active{cursor:grabbing}
+  .light-handle::before{
+    content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;
+    background:currentColor;transform:translate(-50%,-50%);box-shadow:0 0 18px currentColor;
+  }
+  .light-handle::after{
+    content:"";position:absolute;left:100%;top:50%;width:12px;height:16px;
+    transform:translate(-2px,-50%);border:2px solid currentColor;border-left:0;
+    border-radius:0 6px 6px 0;background:rgba(255,255,255,.16);
+  }
+  .light-handle.on{border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,174,239,.35),0 0 28px currentColor;z-index:4}
+  .light-tag{
+    position:absolute;transform:translate(-50%,-100%);z-index:8;pointer-events:none;
+    background:rgba(5,5,6,.92);border:1px solid var(--ui-dark3);border-radius:5px;
+    color:#f4f4f5;padding:3px 6px;font:800 10px Arial,sans-serif;white-space:nowrap;
+    box-shadow:0 5px 16px rgba(0,0,0,.42);
+  }
+  .light-tag.on{border-color:var(--accent);z-index:10}
   .hud{
     position:absolute;left:12px;bottom:12px;display:flex;gap:7px;flex-wrap:wrap;max-width:calc(100% - 24px);
     pointer-events:none;
@@ -187,10 +215,22 @@
   .metric b{font-size:11.5px}
   .metric span{font-family:var(--mono);font-size:11px;color:#dbeafe;white-space:nowrap}
   .metric small{grid-column:1/-1;font-size:10.5px;color:var(--text-dim);line-height:1.35}
-  .share-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-  .share-grid .tbtn{font-size:11px;padding:7px 6px}
   .url-field{display:grid;grid-template-columns:1fr auto;gap:6px;width:100%}
   .url-field input{font-family:var(--mono);font-size:10.5px}
+  .magic-panel{display:grid;grid-template-columns:108px minmax(0,1fr);gap:8px;align-items:center}
+  .magic-compass{width:108px;height:108px;display:block}
+  .magic-compass text{font-family:var(--mono);font-size:6px;font-weight:800;fill:#a1a1aa}
+  .magic-compass .compass-ring{fill:#08080b;stroke:#3f3f46;stroke-width:1}
+  .magic-compass .compass-axis{stroke:#27272a;stroke-width:1}
+  .magic-compass .performer-dot{fill:#e5e7eb;stroke:#09090b;stroke-width:1.2}
+  .magic-hit-list{display:grid;gap:5px;min-width:0}
+  .magic-hit{
+    display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:5px;align-items:center;
+    font-family:var(--mono);font-size:10px;color:#cbd5e1;
+  }
+  .magic-swatch{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.55)}
+  .magic-hit b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;color:#f4f4f5}
+  .magic-hit span{color:#a1a1aa;white-space:nowrap}
   .simple .advanced-only{display:none !important}
   .simple #right .panel-section:not(#analysisSection){display:none}
 
@@ -323,6 +363,7 @@
         <button class="tbtn" data-view="portrait">3D</button>
         <button class="tbtn" data-view="diagram">Diagram</button>
         <button class="tbtn" data-view="setup">Setup</button>
+        <button class="tbtn" data-view="magic">Magic</button>
       </div>
       <button class="tbtn icon" id="frontBtn" title="Front view">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="5"/><path d="M8 3v10M3 8h10"/></svg>
@@ -339,6 +380,7 @@
     <div id="viewport">
       <canvas id="stageCanvas"></canvas>
       <canvas id="threeCanvas"></canvas>
+      <div id="lightOverlay" aria-label="Draggable portrait light handles"></div>
       <div class="hud">
         <div class="hud-item" id="selectedReadout"><b>Key</b> 80% / 5500K</div>
         <div class="hud-item" id="cameraReadout"><b>Camera</b> 100%</div>
@@ -374,13 +416,16 @@
       <h2>Analysis</h2>
       <div class="analysis-grid" id="analysisGrid"></div>
     </section>
+    <section class="panel-section" id="magicSheetSection">
+      <h2>Magic Sheet</h2>
+      <div id="magicSheetPanel" class="magic-panel"></div>
+    </section>
     <section class="panel-section advanced-only">
       <h2>Share Current Setup</h2>
       <div class="url-field">
         <input id="setupUrl" type="text" readonly>
         <button class="tiny-btn" id="copySetupBtn">COPY</button>
       </div>
-      <div class="share-grid" id="setupShareGrid" style="margin-top:8px"></div>
     </section>
     <section class="panel-section advanced-only">
       <h2>Share URL</h2>
@@ -388,7 +433,6 @@
         <input id="toolUrl" type="text" readonly>
         <button class="tiny-btn" id="copyToolBtn">COPY</button>
       </div>
-      <div class="share-grid" id="toolShareGrid" style="margin-top:8px"></div>
     </section>
   </aside>
 </div>
@@ -533,15 +577,6 @@ const PRESETS = {
 
 const SKINS = ['#f7d8bd','#e8bd96','#d79a72','#ba7656','#8e563e','#6d3f2e','#463023'];
 const BACKDROPS = ['#f4f2ed','#beb8ad','#657080','#2b3445','#17171b','#10261f','#3b2032'];
-const SHARE_TARGETS = [
-  ['X','https://twitter.com/intent/tweet?text={text}&url={url}'],
-  ['Facebook','https://www.facebook.com/sharer/sharer.php?u={url}'],
-  ['WhatsApp','https://api.whatsapp.com/send?text={text}%20{url}'],
-  ['LinkedIn','https://www.linkedin.com/sharing/share-offsite/?url={url}'],
-  ['Pinterest','https://pinterest.com/pin/create/button/?url={url}&description={text}'],
-  ['Reddit','https://www.reddit.com/submit?url={url}&title={text}']
-];
-
 let state = defaultState();
 let dirty = false;
 let drag = null;
@@ -560,7 +595,9 @@ let three = {
   hairMaterial:null,
   lights:{},
   lightMeshes:{},
-  target:null
+  target:null,
+  raycaster:null,
+  pointer:null
 };
 
 function defaultState(){
@@ -719,17 +756,10 @@ function buildStaticControls(){
   ).join('');
   buildSwatches('skinSwatches', SKINS, 'skin');
   buildSwatches('backdropSwatches', BACKDROPS, 'backdrop');
-  buildShareButtons('setupShareGrid', true);
-  buildShareButtons('toolShareGrid', false);
 }
 function buildSwatches(id, colors, kind){
   $(id).innerHTML = colors.map(color =>
     `<button class="swatch" data-${kind}="${color}" style="background:${color}" title="${color}"></button>`
-  ).join('');
-}
-function buildShareButtons(id, setup){
-  $(id).innerHTML = SHARE_TARGETS.map(([name]) =>
-    `<button class="tbtn" data-share="${name}" data-share-setup="${setup ? '1' : '0'}">${name}</button>`
   ).join('');
 }
 function renderLights(){
@@ -776,6 +806,25 @@ function rangeControl(light, prop, label, min, max, step, value, suffix){
     </div>
   `;
 }
+function renderLightControlOutputs(id){
+  const l = state.lights[id];
+  if (!l) return;
+  ['intensity','kelvin','height','angle','distance','softness'].forEach(prop => {
+    const input = document.querySelector(`input[data-light="${id}"][data-prop="${prop}"]`);
+    if (!input) return;
+    input.value = l[prop];
+    const output = input.closest('.range-row')?.querySelector('output');
+    if (!output) return;
+    if (prop === 'intensity' || prop === 'softness') output.textContent = `${Math.round(l[prop])}%`;
+    else if (prop === 'kelvin') output.textContent = `${Math.round(l[prop])}K`;
+    else if (prop === 'angle') output.innerHTML = `${Math.round(l[prop])}&deg;`;
+    else output.textContent = `${Math.round(l[prop])}`;
+  });
+  const gel = document.querySelector(`input[type="color"][data-light="${id}"][data-prop="gel"]`);
+  if (gel) gel.value = l.gel;
+  const enabled = document.querySelector(`input[type="checkbox"][data-light="${id}"][data-prop="enabled"]`);
+  if (enabled) enabled.checked = !!l.enabled;
+}
 function renderSwatchState(){
   document.querySelectorAll('[data-skin]').forEach(btn => btn.classList.toggle('on', btn.dataset.skin.toLowerCase() === state.skin.toLowerCase()));
   document.querySelectorAll('[data-backdrop]').forEach(btn => btn.classList.toggle('on', btn.dataset.backdrop.toLowerCase() === state.backdrop.toLowerCase()));
@@ -800,6 +849,112 @@ function renderAnalysis(){
   $('analysisGrid').innerHTML = metrics.map(([name,value,copy]) =>
     `<div class="metric"><b>${name}</b><span>${value}</span><small>${copy}</small></div>`
   ).join('');
+}
+function portraitLightHits(){
+  return LIGHTS.map(meta => {
+    const light = state.lights[meta.id];
+    const effective = light.enabled ? clamp(Number(light.intensity) * Math.pow(50 / Math.max(10, Number(light.distance) || 50), 1.25), 0, 100) : 0;
+    const bearing = lightBearing(light);
+    return {
+      meta,
+      light,
+      effective,
+      source:bearing.label,
+      deg:bearing.deg,
+      color:hexFromRgb(lightColor(light)),
+      top:Number(light.height) > 62
+    };
+  }).filter(hit => hit.effective > 1).sort((a,b) => b.effective - a.effective);
+}
+function lightBearing(light){
+  const a = mod360(light.angle);
+  if (a >= 337.5 || a < 22.5) return {label:'front', deg:90};
+  if (a < 67.5) return {label:'front right', deg:135};
+  if (a < 112.5) return {label:'right', deg:180};
+  if (a < 157.5) return {label:'back right', deg:225};
+  if (a < 202.5) return {label:'back', deg:270};
+  if (a < 247.5) return {label:'back left', deg:315};
+  if (a < 292.5) return {label:'left', deg:0};
+  return {label:'front left', deg:45};
+}
+function magicSheetRows(){
+  const hits = portraitLightHits();
+  return [{
+    performer:{name:'Portrait Subject', x:0, y:0, pose:'headshot'},
+    hits:hits.map(hit => ({
+      name:hit.meta.name,
+      source:hit.source,
+      deg:hit.deg,
+      color:hit.color.toUpperCase(),
+      boardIntensity:Math.round(hit.light.intensity),
+      hitIntensity:Math.round(hit.effective),
+      kelvin:Math.round(hit.light.kelvin),
+      top:hit.top
+    }))
+  }];
+}
+function magicSheetText(){
+  return magicSheetRows().map(sheet => {
+    const lines = [sheet.performer.name];
+    if (!sheet.hits.length) return `${sheet.performer.name}\nNo active lights.`;
+    sheet.hits.forEach(hit => {
+      lines.push(`${hit.name} | from ${hit.source} | ${hit.color} | ${hit.kelvin}K | board ${hit.boardIntensity}% | hit ${hit.hitIntensity}%`);
+    });
+    return lines.join('\n');
+  }).join('\n\n');
+}
+function performerCompassSvg(size=108){
+  const hits = magicSheetRows()[0].hits;
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = size * .36;
+  const beams = hits.filter(hit => !hit.top).slice(0, 10).map(hit => {
+    const rad = hit.deg * Math.PI / 180;
+    const sx = cx + Math.cos(rad) * radius;
+    const sy = cy + Math.sin(rad) * radius;
+    const ex = cx + Math.cos(rad) * (size * .1);
+    const ey = cy + Math.sin(rad) * (size * .1);
+    const width = 2 + hit.hitIntensity / 18;
+    const opacity = clamp(.35 + hit.hitIntensity / 110, .35, .95);
+    return `<g>
+      <line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${escapeAttr(hit.color)}" stroke-width="${width.toFixed(1)}" stroke-linecap="round" opacity="${opacity.toFixed(2)}"/>
+      <circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${(3 + hit.hitIntensity/28).toFixed(1)}" fill="${escapeAttr(hit.color)}" opacity="${opacity.toFixed(2)}"/>
+      <text x="${(cx + Math.cos(rad)*(radius+8)).toFixed(1)}" y="${(cy + Math.sin(rad)*(radius+8)).toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${escapeHtml(hit.name.charAt(0))}</text>
+    </g>`;
+  }).join('');
+  const topDots = hits.filter(hit => hit.top).slice(0, 5).map((hit,index,arr) => {
+    const offset = (index - (arr.length - 1) / 2) * (size * .075);
+    const x = cx + offset;
+    const y = cy - size * .055;
+    const r = 3.8 + hit.hitIntensity / 28;
+    return `<g>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${escapeAttr(hit.color)}" stroke="rgba(255,255,255,.78)" stroke-width="1"/>
+      <text x="${x.toFixed(1)}" y="${(y-r-4).toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${escapeHtml(hit.name.charAt(0))}</text>
+    </g>`;
+  }).join('');
+  return `<svg class="magic-compass" viewBox="0 0 ${size} ${size}" role="img" aria-label="Portrait subject light direction compass">
+    <circle class="compass-ring" cx="${cx}" cy="${cy}" r="${radius}"/>
+    <line class="compass-axis" x1="${cx}" y1="${cy-radius}" x2="${cx}" y2="${cy+radius}"/>
+    <line class="compass-axis" x1="${cx-radius}" y1="${cy}" x2="${cx+radius}" y2="${cy}"/>
+    <text x="${cx}" y="${cy-radius-5}" text-anchor="middle">BACK</text>
+    <text x="${cx}" y="${cy+radius+7}" text-anchor="middle">FRONT</text>
+    <text x="${cx-radius-8}" y="${cy+2}" text-anchor="middle">L</text>
+    <text x="${cx+radius+8}" y="${cy+2}" text-anchor="middle">R</text>
+    ${beams}
+    <circle class="performer-dot" cx="${cx}" cy="${cy}" r="6.5"/>
+    ${topDots}
+  </svg>`;
+}
+function renderMagicSheetPanel(){
+  const hits = magicSheetRows()[0].hits;
+  const hitHtml = hits.length ? hits.slice(0, 6).map(hit => `
+    <div class="magic-hit">
+      <i class="magic-swatch" style="background:${hit.color}"></i>
+      <b>${escapeHtml(hit.name)}</b>
+      <span>${hit.source} / ${hit.hitIntensity}%</span>
+    </div>
+  `).join('') : '<div class="small-note">No active lights.</div>';
+  $('magicSheetPanel').innerHTML = `${performerCompassSvg(108)}<div class="magic-hit-list">${hitHtml}</div>`;
 }
 function keyFillRatio(key, fill){
   const k = key.enabled ? Number(key.intensity) || 0 : 0;
@@ -868,7 +1023,8 @@ function renderTopState(){
   const selectedName = LIGHTS.find(l => l.id === state.selectedLight)?.name || 'Key Light';
   $('selectedReadout').innerHTML = `<b>${selectedName.replace(' Light','')}</b> ${Math.round(selected.intensity)}% / ${Math.round(selected.kelvin)}K`;
   $('cameraReadout').innerHTML = `<b>Camera</b> ${Math.round(state.camera.zoom*100)}%${state.camera.flip ? ' / flipped' : ''}`;
-  $('viewReadout').innerHTML = `<b>${state.view === 'portrait' ? '3D' : titleCase(state.view)}</b> ${state.view === 'portrait' ? 'Portrait' : state.view === 'diagram' ? 'Plan' : 'Sheet'}`;
+  const viewLabel = state.view === 'portrait' ? ['3D','Portrait'] : state.view === 'diagram' ? ['Diagram','Plan'] : state.view === 'magic' ? ['Magic','Sheet'] : ['Setup','Sheet'];
+  $('viewReadout').innerHTML = `<b>${viewLabel[0]}</b> ${viewLabel[1]}`;
   $('viewport').classList.toggle('three-on', state.view === 'portrait' && three.ready);
   if (three.ready) {
     $('threeStatus').className = 'hud-item';
@@ -884,8 +1040,10 @@ function renderAll(){
   renderLights();
   renderSwatchState();
   renderAnalysis();
+  renderMagicSheetPanel();
   renderSavedSlots();
   renderShareFields();
+  renderLightOverlay();
   renderView();
   updateThreeScene();
 }
@@ -907,6 +1065,7 @@ function drawView(){
   if (state.view === 'portrait') drawPortraitFallback(ctx,w,h);
   if (state.view === 'diagram') drawDiagram(ctx,w,h);
   if (state.view === 'setup') drawSetup(ctx,w,h);
+  if (state.view === 'magic') drawMagicSheet(ctx,w,h);
 }
 function renderView(){
   resizeThree();
@@ -915,6 +1074,32 @@ function renderView(){
     return;
   }
   drawView();
+}
+function renderLightOverlay(){
+  const overlay = $('lightOverlay');
+  if (!overlay) return;
+  const show = state.view === 'portrait';
+  overlay.classList.toggle('show', show);
+  if (!show) {
+    overlay.innerHTML = '';
+    return;
+  }
+  const w = viewport.clientWidth || canvas.clientWidth || 1;
+  const h = viewport.clientHeight || canvas.clientHeight || 1;
+  const items = portraitLightHandlePositions(w,h).map(handle => {
+    const light = state.lights[handle.id];
+    const color = hexFromRgb(lightColor(light));
+    const selected = state.selectedLight === handle.id ? ' on' : '';
+    const disabled = !light.enabled || light.intensity <= 0 ? ' opacity:.55;' : '';
+    const aim = lightAimAngle(handle.x, handle.y, w, h);
+    const labelX = clamp(handle.x, 34, Math.max(34, w - 34));
+    const labelY = clamp(handle.y - 24, 20, Math.max(20, h - 6));
+    return `
+      <button class="light-handle${selected}" data-overlay-light="${handle.id}" style="left:${handle.x}px;top:${handle.y}px;color:${color};--aim:${aim}deg;${disabled}" title="Drag ${escapeAttr(handle.label)}"></button>
+      <span class="light-tag${selected}" style="left:${labelX}px;top:${labelY}px">${escapeHtml(handle.label)}</span>
+    `;
+  });
+  overlay.innerHTML = items.join('');
 }
 function drawPortraitFallback(g,w,h){
   g.save();
@@ -927,7 +1112,60 @@ function drawPortraitFallback(g,w,h){
   const headW = Math.min(w,h) * 0.35 * zoom;
   const headH = headW * 1.34;
   drawShadedHead(g, cx, cy, headW, headH);
+  drawPortraitLightHandles(g, w, h);
   g.restore();
+}
+function portraitLightHandlePositions(w,h){
+  const cx = w / 2;
+  const cy = h * .48;
+  const radiusX = Math.min(w,h) * .33;
+  const radiusY = Math.min(w,h) * .26;
+  return LIGHTS.map(meta => {
+    const l = state.lights[meta.id];
+    const angle = mod360(l.angle) * Math.PI / 180;
+    const distance = .58 + (l.distance / 100) * .7;
+    return {
+      id:meta.id,
+      label:meta.name.replace(' Light',''),
+      x:cx + Math.sin(angle) * radiusX * distance,
+      y:cy + Math.cos(angle) * radiusY * distance - (Number(l.height) - 25) * (h / 430)
+    };
+  });
+}
+function lightAimAngle(x,y,w,h){
+  const faceX = w / 2;
+  const faceY = h * .48;
+  return Math.atan2(faceY - y, faceX - x) * 180 / Math.PI;
+}
+function drawPortraitLightHandles(g,w,h){
+  portraitLightHandlePositions(w,h).forEach(handle => {
+    const light = state.lights[handle.id];
+    const color = hexFromRgb(lightColor(light));
+    g.save();
+    const aim = lightAimAngle(handle.x, handle.y, w, h);
+    g.translate(handle.x, handle.y);
+    g.rotate(aim * Math.PI / 180);
+    g.fillStyle = '#101014';
+    g.strokeStyle = state.selectedLight === handle.id ? '#00AEEF' : color;
+    g.lineWidth = state.selectedLight === handle.id ? 3 : 2;
+    roundRect(g, -24, -16, 48, 32, 7);
+    g.fill();
+    g.stroke();
+    roundRect(g, 22, -8, 12, 16, 5);
+    g.fill();
+    g.stroke();
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(0, 0, 6, 0, Math.PI*2);
+    g.fill();
+    g.rotate(-aim * Math.PI / 180);
+    g.fillStyle = '#f4f4f5';
+    g.font = '800 10px Arial, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(handle.label, 0, -27);
+    g.restore();
+  });
 }
 function drawBackdropFloor(g,w,h){
   const l = colorLuma(state.backdrop);
@@ -1160,6 +1398,87 @@ function drawSetup(g,w,h){
   drawSetupSheet(g, leftW, 0, w-leftW, h, false);
   g.restore();
 }
+function drawMagicSheet(g,w,h){
+  g.save();
+  g.fillStyle = '#f6f4ef';
+  g.fillRect(0,0,w,h);
+  const margin = Math.max(18, Math.min(42, w * .045));
+  const titleY = margin + 8;
+  g.fillStyle = '#171717';
+  g.font = `900 ${w < 560 ? 22 : 30}px Arial, sans-serif`;
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  drawTextLine(g, 'Lighting People Magic Sheet', margin, titleY + 24, w - margin * 2);
+  g.font = `700 ${w < 560 ? 11 : 14}px Consolas, monospace`;
+  g.fillStyle = '#525252';
+  drawTextLine(g, `${state.projectName || 'Untitled project'} / ${new Date().toLocaleString()}`, margin, titleY + 46, w - margin * 2);
+  g.strokeStyle = '#171717';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(margin, titleY + 62);
+  g.lineTo(w - margin, titleY + 62);
+  g.stroke();
+
+  const top = titleY + 84;
+  const gap = Math.max(16, w * .025);
+  const portraitW = w < 720 ? w - margin * 2 : Math.min((w - margin * 2 - gap) * .44, 500);
+  const portraitH = w < 720 ? Math.min(h * .36, portraitW * .72) : h - top - margin;
+  const portraitX = margin;
+  const portraitY = top;
+  g.save();
+  g.beginPath();
+  roundRect(g, portraitX, portraitY, portraitW, portraitH, 10);
+  g.clip();
+  g.translate(portraitX, portraitY);
+  g.fillStyle = state.backdrop;
+  g.fillRect(0, 0, portraitW, portraitH);
+  drawBackdropFloor(g, portraitW, portraitH);
+  drawShadedHead(g, portraitW/2, portraitH*.43, Math.min(portraitW,portraitH)*.42, Math.min(portraitW,portraitH)*.56);
+  g.restore();
+  g.strokeStyle = '#d4d4d4';
+  g.lineWidth = 2;
+  roundRect(g, portraitX, portraitY, portraitW, portraitH, 10);
+  g.stroke();
+
+  const sheetX = w < 720 ? margin : portraitX + portraitW + gap;
+  const sheetY = w < 720 ? portraitY + portraitH + gap : top;
+  const sheetW = w < 720 ? w - margin * 2 : w - sheetX - margin;
+  const compact = sheetW < 430;
+  const compassSize = Math.min(compact ? 160 : 210, sheetW * (compact ? .56 : .42));
+  drawMagicCompassCanvas(g, portraitLightHits(), sheetX, sheetY, compassSize);
+  let tx = compact ? sheetX : sheetX + compassSize + 24;
+  let ty = compact ? sheetY + compassSize + 24 : sheetY + 22;
+  g.fillStyle = '#171717';
+  g.font = `900 ${compact ? 15 : 18}px Arial, sans-serif`;
+  g.fillText('Portrait Subject', tx, ty);
+  ty += compact ? 24 : 30;
+  g.font = `700 ${compact ? 11 : 13}px Consolas, monospace`;
+  g.fillStyle = '#525252';
+  drawTextLine(g, `Pattern ${patternLabel(state.lights.key)} / Ratio ${keyFillRatio(state.lights.key,state.lights.fill).label}`, tx, ty, sheetX + sheetW - tx);
+  ty += compact ? 24 : 30;
+  const hits = portraitLightHits();
+  if (!hits.length) {
+    g.fillStyle = '#92400e';
+    g.fillText('No active lights.', tx, ty);
+  } else {
+    hits.forEach(hit => {
+      const maxW = sheetX + sheetW - tx - 10;
+      g.fillStyle = hit.color;
+      g.fillRect(tx, ty - 12, 12, 12);
+      g.strokeStyle = '#737373';
+      g.strokeRect(tx, ty - 12, 12, 12);
+      g.fillStyle = '#171717';
+      g.font = `900 ${compact ? 11 : 12}px Arial, sans-serif`;
+      drawTextLine(g, hit.meta.name, tx + 18, ty, maxW - 18);
+      ty += 16;
+      g.fillStyle = '#525252';
+      g.font = `700 ${compact ? 10 : 11}px Consolas, monospace`;
+      drawTextLine(g, `${hit.source} / ${hit.color.toUpperCase()} / ${Math.round(hit.light.kelvin)}K / board ${Math.round(hit.light.intensity)}% / hit ${Math.round(hit.effective)}%`, tx + 18, ty, maxW - 18);
+      ty += compact ? 25 : 31;
+    });
+  }
+  g.restore();
+}
 function drawSetupPortrait(g,x,y,w,h){
   g.save();
   g.beginPath();
@@ -1222,6 +1541,85 @@ function drawTextLine(g,text,x,y,maxW){
   while (g.measureText(out).width > maxW && out.length > 4) out = out.slice(0,-5) + '...';
   g.fillText(out,x,y);
 }
+function drawMagicCompassCanvas(g, hits, x, y, size){
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const radius = size * .37;
+  g.save();
+  g.fillStyle = '#f8fafc';
+  g.strokeStyle = '#737373';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.arc(cx, cy, radius, 0, Math.PI*2);
+  g.fill();
+  g.stroke();
+  g.strokeStyle = '#d4d4d4';
+  g.lineWidth = 1.4;
+  g.beginPath();
+  g.moveTo(cx, cy-radius);
+  g.lineTo(cx, cy+radius);
+  g.moveTo(cx-radius, cy);
+  g.lineTo(cx+radius, cy);
+  g.stroke();
+  g.fillStyle = '#525252';
+  g.font = `700 ${Math.max(9, size*.07)}px Arial, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('BACK', cx, cy-radius-14);
+  g.fillText('FRONT', cx, cy+radius+14);
+  g.fillText('L', cx-radius-16, cy);
+  g.fillText('R', cx+radius+16, cy);
+  hits.filter(hit => !hit.top).slice(0, 10).forEach(hit => {
+    const rad = hit.deg * Math.PI / 180;
+    const sx = cx + Math.cos(rad) * radius;
+    const sy = cy + Math.sin(rad) * radius;
+    const ex = cx + Math.cos(rad) * (size * .1);
+    const ey = cy + Math.sin(rad) * (size * .1);
+    g.save();
+    g.globalAlpha = clamp(.35 + hit.effective / 110, .35, .95);
+    g.strokeStyle = hit.color;
+    g.lineWidth = 3 + clamp(hit.effective, 0, 100) / 16;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(sx, sy);
+    g.lineTo(ex, ey);
+    g.stroke();
+    g.fillStyle = hit.color;
+    g.beginPath();
+    g.arc(sx, sy, 4 + hit.effective/32, 0, Math.PI*2);
+    g.fill();
+    g.restore();
+    g.fillStyle = '#171717';
+    g.font = `800 ${Math.max(9, size*.07)}px Arial, sans-serif`;
+    g.fillText(hit.meta.name.charAt(0), cx + Math.cos(rad)*(radius+12), cy + Math.sin(rad)*(radius+12));
+  });
+  hits.filter(hit => hit.top).slice(0, 5).forEach((hit, index, arr) => {
+    const offset = (index - (arr.length - 1) / 2) * (size * .07);
+    const px = cx + offset;
+    const py = cy - size * .055;
+    g.save();
+    g.globalAlpha = clamp(.4 + hit.effective / 105, .4, .98);
+    g.fillStyle = hit.color;
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(px, py, 7 + hit.effective/24, 0, Math.PI*2);
+    g.fill();
+    g.stroke();
+    g.restore();
+    g.fillStyle = '#171717';
+    g.font = `800 ${Math.max(9, size*.065)}px Arial, sans-serif`;
+    g.fillText(hit.meta.name.charAt(0), px, py - 15);
+  });
+  g.fillStyle = '#171717';
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.arc(cx, cy, Math.max(8, size*.055), 0, Math.PI*2);
+  g.fill();
+  g.stroke();
+  g.restore();
+}
 function roundRect(g,x,y,w,h,r){
   const rr = Math.min(r,w/2,h/2);
   g.beginPath();
@@ -1249,6 +1647,8 @@ async function initThree(){
     three.controls.target.set(0, .52, 0);
     three.controls.minDistance = 3.1;
     three.controls.maxDistance = 7.4;
+    three.raycaster = new THREE.Raycaster();
+    three.pointer = new THREE.Vector2();
     buildThreeSubject(THREE);
     buildThreeLights(THREE);
     three.ready = true;
@@ -1306,7 +1706,7 @@ function buildThreeSubject(THREE){
   const hemi = new THREE.HemisphereLight(0xffffff, 0x111118, .25);
   three.scene.add(hemi);
   three.target = new THREE.Object3D();
-  three.target.position.set(0,.55,0);
+  three.target.position.set(0,.78,.54);
   three.scene.add(three.target);
 }
 function buildThreeLights(THREE){
@@ -1314,12 +1714,12 @@ function buildThreeLights(THREE){
     const light = new THREE.SpotLight(0xffffff, 2.5, 10, Math.PI/5, .5, 1.2);
     light.target = three.target;
     three.scene.add(light);
-    three.scene.add(light.target);
     three.lights[meta.id] = light;
     const fixture = new THREE.Mesh(
-      new THREE.CylinderGeometry(.08,.12,.24,18),
+      new THREE.CylinderGeometry(.12,.18,.34,18),
       new THREE.MeshBasicMaterial({color:meta.color})
     );
+    fixture.userData.lightId = meta.id;
     fixture.rotation.x = Math.PI/2;
     three.scene.add(fixture);
     three.lightMeshes[meta.id] = fixture;
@@ -1331,6 +1731,7 @@ function updateThreeScene(){
   three.scene.background = new THREE.Color(state.backdrop);
   three.skinMaterial.color.set(state.skin);
   three.subject.scale.x = state.camera.flip ? -1 : 1;
+  const targetPos = three.target.position.clone();
   LIGHTS.forEach(meta => {
     const l = state.lights[meta.id];
     const pos = lightPosition(l, .82);
@@ -1343,11 +1744,14 @@ function updateThreeScene(){
     spot.angle = (12 + l.softness*.38) * Math.PI / 180;
     spot.penumbra = clamp(l.softness / 100, .05, .95);
     spot.position.set(pos.x, pos.y, pos.z);
+    spot.target.position.copy(targetPos);
     const mesh = three.lightMeshes[meta.id];
     mesh.position.set(pos.x, pos.y, pos.z);
     mesh.material.color = color;
     mesh.visible = !!l.enabled && l.intensity > 0;
-    mesh.lookAt(0,.55,0);
+    const source = new THREE.Vector3(pos.x, pos.y, pos.z);
+    const dir = targetPos.clone().sub(source).normalize();
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0), dir);
   });
   renderThree();
 }
@@ -1596,6 +2000,9 @@ function printComparison(paper='white'){
 function escapeHtml(text){
   return String(text ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
+function escapeAttr(text){
+  return escapeHtml(text).replace(/`/g, '&#96;');
+}
 
 function base64UrlEncode(text){
   return btoa(unescape(encodeURIComponent(text))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -1634,14 +2041,6 @@ async function copyText(text){
     $('copyText').select();
   }
 }
-function shareUrl(targetName, setup){
-  const url = encodeURIComponent(setup ? setupUrl() : toolUrl());
-  const text = encodeURIComponent(setup ? `${state.projectName} portrait lighting setup` : 'Lighting People Lab');
-  const template = SHARE_TARGETS.find(([name]) => name === targetName)?.[1];
-  if (!template) return;
-  window.open(template.replace('{url}', url).replace('{text}', text), '_blank', 'noopener,noreferrer');
-}
-
 function onPointerDown(event){
   if (state.view === 'diagram') {
     const pos = eventCanvasPos(event);
@@ -1656,10 +2055,44 @@ function onPointerDown(event){
     }
   }
   if (state.view === 'portrait' && !three.ready) {
+    const pos = eventCanvasPos(event);
+    const hit = hitPortraitLight(pos.x, pos.y);
+    if (hit) {
+      state.selectedLight = hit;
+      drag = {type:'lightPortrait', id:hit, target:canvas};
+      canvas.setPointerCapture(event.pointerId);
+      canvas.classList.add('dragging');
+      renderAll();
+      return;
+    }
     drag = {type:'camera', x:event.clientX, y:event.clientY, yaw:state.camera.yaw, pitch:state.camera.pitch};
     canvas.setPointerCapture(event.pointerId);
     canvas.classList.add('dragging');
   }
+}
+function onThreePointerDown(event){
+  if (!three.ready || state.view !== 'portrait') return;
+  const hit = hitThreeLight(event);
+  if (!hit) return;
+  event.preventDefault();
+  state.selectedLight = hit;
+  drag = {type:'lightPortrait', id:hit, target:threeCanvas};
+  if (three.controls) three.controls.enabled = false;
+  threeCanvas.setPointerCapture(event.pointerId);
+  threeCanvas.classList.add('dragging');
+  renderAll();
+}
+function onOverlayPointerDown(event){
+  const handle = event.target.closest('[data-overlay-light]');
+  if (!handle || state.view !== 'portrait') return;
+  event.preventDefault();
+  const id = handle.dataset.overlayLight;
+  state.selectedLight = id;
+  drag = {type:'lightPortrait', id, target:viewport};
+  handle.setPointerCapture(event.pointerId);
+  handle.classList.add('dragging', 'on');
+  if (three.controls) three.controls.enabled = false;
+  renderTopState();
 }
 function onPointerMove(event){
   if (!drag) return;
@@ -1667,6 +2100,17 @@ function onPointerMove(event){
     state.camera.yaw = clamp(drag.yaw + (event.clientX - drag.x) * .35, -65, 65);
     state.camera.pitch = clamp(drag.pitch + (event.clientY - drag.y) * .25, -35, 35);
     renderAll();
+  }
+  if (drag.type === 'lightPortrait') {
+    const pos = elementPointerPos(event, drag.target || canvas);
+    updateLightFromPortraitPoint(drag.id, pos.x, pos.y, drag.target || canvas);
+    renderLightControlOutputs(drag.id);
+    renderTopState();
+    renderAnalysis();
+    renderMagicSheetPanel();
+    renderLightOverlay();
+    renderView();
+    updateThreeScene();
   }
   if (drag.type === 'light') {
     const pos = eventCanvasPos(event);
@@ -1677,19 +2121,86 @@ function onPointerMove(event){
     const angle = angleFromPoint(dx, dy);
     state.lights[drag.id].distance = Math.round(distance);
     state.lights[drag.id].angle = Math.round(angle);
-    renderAll();
+    renderLightControlOutputs(drag.id);
+    renderTopState();
+    renderAnalysis();
+    renderMagicSheetPanel();
+    renderLightOverlay();
+    renderView();
+    updateThreeScene();
   }
 }
 function onPointerUp(event){
   if (!drag) return;
-  try { canvas.releasePointerCapture(event.pointerId); } catch (err) {}
+  try { (drag.target || canvas).releasePointerCapture(event.pointerId); } catch (err) {}
+  try { event.target.releasePointerCapture(event.pointerId); } catch (err) {}
   canvas.classList.remove('dragging');
+  threeCanvas.classList.remove('dragging');
+  document.querySelectorAll('.light-handle.dragging').forEach(el => el.classList.remove('dragging'));
+  if (three.controls) three.controls.enabled = true;
   drag = null;
   setDirty(true);
+  renderAll();
 }
 function eventCanvasPos(event){
   const rect = canvas.getBoundingClientRect();
   return {x:event.clientX - rect.left, y:event.clientY - rect.top};
+}
+function elementPointerPos(event, element){
+  const rect = element.getBoundingClientRect();
+  return {x:event.clientX - rect.left, y:event.clientY - rect.top};
+}
+function hitPortraitLight(x,y){
+  let best = null;
+  let bestDist = 999;
+  portraitLightHandlePositions(canvas.clientWidth, canvas.clientHeight).forEach(handle => {
+    const d = Math.hypot(x-handle.x, y-handle.y);
+    if (d < 36 && d < bestDist) {
+      best = handle.id;
+      bestDist = d;
+    }
+  });
+  return best;
+}
+function updateLightFromPortraitPoint(id,x,y,element){
+  const light = state.lights[id];
+  if (!light) return;
+  const w = element.clientWidth || canvas.clientWidth || 1;
+  const h = element.clientHeight || canvas.clientHeight || 1;
+  const cx = w / 2;
+  const cy = h * .48;
+  const dx = x - cx;
+  const dyBase = y - cy;
+  light.angle = Math.round(mod360(Math.atan2(dx, dyBase) * 180 / Math.PI));
+  light.distance = Math.round(clamp((Math.abs(dx) / Math.max(1, Math.min(w,h) * .33) - .58) / .7 * 100, 10, 100));
+  light.height = Math.round(clamp(25 - dyBase / (h / 430), -50, 100));
+  state.selectedLight = id;
+}
+function hitThreeLight(event){
+  if (!three.ready || !three.raycaster || !three.pointer) return null;
+  const rect = threeCanvas.getBoundingClientRect();
+  three.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  three.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  three.raycaster.setFromCamera(three.pointer, three.camera);
+  const meshes = Object.values(three.lightMeshes);
+  const hits = three.raycaster.intersectObjects(meshes, false);
+  if (hits[0]?.object?.userData?.lightId) return hits[0].object.userData.lightId;
+  const px = event.clientX - rect.left;
+  const py = event.clientY - rect.top;
+  let best = null;
+  let bestDist = 999;
+  Object.entries(three.lightMeshes).forEach(([id, mesh]) => {
+    if (!mesh.visible) return;
+    const p = mesh.position.clone().project(three.camera);
+    const sx = (p.x * .5 + .5) * rect.width;
+    const sy = (-p.y * .5 + .5) * rect.height;
+    const d = Math.hypot(px - sx, py - sy);
+    if (d < 48 && d < bestDist) {
+      best = id;
+      bestDist = d;
+    }
+  });
+  return best;
 }
 function hitDiagramLight(x,y){
   const layout = diagramLayout(canvas.clientWidth, canvas.clientHeight);
@@ -1745,6 +2256,14 @@ function bindEvents(){
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointerleave', onPointerUp);
   canvas.addEventListener('wheel', onWheel, {passive:false});
+  threeCanvas.addEventListener('pointerdown', onThreePointerDown);
+  threeCanvas.addEventListener('pointermove', onPointerMove);
+  threeCanvas.addEventListener('pointerup', onPointerUp);
+  threeCanvas.addEventListener('pointerleave', onPointerUp);
+  $('lightOverlay').addEventListener('pointerdown', onOverlayPointerDown);
+  $('lightOverlay').addEventListener('pointermove', onPointerMove);
+  $('lightOverlay').addEventListener('pointerup', onPointerUp);
+  $('lightOverlay').addEventListener('pointerleave', onPointerUp);
   $('projectName').addEventListener('input', e => {
     state.projectName = e.target.value || 'Untitled project';
     setDirty(true);
@@ -1788,12 +2307,12 @@ function bindEvents(){
   $('lightsPanel').addEventListener('input', e => {
     const input = e.target.closest('[data-light][data-prop]');
     if (!input) return;
-    updateLightInput(input);
+    updateLightInput(input, 'input');
   });
   $('lightsPanel').addEventListener('change', e => {
     const input = e.target.closest('[data-light][data-prop]');
     if (!input) return;
-    updateLightInput(input);
+    updateLightInput(input, 'change');
   });
   $('lightsPanel').addEventListener('click', e => {
     const select = e.target.closest('[data-select-light]');
@@ -1865,14 +2384,6 @@ function bindEvents(){
   $('printCompareDarkBtn').addEventListener('click', () => printComparison('dark'));
   $('copySetupBtn').addEventListener('click', () => copyText(setupUrl()));
   $('copyToolBtn').addEventListener('click', () => copyText(toolUrl()));
-  $('setupShareGrid').addEventListener('click', e => {
-    const btn = e.target.closest('[data-share]');
-    if (btn) shareUrl(btn.dataset.share, true);
-  });
-  $('toolShareGrid').addEventListener('click', e => {
-    const btn = e.target.closest('[data-share]');
-    if (btn) shareUrl(btn.dataset.share, false);
-  });
   $('selectCopyBtn').addEventListener('click', () => $('copyText').select());
   $('closeCopyBtn').addEventListener('click', () => $('copyModal').classList.remove('show'));
   document.querySelectorAll('.modal-back').forEach(modal => {
@@ -1881,7 +2392,7 @@ function bindEvents(){
     });
   });
 }
-function updateLightInput(input){
+function updateLightInput(input, eventType='change'){
   const light = state.lights[input.dataset.light];
   const prop = input.dataset.prop;
   if (!light) return;
@@ -1890,11 +2401,21 @@ function updateLightInput(input){
   else if (prop === 'angle') light[prop] = mod360(Number(input.value) || 0);
   else light[prop] = Number(input.value) || 0;
   state.selectedLight = input.dataset.light;
-  const now = performance.now();
   setDirty(true);
-  if (now - lastRenderStamp > 25 || prop === 'enabled' || prop === 'gel') {
-    lastRenderStamp = now;
+  renderLightControlOutputs(input.dataset.light);
+  if (eventType === 'change' || prop === 'enabled' || prop === 'gel') {
     renderAll();
+    return;
+  }
+  const now = performance.now();
+  if (now - lastRenderStamp > 16) {
+    lastRenderStamp = now;
+    renderTopState();
+    renderAnalysis();
+    renderMagicSheetPanel();
+    renderLightOverlay();
+    renderView();
+    updateThreeScene();
   }
 }
 
