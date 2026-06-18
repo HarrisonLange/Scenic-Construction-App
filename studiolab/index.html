@@ -419,7 +419,7 @@
   };
   const AUDIENCE_CAMERA = {dist:20, height:6, pitch:.07, stageHalfW:33, stageDepth:30};
   const THREE_FT = 0.31;
-  const SUBJECT_BASE_HEIGHT = 2.86;
+  const SUBJECT_BASE_HEIGHT = 2.78;
   const SUBJECT_REAL_HEIGHT_FT = 5.8;
   const SUBJECT_THREE_SCALE = SUBJECT_REAL_HEIGHT_FT * THREE_FT / SUBJECT_BASE_HEIGHT;
   const SUBJECT_AIM_HEIGHT_FT = 4.2;
@@ -446,6 +446,9 @@
     hairMaterial:null,
     backdropMaterial:null,
     floorMaterial:null,
+    goboCanvases:{},
+    goboTextures:{},
+    goboMeshes:{},
     lights:{},
     lightMeshes:{}
   };
@@ -523,7 +526,10 @@
   function load(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.lights)) data.lights.forEach(l => { l.gobo = l.gobo || 'open'; });
+      return data;
     }catch(err){ return null; }
   }
   function saveSoon(){
@@ -549,6 +555,9 @@
     const rad = angleDeg * Math.PI / 180;
     l.x = clamp(state.subject.x + Math.sin(rad) * distance, 4, 96);
     l.y = clamp(state.subject.y + Math.cos(rad) * distance, 4, 58);
+  }
+  function goboLabel(value){
+    return {open:'Open', window:'Window', blinds:'Blinds', branches:'Branches', dots:'Breakup'}[value || 'open'] || 'Open';
   }
 
   function resizeCanvas(){
@@ -673,7 +682,43 @@
     const edge = clamp(1 - cross / Math.max(1,halfWidth), 0, 1);
     const modifier = l.type === 'softbox' ? 1.25 : l.type === 'panel' ? 1.05 : l.type === 'practical' ? .75 : .9;
     const distanceFalloff = clamp(1.22 - c.len/52, .45, 1.1);
-    return Math.pow(edge,.96) * (l.intensity/100) * modifier * distanceFalloff;
+    return Math.pow(edge,.96) * (l.intensity/100) * modifier * distanceFalloff * goboMaskAt(l, x, y);
+  }
+  function goboMaskAt(l, x, y){
+    const gobo = l.gobo || 'open';
+    if (gobo === 'open') return 1;
+    const target = lightTarget(l);
+    const radius = Math.max(3, (Number(l.spread)||34) * .44);
+    const angle = -(lightCompass(l).angle - 180) * Math.PI / 180;
+    const dx = x - target.x;
+    const dy = y - target.y;
+    const gx = (dx*Math.cos(angle) - dy*Math.sin(angle)) / radius;
+    const gy = (dx*Math.sin(angle) + dy*Math.cos(angle)) / radius;
+    if (Math.hypot(gx, gy) > 1.05) return .15;
+    if (gobo === 'window') {
+      const inFrame = Math.abs(gx) < .5 && Math.abs(gy) < .35;
+      const bar = Math.abs(gx) < .045 || Math.abs(gy) < .055;
+      return inFrame && !bar ? 1 : .08;
+    }
+    if (gobo === 'blinds') {
+      const stripe = Math.abs((((gy + gx*.18 + 1.2) % .24) + .24) % .24 - .12);
+      return stripe < .055 ? .08 : 1;
+    }
+    if (gobo === 'branches') {
+      const trunk = Math.abs(Math.sin((gx*3.2 + gy*7.5) * Math.PI)) < .13;
+      const twig = Math.abs(Math.sin((gx*8.5 - gy*4.2) * Math.PI)) < .08 && gy < .45;
+      return trunk || twig ? .1 : 1;
+    }
+    if (gobo === 'dots') {
+      const cellX = Math.floor((gx + 1) * 7);
+      const cellY = Math.floor((gy + 1) * 6);
+      const localX = ((gx + 1) * 7) % 1 - .5;
+      const localY = ((gy + 1) * 6) % 1 - .5;
+      const seed = Math.sin(cellX*12.9898 + cellY*78.233) * 43758.5453;
+      const radiusDot = .14 + (seed - Math.floor(seed)) * .16;
+      return Math.hypot(localX, localY) < radiusDot ? .08 : 1;
+    }
+    return 1;
   }
   function subjectLighting(){
     const p = state.subject;
@@ -838,15 +883,58 @@
       ctx.beginPath();
       floorCirclePath(target.x,target.y,radius);
       ctx.clip();
-      const pool = ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,layout.w*.18 + radius*1.5);
-      pool.addColorStop(0, rgba(l.color, alpha*.32));
-      pool.addColorStop(.6, rgba(l.color, alpha*.15));
-      pool.addColorStop(1, rgba(l.color, 0));
       ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = pool;
-      ctx.fillRect(layout.x-80, layout.y-80, layout.w+160, layout.h+160);
+      if ((l.gobo || 'open') === 'open') {
+        const pool = ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,layout.w*.18 + radius*1.5);
+        pool.addColorStop(0, rgba(l.color, alpha*.32));
+        pool.addColorStop(.6, rgba(l.color, alpha*.15));
+        pool.addColorStop(1, rgba(l.color, 0));
+        ctx.fillStyle = pool;
+        ctx.fillRect(layout.x-80, layout.y-80, layout.w+160, layout.h+160);
+      } else {
+        drawCanvasGoboLight(l, s, layout.w*.18 + radius*1.5, alpha);
+      }
       ctx.restore();
     });
+  }
+  function drawCanvasGoboLight(l, center, radius, alpha){
+    const gobo = l.gobo || 'open';
+    if (gobo === 'open') return;
+    ctx.save();
+    ctx.translate(center.x, center.y);
+    ctx.rotate((lightCompass(l).angle - 180) * Math.PI / 180);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = clamp(alpha*.55, .18, .72);
+    ctx.strokeStyle = rgba(l.color, .42);
+    ctx.fillStyle = rgba(l.color, .32);
+    ctx.lineWidth = Math.max(1.4, radius*.04);
+    if (gobo === 'window') {
+      const w = radius*.36;
+      const h = radius*.16;
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sy]) => {
+        ctx.fillRect(sx*radius*.23 - w/2, sy*radius*.12 - h/2, w, h);
+      });
+    } else if (gobo === 'blinds') {
+      for (let y=-radius*.42; y<=radius*.42; y+=radius*.13) {
+        ctx.beginPath(); ctx.moveTo(-radius*.62, y + radius*.07); ctx.lineTo(radius*.62, y + radius*.17); ctx.stroke();
+      }
+    } else if (gobo === 'branches') {
+      ctx.strokeStyle = rgba(l.color, .34);
+      for (let i=0; i<7; i++) {
+        const x = -radius*.55 + i*radius*.18;
+        ctx.beginPath();
+        ctx.moveTo(x, radius*.45);
+        ctx.bezierCurveTo(x+radius*.08, radius*.1, x-radius*.12, -radius*.08, x+radius*.05, -radius*.48);
+        ctx.stroke();
+      }
+    } else if (gobo === 'dots') {
+      for (let i=0; i<36; i++) {
+        const x = Math.sin(i*12.9898) * radius*.52;
+        const y = Math.cos(i*78.233) * radius*.32;
+        ctx.beginPath(); ctx.arc(x,y,Math.max(2,radius*.035),0,Math.PI*2); ctx.fill();
+      }
+    }
+    ctx.restore();
   }
   function drawLightIcons(){
     state.lights
@@ -1282,46 +1370,72 @@
     three.skinMaterial = new THREE.MeshStandardMaterial({color:state.subject.skin, roughness:.62, metalness:0, flatShading:true});
     three.costumeMaterial = new THREE.MeshStandardMaterial({color:state.subject.costume, roughness:.72, metalness:0, flatShading:true});
     three.hairMaterial = new THREE.MeshStandardMaterial({color:'#201714', roughness:.78, metalness:0, flatShading:true});
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.42, 1.2, 5, 10), three.costumeMaterial);
-    body.position.set(0,1.36,0);
-    body.castShadow = true;
-    three.subject.add(body);
-    three.subjectParts.body = body;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(.42, 18, 14), three.skinMaterial);
-    head.scale.set(.9,1.08,.82);
-    head.position.set(0,2.38,.02);
+
+    const hips = addSubjectMesh('hips', new THREE.SphereGeometry(.36,18,12), three.costumeMaterial, [0,.9,0], [.86,.36,.62]);
+    const waist = addSubjectMesh('waist', new THREE.CapsuleGeometry(.18,.34,4,12), three.costumeMaterial, [0,1.18,0], [.9,1,.7]);
+    const chest = addSubjectMesh('chest', new THREE.CapsuleGeometry(.27,.54,5,14), three.costumeMaterial, [0,1.55,0], [1.1,1,.72]);
+    const shoulders = addSubjectMesh('shoulders', new THREE.SphereGeometry(.38,18,10), three.costumeMaterial, [0,1.86,0], [1.38,.18,.48]);
+    three.subjectParts.body = chest;
+    three.subjectParts.hips = hips;
+    three.subjectParts.waist = waist;
+    three.subjectParts.shoulders = shoulders;
+
+    const head = addSubjectMesh('head', new THREE.SphereGeometry(.34,20,15), three.skinMaterial, [0,2.38,.02], [.88,1.06,.82]);
     head.castShadow = true;
-    three.subject.add(head);
-    three.subjectParts.head = head;
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(.43, 18, 10, 0, Math.PI*2, 0, Math.PI*.54), three.hairMaterial);
-    hair.scale.set(.96,.7,.86);
-    hair.position.set(0,2.63,-.04);
-    hair.castShadow = true;
-    three.subject.add(hair);
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,.28,12), three.skinMaterial);
-    neck.position.set(0,2.02,0);
-    neck.castShadow = true;
-    three.subject.add(neck);
+    const hair = addSubjectMesh('hair', new THREE.SphereGeometry(.35,18,10,0,Math.PI*2,0,Math.PI*.56), three.hairMaterial, [0,2.59,-.04], [.98,.68,.88]);
+    const neck = addSubjectMesh('neck', new THREE.CylinderGeometry(.11,.15,.28,12), three.skinMaterial, [0,2.04,0], [1,1,1]);
     const eyeMat = new THREE.MeshStandardMaterial({color:'#141014', roughness:.7});
     [-1,1].forEach(side => {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(.035,10,8), eyeMat);
       eye.scale.set(1.8,.75,.45);
-      eye.position.set(side*.15,2.43,.35);
+      eye.position.set(side*.13,2.43,.29);
       three.subject.add(eye);
     });
-    addLimbPair(THREE, 'arm', .12, .52, three.skinMaterial, [[-.46,1.9,0],[.46,1.9,0]], [[-.82,1.2,.08],[.82,1.2,.08]]);
-    addLimbPair(THREE, 'leg', .15, .72, three.costumeMaterial, [[-.18,.82,0],[.18,.82,0]], [[-.28,.1,.05],[.28,.1,.05]]);
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(.045,.18,12), three.skinMaterial);
+    nose.rotation.x = Math.PI/2;
+    nose.position.set(0,2.34,.31);
+    nose.castShadow = true;
+    three.subject.add(nose);
+    addLimbPair(THREE, 'arm', .085, .46, three.skinMaterial, [[-.42,1.76,0],[.42,1.76,0]], [[-.58,1.18,.04],[.58,1.18,.04]]);
+    addLimbPair(THREE, 'leg', .115, .6, three.costumeMaterial, [[-.16,.82,0],[.16,.82,0]], [[-.24,.1,.05],[.24,.1,.05]]);
     three.scene.add(three.subject);
     markThreeObjectDraggable(three.subject, 'subject');
+  }
+  function addSubjectMesh(name, geometry, material, position, scale){
+    const mesh = new three.api.Mesh(geometry, material);
+    mesh.position.set(position[0], position[1], position[2]);
+    mesh.scale.set(scale[0], scale[1], scale[2]);
+    mesh.castShadow = true;
+    three.subject.add(mesh);
+    three.subjectParts[name] = mesh;
+    return mesh;
   }
   function addLimbPair(THREE, name, radius, length, material, starts, ends){
     starts.forEach((start, i) => {
       const group = new THREE.Group();
-      const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 10), material);
-      mesh.castShadow = true;
-      group.add(mesh);
+      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 10), material);
+      upper.position.y = -length*.38;
+      upper.castShadow = true;
+      group.add(upper);
+      const lower = new THREE.Mesh(new THREE.CapsuleGeometry(radius*.82, length*.86, 4, 10), material);
+      lower.position.y = -length*.95;
+      lower.castShadow = true;
+      group.add(lower);
+      const joint = new THREE.Mesh(new THREE.SphereGeometry(radius*.95, 12, 8), material);
+      joint.position.y = -length*.68;
+      joint.castShadow = true;
+      group.add(joint);
+      const endMat = name === 'arm' ? three.skinMaterial : three.costumeMaterial;
+      const end = new THREE.Mesh(
+        name === 'arm' ? new THREE.SphereGeometry(radius*1.12, 12, 8) : new THREE.BoxGeometry(radius*2.6, radius*.86, radius*3.3),
+        endMat
+      );
+      end.position.set(0, -length*1.42, name === 'arm' ? .015 : .11);
+      end.scale.set(name === 'arm' ? .86 : 1, name === 'arm' ? 1.15 : 1, 1);
+      end.castShadow = true;
+      group.add(end);
       three.subject.add(group);
-      three.subjectParts[`${name}${i}`] = {group, mesh, start, end:ends[i]};
+      three.subjectParts[`${name}${i}`] = {group, upper, lower, joint, end, start, target:ends[i], length};
     });
   }
   function buildThreeCameraFrame(THREE){
@@ -1364,6 +1478,18 @@
     markThreeObjectDraggable(fixture, l.id);
     three.scene.add(fixture);
     three.lightMeshes[l.id] = fixture;
+    const cookieMat = new THREE.MeshBasicMaterial({
+      color:l.color,
+      transparent:true,
+      opacity:0,
+      depthWrite:false,
+      side:THREE.DoubleSide,
+      blending:THREE.MultiplyBlending
+    });
+    const cookie = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.35), cookieMat);
+    cookie.renderOrder = 8;
+    three.scene.add(cookie);
+    three.goboMeshes[l.id] = cookie;
   }
   function updateThreeScene(){
     if (!three.ready) return;
@@ -1388,6 +1514,8 @@
         delete three.lights[id];
         three.scene.remove(three.lightMeshes[id]);
         delete three.lightMeshes[id];
+        three.scene.remove(three.goboMeshes[id]);
+        delete three.goboMeshes[id];
       }
     });
     state.lights.forEach(l => {
@@ -1401,6 +1529,7 @@
       spot.intensity = (l.intensity/32) * modifier;
       spot.angle = clamp(l.spread, 12, 105) * Math.PI / 360;
       spot.penumbra = l.type === 'fresnel' ? .18 : l.type === 'practical' ? .78 : .62;
+      spot.map = (l.gobo || 'open') === 'open' ? null : goboTexture(l.gobo);
       spot.position.set(pos.x,pos.y,pos.z);
       spot.target = three.target;
       fixture.position.set(pos.x,pos.y,pos.z);
@@ -1413,6 +1542,7 @@
       ];
       fixture.children[1].geometry.dispose();
       fixture.children[1].geometry = new THREE.BufferGeometry().setFromPoints(points);
+      updateThreeGobo(l, pos);
     });
     const lensScale = state.lens === '85' ? .64 : state.lens === '35' ? 1.18 : .9;
     three.cameraFrame.scale.set(lensScale,1,lensScale);
@@ -1422,24 +1552,26 @@
   function poseThreeSubject(pose){
     const parts = three.subjectParts || {};
     const presets = {
-      standing:{arm0:[-.45,-.05,.22],arm1:[.45,-.05,-.22],leg0:[-.12,.02,.08],leg1:[.12,.02,-.08]},
-      contrapposto:{arm0:[-.28,.12,.34],arm1:[.5,-.08,-.24],leg0:[-.18,.02,.03],leg1:[.32,.04,-.28]},
-      open:{arm0:[-.95,.08,.72],arm1:[.95,.08,-.72],leg0:[-.34,.03,.16],leg1:[.34,.03,-.16]},
-      reach:{arm0:[-1.95,.2,.12],arm1:[.44,-.05,-.22],leg0:[-.18,.02,.08],leg1:[.2,.02,-.08]},
-      low:{arm0:[-.36,.2,.28],arm1:[.36,.2,-.28],leg0:[-.65,.1,.2],leg1:[.65,.1,-.2]}
+      standing:{lean:0,head:0,arm0:[-.08,0,.18],arm1:[.08,0,-.18],leg0:[.03,0,.06],leg1:[-.03,0,-.06]},
+      contrapposto:{lean:-.08,head:.05,arm0:[-.12,.05,.3],arm1:[.16,-.04,-.22],leg0:[-.06,0,.02],leg1:[.18,0,-.22]},
+      open:{lean:0,head:0,arm0:[-.22,.02,1.08],arm1:[.22,.02,-1.08],leg0:[.04,0,.18],leg1:[-.04,0,-.18]},
+      reach:{lean:.05,head:.16,arm0:[-1.45,.08,.18],arm1:[.1,0,-.18],leg0:[.02,0,.08],leg1:[-.03,0,-.08]},
+      low:{lean:.12,head:-.04,arm0:[.14,.1,.32],arm1:[-.14,.1,-.32],leg0:[.28,0,.38],leg1:[.28,0,-.38]}
     };
     const cfg = presets[pose] || presets.standing;
     ['arm0','arm1','leg0','leg1'].forEach(key => {
       if (!parts[key]) return;
-      const side = key.endsWith('0') ? -1 : 1;
       const values = cfg[key];
       const group = parts[key].group;
       group.position.set(parts[key].start[0], parts[key].start[1], parts[key].start[2]);
       group.rotation.set(values[0], 0, values[2]);
-      group.children[0].position.y = key.startsWith('leg') ? -.44 : -.38;
     });
-    if (parts.body) parts.body.rotation.z = pose === 'contrapposto' ? -.08 : pose === 'low' ? .02 : 0;
-    if (parts.head) parts.head.rotation.z = pose === 'reach' ? .16 : 0;
+    ['body','waist','hips','shoulders'].forEach(name => {
+      if (parts[name]) parts[name].rotation.z = cfg.lean || 0;
+    });
+    if (parts.head) parts.head.rotation.z = cfg.head || 0;
+    if (parts.hair) parts.hair.rotation.z = cfg.head || 0;
+    if (parts.neck) parts.neck.rotation.z = (cfg.lean || 0) * .45;
   }
   function resizeThree(){
     if (!three.ready) return;
@@ -1458,6 +1590,60 @@
     if (!three.ready) return;
     requestAnimationFrame(animateThree);
     renderThree();
+  }
+  function goboTexture(gobo){
+    const key = gobo || 'open';
+    if (key === 'open') return null;
+    if (three.goboTextures[key]) return three.goboTextures[key];
+    const THREE = three.api;
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.fillRect(0,0,256,256);
+    g.fillStyle = '#000000';
+    g.strokeStyle = '#000000';
+    g.lineWidth = 13;
+    if (key === 'window') {
+      g.strokeRect(48,68,160,120);
+      g.beginPath(); g.moveTo(128,68); g.lineTo(128,188); g.moveTo(48,128); g.lineTo(208,128); g.stroke();
+    } else if (key === 'blinds') {
+      for (let y=50; y<210; y+=26) {
+        g.beginPath(); g.moveTo(38,y); g.lineTo(218,y+16); g.stroke();
+      }
+    } else if (key === 'branches') {
+      g.lineCap = 'round';
+      for (let i=0; i<8; i++) {
+        const x = 34 + i*28;
+        g.beginPath();
+        g.moveTo(x,226);
+        g.bezierCurveTo(x+22,154,x-28,102,x+12,28);
+        g.stroke();
+      }
+    } else if (key === 'dots') {
+      for (let i=0; i<54; i++) {
+        const x = 128 + Math.sin(i*12.9898) * 92;
+        const y = 128 + Math.cos(i*78.233) * 72;
+        g.beginPath(); g.arc(x,y,7 + (i%5),0,Math.PI*2); g.fill();
+      }
+    }
+    const texture = new THREE.CanvasTexture(c);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    three.goboCanvases[key] = c;
+    three.goboTextures[key] = texture;
+    return texture;
+  }
+  function updateThreeGobo(l, pos){
+    const mesh = three.goboMeshes[l.id];
+    if (!mesh) return;
+    const gobo = l.gobo || 'open';
+    const alpha = clamp(l.intensity/100,0,1);
+    if (gobo === 'open' || alpha <= 0) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.visible = false;
   }
   function markThreeObjectDraggable(object, id){
     object.userData.dragId = id;
@@ -1631,7 +1817,7 @@
 
   $('addLightBtn').addEventListener('click', () => {
     const id = `l${Date.now()}`;
-    state.lights.push(makeLight(id,`Studio Light ${state.lights.length+1}`,'softbox','fill',40 + state.lights.length*8,32,45,54,7,'#ffffff'));
+    state.lights.push(makeLight(id,`Studio Light ${state.lights.length+1}`,'softbox','fill',40 + state.lights.length*8,32,45,54,7,'#ffffff','open'));
     state.selected = id;
     state.preset = 'custom';
     renderAll(); saveSoon();
@@ -1656,7 +1842,7 @@
   $('subjectSelect').addEventListener('click', () => { state.selected = 'subject'; renderAll(); saveSoon(); });
   $('lightName').addEventListener('input', e => { const l=selectedLight(); if(l){l.name=e.target.value || 'Studio Light'; state.preset='custom'; renderAll(); saveSoon();} });
   $('lightType').addEventListener('change', e => { const l=selectedLight(); if(l){l.type=e.target.value; state.preset='custom'; renderAll(); saveSoon();} });
-  $('lightRole').addEventListener('change', e => { const l=selectedLight(); if(l){l.role=e.target.value; state.preset='custom'; renderAll(); saveSoon();} });
+  $('lightGobo').addEventListener('change', e => { const l=selectedLight(); if(l){l.gobo=e.target.value; state.preset='custom'; renderAll(); saveSoon();} });
   $('intensity').addEventListener('input', e => { const l=selectedLight(); if(l){l.intensity=Number(e.target.value); state.preset='custom'; renderAll(); saveSoon();} });
   $('spread').addEventListener('input', e => { const l=selectedLight(); if(l){l.spread=Number(e.target.value); state.preset='custom'; renderAll(); saveSoon();} });
   $('height').addEventListener('input', e => { const l=selectedLight(); if(l){l.height=Number(e.target.value); state.preset='custom'; renderAll(); saveSoon();} });
