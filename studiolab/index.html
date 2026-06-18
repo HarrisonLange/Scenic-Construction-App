@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Studio Lighting Lab</title>
+<style>
+  :root{
+    --bg:#0b0c0f;
+    --panel:#151820;
+    --panel-2:#1f2430;
+    --line:#343b4a;
+    --line-soft:#242a35;
+    --text:#f4f6fb;
+    --muted:#a8b0bf;
+    --dim:#747d8d;
+    --cyan:#20b6d7;
+    --green:#58c46f;
+    --amber:#f2b84b;
+    --red:#ee5b5b;
+    --magenta:#d76ecf;
+    --shadow:0 18px 42px rgba(0,0,0,.36);
+    --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    margin:0;
+    color:var(--text);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    background:
+      linear-gradient(180deg,rgba(32,182,215,.08),transparent 240px),
+      var(--bg);
+  }
+  button,input,select,textarea{font:inherit}
+  button{
+    min-height:38px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#222835;
+    color:var(--text);
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:8px 11px;
+    transition:background .14s ease,border-color .14s ease,transform .14s ease;
+  }
+  button:hover{background:#2b3242;border-color:#4c566b}
+  button:active{transform:translateY(1px)}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+    outline:2px solid var(--cyan);
+    outline-offset:2px;
+  }
+  button svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .icon-only{width:38px;padding:8px}
+  .primary{background:var(--cyan);border-color:var(--cyan);color:#061015;font-weight:800}
+  .primary:hover{background:#4dcce7;border-color:#4dcce7}
+  .danger{color:#ffd6d6;border-color:#724142;background:#322026}
+  .danger:hover{background:#44232b;border-color:#99515a}
+  .ghost{background:transparent}
+  .active{border-color:var(--cyan);box-shadow:inset 0 0 0 1px rgba(32,182,215,.35)}
+
+  .app-shell{
+    min-height:100vh;
+    display:grid;
+    grid-template-rows:auto 1fr;
+  }
+  header{
+    border-bottom:1px solid #000;
+    background:#0d0f14;
+  }
+  .topbar{
+    max-width:1520px;
+    margin:0 auto;
+    padding:14px 18px;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:16px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+  }
+  .mark{
+    width:38px;
+    height:38px;
+    border-radius:8px;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(135deg,var(--cyan),var(--green) 52%,var(--amber));
+    color:#071015;
+    font-weight:900;
+    letter-spacing:.4px;
+  }
+  h1{
+    font-size:18px;
+    margin:0;
+    letter-spacing:0;
+    line-height:1.15;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:12px;
+    margin-top:3px;
+  }
+  .top-actions{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:8px;
+  }
+  .modebar{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+  }
+  .modebar button{
+    min-width:126px;
+  }
+
+  main{
+    max-width:1520px;
+    width:100%;
+    margin:0 auto;
+    padding:14px 18px 18px;
+    display:grid;
+    grid-template-columns:minmax(260px,330px) minmax(520px,1fr) minmax(280px,360px);
+    gap:14px;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line-soft);
+    border-radius:8px;
+    box-shadow:var(--shadow);
+    min-width:0;
+  }
+  .panel-header{
+    padding:12px 13px;
+    border-bottom:1px solid var(--line-soft);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .panel-title{
+    font-size:12px;
+    font-weight:800;
+    color:#d9deea;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+  }
+  .panel-body{padding:13px}
+  .control-stack{display:grid;gap:13px}
+  .field{
+    display:grid;
+    gap:7px;
+  }
+  .field label,
+  .small-label{
+    color:var(--muted);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.8px;
+    font-weight:800;
+  }
+  .row{display:flex;align-items:center;gap:8px}
+  .row.wrap{flex-wrap:wrap}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  input[type=range]{width:100%;accent-color:var(--cyan)}
+  input[type=number],
+  input[type=text],
+  select,
+  textarea{
+    width:100%;
+    background:#10131a;
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--text);
+    min-height:38px;
+    padding:8px 10px;
+  }
+  textarea{
+    min-height:86px;
+    resize:vertical;
+    line-height:1.45;
+  }
+  .readout{
+    min-width:54px;
+    color:#dfe7f5;
+    font-family:var(--mono);
+    font-size:12px;
+    text-align:right;
+  }
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+  }
+  .chip{
+    min-height:32px;
+    font-size:12px;
+    color:#dce4f2;
+    background:#191e28;
+  }
+  .chip.active{
+    background:#102b33;
+  }
+  .color-row{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:7px;
+  }
+  .swatch{
+    min-height:34px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,.18);
+    cursor:pointer;
+  }
+  .swatch.active{outline:2px solid #fff;outline-offset:1px}
+
+  .workspace{
+    display:grid;
+    grid-template-rows:minmax(320px,1.08fr) minmax(250px,.92fr);
+    gap:14px;
+    min-height:0;
+  }
+  .canvas-panel{
+    overflow:hidden;
+    display:grid;
+    grid-template-rows:auto 1fr;
+  }
+  .canvas-wrap{
+    position:relative;
+    min-height:0;
+    background:#11151d;
+  }
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+  }
+  #planCanvas{cursor:grab}
+  #planCanvas.dragging{cursor:grabbing}
+  .canvas-tip{
+    position:absolute;
+    left:12px;
+    bottom:12px;
+    color:#c7d0dd;
+    background:rgba(9,11,15,.78);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:8px;
+    padding:7px 9px;
+    font-size:12px;
+    pointer-events:none;
+  }
+  .preview-overlay{
+    position:absolute;
+    right:12px;
+    top:12px;
+    display:grid;
+    gap:8px;
+    min-width:170px;
+    pointer-events:none;
+  }
+  .meter-pill{
+    background:rgba(9,11,15,.82);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:8px;
+    padding:8px 10px;
+  }
+  .meter-pill b{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.8px;
+    color:var(--muted);
+    margin-bottom:3px;
+  }
+  .meter-pill span{
+    font-family:var(--mono);
+    font-size:16px;
+    color:#fff;
+  }
+
+  .inspector-grid{
+    display:grid;
+    gap:12px;
+  }
+  .entity-list{
+    display:grid;
+    gap:7px;
+    max-height:205px;
+    overflow:auto;
+    padding-right:2px;
+  }
+  .entity{
+    width:100%;
+    justify-content:flex-start;
+    background:#10131a;
+    color:#dbe4f0;
+    min-height:35px;
+    padding-top:6px;
+    padding-bottom:6px;
+  }
+  .entity.active{border-color:var(--cyan);background:#10252d}
+  .entity-color{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.45);
+    flex:0 0 auto;
+  }
+  .muted{color:var(--muted)}
+  .micro{
+    color:var(--dim);
+    font-size:11px;
+    line-height:1.45;
+  }
+  .meter-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+  .stat{
+    background:#10131a;
+    border:1px solid var(--line-soft);
+    border-radius:8px;
+    padding:9px 10px;
+    min-width:0;
+  }
+  .stat b{
+    display:block;
+    color:var(--muted);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.7px;
+    margin-bottom:5px;
+  }
+  .stat span{
+    font-family:var(--mono);
+    font-size:14px;
+  }
+  .histogram{
+    height:74px;
+    display:flex;
+    align-items:flex-end;
+    gap:3px;
+    padding:8px;
+    background:#10131a;
+    border:1px solid var(--line-soft);
+    border-radius:8px;
+  }
+  .histogram i{
+    display:block;
+    flex:1;
+    min-width:5px;
+    border-radius:3px 3px 0 0;
+    background:linear-gradient(180deg,var(--cyan),var(--green));
+  }
+  .plan-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+  }
+  .plan-table th,
+  .plan-table td{
+    border-bottom:1px solid var(--line-soft);
+    padding:8px 6px;
+    text-align:left;
+    vertical-align:top;
+  }
+  .plan-table th{
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.8px;
+    font-size:10px;
+  }
+  .lesson-buttons{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .lesson{
+    min-height:48px;
+    justify-content:flex-start;
+    text-align:left;
+    padding:9px 10px;
+  }
+  .lesson span{
+    display:block;
+    color:#dfe7f5;
+    font-size:12px;
+    line-height:1.2;
+  }
+  .lesson small{
+    display:block;
+    color:var(--muted);
+    font-size:10px;
+    margin-top:3px;
+  }
+  .warning{
+    border:1px solid rgba(242,184,75,.4);
+    background:rgba(242,184,75,.09);
+    border-radius:8px;
+    padding:9px 10px;
+    color:#ffe0a1;
+    font-size:12px;
+    line-height:1.4;
+  }
+  .hidden{display:none!important}
+
+  @media (max-width:1180px){
+    main{grid-template-columns:minmax(240px,320px) 1fr}
+    .right-rail{grid-column:1 / -1}
+    .right-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  }
+  @media (max-width:820px){
+    .topbar{grid-template-columns:1fr;align-items:start}
+    .modebar{justify-content:flex-start;overflow:auto;padding-bottom:2px}
+    .top-actions{justify-content:flex-start}
+    main{grid-template-columns:1fr;padding:10px}
+    .workspace{order:-1}
+    .workspace{grid-template-rows:340px 300px}
+    .right-grid{display:grid;grid-template-columns:1fr}
+    .lesson-buttons{grid-template-columns:1fr}
+    .meter-grid{grid-template-columns:1fr 1fr}
+  }
+  @media print{
+    body{background:#fff;color:#000}
+    header,.left-rail,.workspace .panel-header button,.top-actions,.canvas-tip,.preview-overlay{display:none!important}
+    main{display:block;max-width:none;padding:0}
+    .panel{box-shadow:none;border:1px solid #999;margin-bottom:12px}
+    .workspace{display:block}
+    .canvas-panel{height:45vh;margin-bottom:12px}
+    .right-rail{display:block}
+    .panel,.panel-title,.muted,.micro,.stat b{color:#000}
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <div class="mark">SL</div>
+        <div>
+          <h1>Studio Lighting Lab</h1>
+          <div class="subtitle">Still studio practice for film and photography students</div>
+        </div>
+      </div>
+      <div class="modebar" role="group" aria-label="Workspace view">
+        <button class="active" data-view="both" title="Show plan and camera preview">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>
+          Plan + Preview
+        </button>
+        <button data-view="plan" title="Focus on the overhead studio plan">
+          <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 11h16M10 5v14"/></svg>
+          Plan
+        </button>
+        <button data-view="preview" title="Focus on the still camera preview">
+          <svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Preview
+        </button>
+      </div>
+      <div class="top-actions">
+        <a href="../" style="text-decoration:none"><button class="ghost" title="Return to lab chooser">
+          <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          Labs
+        </button></a>
+        <button id="saveBtn" title="Save this setup in this browser">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+          Save
+        </button>
+        <button id="printBtn" class="primary" title="Print the current shot plan">
+          <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+          Shot Plan
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <aside class="left-rail panel">
+      <div class="panel-header">
+        <div class="panel-title">Studio Kit</div>
+        <button id="addLightBtn" class="icon-only" title="Add light">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div class="panel-body control-stack">
+        <div class="field">
+          <div class="small-label">Exercises</div>
+          <div class="lesson-buttons">
+            <button class="lesson" data-preset="threePoint"><span>Three-point portrait</span><small>Balanced key, fill, rim</small></button>
+            <button class="lesson" data-preset="lowKey"><span>Low-key drama</span><small>Hard side key, deep shadow</small></button>
+            <button class="lesson" data-preset="product"><span>Product sweep</span><small>Soft even table light</small></button>
+            <button class="lesson" data-preset="filmNoir"><span>Film noir edge</span><small>Narrow beam, strong backlight</small></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="small-label">Select</div>
+          <div id="entityList" class="entity-list"></div>
+        </div>
+
+        <div class="field">
+          <label for="backgroundSelect">Backdrop</label>
+          <select id="backgroundSelect">
+            <option value="neutral">Neutral gray seamless</option>
+            <option value="black">Black cyc wall</option>
+            <option value="white">White studio sweep</option>
+            <option value="warm">Warm practical interior</option>
+            <option value="cool">Cool classroom set</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="notesInput">Setup notes</label>
+          <textarea id="notesInput" placeholder="Key intention, subject direction, lens, exposure target"></textarea>
+        </div>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <div id="planPanel" class="panel canvas-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Overhead Studio</div>
+            <div class="micro">Drag lights, subject, and camera inside the studio.</div>
+          </div>
+          <button id="resetBtn" title="Reset the current exercise">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
+            Reset
+          </button>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="planCanvas"></canvas>
+          <div class="canvas-tip" id="selectionTip">Selected: Key Light</div>
+        </div>
+      </div>
+
+      <div id="previewPanel" class="panel canvas-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Still Camera Preview</div>
+            <div class="micro">Exposure and contrast update from the current light positions.</div>
+          </div>
+          <button id="captureBtn" title="Freeze the current preview values">
+            <svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Capture
+          </button>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="previewCanvas"></canvas>
+          <div class="preview-overlay">
+            <div class="meter-pill"><b>Exposure</b><span id="exposureBadge">0.0 EV</span></div>
+            <div class="meter-pill"><b>Ratio</b><span id="ratioBadge">2.1:1</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="right-rail">
+      <div class="right-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Inspector</div>
+            <button id="deleteLightBtn" class="danger icon-only" title="Delete selected light">
+              <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+            </button>
+          </div>
+          <div class="panel-body inspector-grid">
+            <div class="field">
+              <label for="nameInput">Name</label>
+              <input id="nameInput" type="text">
+            </div>
+            <div class="split">
+              <div class="field">
+                <label for="typeSelect">Type</label>
+                <select id="typeSelect">
+                  <option value="fresnel">Fresnel</option>
+                  <option value="led">LED panel</option>
+                  <option value="strobe">Strobe</option>
+                  <option value="practical">Practical</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="modifierSelect">Modifier</label>
+                <select id="modifierSelect">
+                  <option value="bare">Bare</option>
+                  <option value="softbox">Softbox</option>
+                  <option value="umbrella">Umbrella</option>
+                  <option value="snoot">Snoot</option>
+                  <option value="bounce">Bounce</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <div class="row">
+                <label for="intensityRange">Intensity</label>
+                <span id="intensityValue" class="readout">70%</span>
+              </div>
+              <input id="intensityRange" type="range" min="0" max="100" value="70">
+            </div>
+            <div class="field">
+              <div class="row">
+                <label for="spreadRange">Beam spread</label>
+                <span id="spreadValue" class="readout">48 deg</span>
+              </div>
+              <input id="spreadRange" type="range" min="12" max="110" value="48">
+            </div>
+            <div class="field">
+              <div class="row">
+                <label for="heightRange">Height</label>
+                <span id="heightValue" class="readout">7.0 ft</span>
+              </div>
+              <input id="heightRange" type="range" min="2" max="12" step=".5" value="7">
+            </div>
+            <div class="field">
+              <div class="small-label">Gel</div>
+              <div id="colorRow" class="color-row"></div>
+            </div>
+            <div id="inspectorNotice" class="warning hidden"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Learning Meter</div>
+            <button id="meterModeBtn" class="icon-only" title="Toggle false color">
+              <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9h9"/></svg>
+            </button>
+          </div>
+          <div class="panel-body control-stack">
+            <div class="meter-grid">
+              <div class="stat"><b>Key side</b><span id="keyStat">Left</span></div>
+              <div class="stat"><b>Fill</b><span id="fillStat">37%</span></div>
+              <div class="stat"><b>Shadow</b><span id="shadowStat">62%</span></div>
+            </div>
+            <div id="histogram" class="histogram" aria-label="Preview histogram"></div>
+            <div id="lessonFeedback" class="warning">Balanced portrait lighting gives students a clear baseline for key, fill, and back light roles.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Shot Plan</div>
+            <button id="copyBtn" class="icon-only" title="Copy shot plan">
+              <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><rect x="2" y="2" width="13" height="13" rx="2"/></svg>
+            </button>
+          </div>
+          <div class="panel-body">
+            <table class="plan-table">
+              <thead><tr><th>Unit</th><th>Role</th><th>Setting</th></tr></thead>
+              <tbody id="shotPlanBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+  const planCanvas = document.getElementById('planCanvas');
+  const previewCanvas = document.getElementById('previewCanvas');
+  const planCtx = planCanvas.getContext('2d');
+  const previewCtx = previewCanvas.getContext('2d');
+  const entityList = document.getElementById('entityList');
+  const selectionTip = document.getElementById('selectionTip');
+  const backgroundSelect = document.getElementById('backgroundSelect');
+  const notesInput = document.getElementById('notesInput');
+  const nameInput = document.getElementById('nameInput');
+  const typeSelect = document.getElementById('typeSelect');
+  const modifierSelect = document.getElementById('modifierSelect');
+  const intensityRange = document.getElementById('intensityRange');
+  const spreadRange = document.getElementById('spreadRange');
+  const heightRange = document.getElementById('heightRange');
+  const intensityValue = document.getElementById('intensityValue');
+  const spreadValue = document.getElementById('spreadValue');
+  const heightValue = document.getElementById('heightValue');
+  const colorRow = document.getElementById('colorRow');
+  const inspectorNotice = document.getElementById('inspectorNotice');
+  const histogram = document.getElementById('histogram');
+  const shotPlanBody = document.getElementById('shotPlanBody');
+  const lessonFeedback = document.getElementById('lessonFeedback');
+  const exposureBadge = document.getElementById('exposureBadge');
+  const ratioBadge = document.getElementById('ratioBadge');
+  const keyStat = document.getElementById('keyStat');
+  const fillStat = document.getElementById('fillStat');
+  const shadowStat = document.getElementById('shadowStat');
+  const deleteLightBtn = document.getElementById('deleteLightBtn');
+
+  const studio = { width: 28, depth: 18 };
+  const gels = [
+    { name:'White', value:'#fff8e7' },
+    { name:'Daylight', value:'#d8f1ff' },
+    { name:'Tungsten', value:'#ffd29a' },
+    { name:'Steel', value:'#94b6ff' },
+    { name:'Rose', value:'#ff8bb8' }
+  ];
+  const backgrounds = {
+    neutral: ['#5d6370','#2b303a'],
+    black: ['#1a1b1f','#050609'],
+    white: ['#d8dce2','#888f9c'],
+    warm: ['#6d5341','#2b2019'],
+    cool: ['#425c70','#172430']
+  };
+  const lessons = {
+    threePoint: 'Balanced portrait lighting gives students a clear baseline for key, fill, and back light roles.',
+    lowKey: 'Low-key work is about deciding which details disappear, not just making the room dark.',
+    product: 'Product lighting rewards broad sources, controlled reflections, and clean separation from the surface.',
+    filmNoir: 'A narrow hard source creates graphic shadows; the back light keeps the subject readable.'
+  };
+
+  let falseColor = false;
+  let selectedId = 'key';
+  let dragTarget = null;
+  let captureText = '';
+  let state = loadState() || presetState('threePoint');
+
+  function presetState(name){
+    const common = {
+      background: 'neutral',
+      notes: '',
+      subject: { id:'subject', kind:'subject', name:'Subject', x:14, y:9, color:'#f1c4a8' },
+      camera: { id:'camera', kind:'camera', name:'Camera', x:14, y:16, color:'#ffffff' }
+    };
+    if(name === 'lowKey'){
+      return {
+        ...common,
+        background:'black',
+        notes:'Hard side key with very little fill. Watch shadow detail and rim separation.',
+        lights:[
+          light('key','Hard key','fresnel','bare',8.4,6.5,82,28,7.5,'#fff8e7'),
+          light('rim','Low rim','led','snoot',18.8,5.2,38,24,8,'#94b6ff')
+        ]
+      };
+    }
+    if(name === 'product'){
+      return {
+        ...common,
+        background:'white',
+        notes:'Soft top/front light for a clean object study. Keep contrast controlled.',
+        subject:{ id:'subject', kind:'subject', name:'Product', x:14, y:9.5, color:'#d7dce3' },
+        camera:{ id:'camera', kind:'camera', name:'Camera', x:14, y:16.4, color:'#ffffff' },
+        lights:[
+          light('key','Large softbox','strobe','softbox',9.5,7.7,72,86,6.5,'#fff8e7'),
+          light('fill','White bounce','led','bounce',19.6,10.5,42,94,5.5,'#d8f1ff')
+        ]
+      };
+    }
+    if(name === 'filmNoir'){
+      return {
+        ...common,
+        background:'warm',
+        notes:'Narrow side beam and strong back edge. Aim for shape and mood.',
+        lights:[
+          light('key','Window slash','fresnel','snoot',7.4,9,70,18,8,'#ffd29a'),
+          light('rim','Back edge','led','bare',18.8,4.2,62,34,8.5,'#d8f1ff'),
+          light('practical','Practical lamp','practical','bare',21,12.8,24,80,4,'#ffd29a')
+        ]
+      };
+    }
+    return {
+      ...common,
+      background:'neutral',
+      notes:'Classic baseline: key, fill, and rim. Adjust ratio before moving to stylized setups.',
+      lights:[
+        light('key','Key Light','led','softbox',9.8,7.1,76,60,7,'#fff8e7'),
+        light('fill','Fill Light','led','umbrella',19,8.8,34,78,6,'#d8f1ff'),
+        light('rim','Back Light','fresnel','bare',14.2,3.4,48,34,8,'#fff8e7')
+      ]
+    };
+  }
+
+  function light(id,name,type,modifier,x,y,intensity,spread,height,color){
+    return { id, kind:'light', name, type, modifier, x, y, intensity, spread, height, color };
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem('studioLightingLab');
+      return raw ? JSON.parse(raw) : null;
+    }catch(err){
+      return null;
+    }
+  }
+
+  function resizeCanvas(canvas){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(320, Math.round(rect.width * dpr));
+    canvas.height = Math.max(220, Math.round(rect.height * dpr));
+    canvas.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function worldToCanvas(x,y){
+    const rect = planCanvas.getBoundingClientRect();
+    const pad = 34;
+    const scale = Math.min((rect.width - pad*2)/studio.width, (rect.height - pad*2)/studio.depth);
+    const ox = (rect.width - studio.width*scale)/2;
+    const oy = (rect.height - studio.depth*scale)/2;
+    return { x: ox + x*scale, y: oy + y*scale, scale, ox, oy };
+  }
+
+  function canvasToWorld(px,py){
+    const p0 = worldToCanvas(0,0);
+    return {
+      x: clamp((px - p0.ox)/p0.scale, 0, studio.width),
+      y: clamp((py - p0.oy)/p0.scale, 0, studio.depth)
+    };
+  }
+
+  function render(){
+    resizeCanvas(planCanvas);
+    resizeCanvas(previewCanvas);
+    drawPlan();
+    drawPreview();
+    renderControls();
+    renderMeter();
+    renderShotPlan();
+  }
+
+  function drawPlan(){
+    const rect = planCanvas.getBoundingClientRect();
+    planCtx.clearRect(0,0,rect.width,rect.height);
+    planCtx.fillStyle = '#10131a';
+    planCtx.fillRect(0,0,rect.width,rect.height);
+
+    const p0 = worldToCanvas(0,0);
+    planCtx.save();
+    planCtx.translate(p0.ox,p0.oy);
+    planCtx.scale(p0.scale,p0.scale);
+
+    planCtx.fillStyle = '#1b202b';
+    planCtx.strokeStyle = '#566174';
+    planCtx.lineWidth = 2 / p0.scale;
+    planCtx.fillRect(0,0,studio.width,studio.depth);
+    planCtx.strokeRect(0,0,studio.width,studio.depth);
+
+    planCtx.lineWidth = 1 / p0.scale;
+    for(let x=0; x<=studio.width; x+=2){
+      planCtx.strokeStyle = x % 4 === 0 ? '#303848' : '#262d3b';
+      planCtx.beginPath();
+      planCtx.moveTo(x,0);
+      planCtx.lineTo(x,studio.depth);
+      planCtx.stroke();
+    }
+    for(let y=0; y<=studio.depth; y+=2){
+      planCtx.strokeStyle = y % 4 === 0 ? '#303848' : '#262d3b';
+      planCtx.beginPath();
+      planCtx.moveTo(0,y);
+      planCtx.lineTo(studio.width,y);
+      planCtx.stroke();
+    }
+
+    state.lights.forEach(l => drawLightCone(l, p0.scale));
+    drawSubject(state.subject, p0.scale);
+    drawCamera(state.camera, p0.scale);
+    state.lights.forEach(l => drawLight(l, p0.scale));
+    planCtx.restore();
+  }
+
+  function drawLightCone(l, scale){
+    const dx = state.subject.x - l.x;
+    const dy = state.subject.y - l.y;
+    const angle = Math.atan2(dy, dx);
+    const spread = degToRad(l.spread);
+    const dist = Math.hypot(dx,dy);
+    const length = Math.min(dist + 4.2, 18);
+    const gradient = planCtx.createRadialGradient(l.x,l.y,0,l.x,l.y,length);
+    gradient.addColorStop(0, hexToRgba(l.color,.22 * l.intensity/100));
+    gradient.addColorStop(1, hexToRgba(l.color,0));
+    planCtx.fillStyle = gradient;
+    planCtx.beginPath();
+    planCtx.moveTo(l.x,l.y);
+    planCtx.arc(l.x,l.y,length,angle-spread/2,angle+spread/2);
+    planCtx.closePath();
+    planCtx.fill();
+    planCtx.strokeStyle = hexToRgba(l.color,.34);
+    planCtx.lineWidth = 1.4 / scale;
+    planCtx.stroke();
+  }
+
+  function drawSubject(s, scale){
+    const selected = selectedId === s.id;
+    planCtx.fillStyle = s.color;
+    planCtx.strokeStyle = selected ? '#20b6d7' : '#221a16';
+    planCtx.lineWidth = (selected ? 3 : 1.5) / scale;
+    planCtx.beginPath();
+    planCtx.ellipse(s.x,s.y,.62,.44,0,0,Math.PI*2);
+    planCtx.fill();
+    planCtx.stroke();
+    label(s.name,s.x,s.y-1,scale);
+  }
+
+  function drawCamera(c, scale){
+    const selected = selectedId === c.id;
+    const angle = Math.atan2(state.subject.y-c.y,state.subject.x-c.x);
+    planCtx.save();
+    planCtx.translate(c.x,c.y);
+    planCtx.rotate(angle);
+    planCtx.fillStyle = '#e8edf5';
+    planCtx.strokeStyle = selected ? '#20b6d7' : '#141820';
+    planCtx.lineWidth = (selected ? 3 : 1.5) / scale;
+    planCtx.beginPath();
+    planCtx.moveTo(.72,0);
+    planCtx.lineTo(-.55,-.42);
+    planCtx.lineTo(-.55,.42);
+    planCtx.closePath();
+    planCtx.fill();
+    planCtx.stroke();
+    planCtx.restore();
+    label('Camera',c.x,c.y+.95,scale);
+  }
+
+  function drawLight(l, scale){
+    const selected = selectedId === l.id;
+    const angle = Math.atan2(state.subject.y-l.y,state.subject.x-l.x);
+    planCtx.save();
+    planCtx.translate(l.x,l.y);
+    planCtx.rotate(angle);
+    planCtx.fillStyle = l.color;
+    planCtx.strokeStyle = selected ? '#20b6d7' : '#0b0c0f';
+    planCtx.lineWidth = (selected ? 3 : 1.5) / scale;
+    planCtx.beginPath();
+    planCtx.moveTo(.72,0);
+    planCtx.lineTo(-.4,-.38);
+    planCtx.lineTo(-.4,.38);
+    planCtx.closePath();
+    planCtx.fill();
+    planCtx.stroke();
+    planCtx.restore();
+    label(l.name,l.x,l.y-.85,scale);
+  }
+
+  function label(text,x,y,scale){
+    planCtx.save();
+    planCtx.scale(1/scale,1/scale);
+    planCtx.font = '700 11px Inter, system-ui';
+    planCtx.textAlign = 'center';
+    planCtx.fillStyle = '#dce4f2';
+    planCtx.fillText(text,x*scale,y*scale);
+    planCtx.restore();
+  }
+
+  function drawPreview(){
+    const rect = previewCanvas.getBoundingClientRect();
+    previewCtx.clearRect(0,0,rect.width,rect.height);
+    const bg = backgrounds[state.background] || backgrounds.neutral;
+    const grad = previewCtx.createLinearGradient(0,0,0,rect.height);
+    grad.addColorStop(0,bg[0]);
+    grad.addColorStop(.58,bg[1]);
+    grad.addColorStop(1,'#101218');
+    previewCtx.fillStyle = grad;
+    previewCtx.fillRect(0,0,rect.width,rect.height);
+
+    drawBackdropLine(rect);
+    const analysis = analyzeLighting();
+    drawPreviewLightFields(rect,analysis);
+    drawFloorShadows(rect,analysis);
+    drawSubjectPreview(rect,analysis);
+    if(falseColor) drawFalseColor(rect,analysis);
+    if(captureText) drawCaptureStamp(rect);
+  }
+
+  function drawBackdropLine(rect){
+    previewCtx.strokeStyle = 'rgba(255,255,255,.14)';
+    previewCtx.lineWidth = 1;
+    const y = rect.height * .64;
+    previewCtx.beginPath();
+    previewCtx.moveTo(0,y);
+    previewCtx.bezierCurveTo(rect.width*.3,y+16,rect.width*.7,y+16,rect.width,y);
+    previewCtx.stroke();
+  }
+
+  function drawPreviewLightFields(rect,analysis){
+    state.lights.forEach(l => {
+      const relX = (l.x - state.subject.x) / studio.width;
+      const relY = (l.y - state.subject.y) / studio.depth;
+      const intensity = l.intensity / 100;
+      const softness = modifierSoftness(l.modifier);
+      const gx = rect.width * (.5 - relX * 1.2);
+      const gy = rect.height * (.44 + relY * .3);
+      const radius = rect.width * (.2 + softness * .38 + l.spread/260);
+      const grad = previewCtx.createRadialGradient(gx,gy,0,gx,gy,radius);
+      grad.addColorStop(0,hexToRgba(l.color,.28 * intensity));
+      grad.addColorStop(.45,hexToRgba(l.color,.12 * intensity));
+      grad.addColorStop(1,hexToRgba(l.color,0));
+      previewCtx.globalCompositeOperation = 'screen';
+      previewCtx.fillStyle = grad;
+      previewCtx.fillRect(0,0,rect.width,rect.height);
+      previewCtx.globalCompositeOperation = 'source-over';
+    });
+  }
+
+  function drawFloorShadows(rect,analysis){
+    state.lights.forEach(l => {
+      const dx = state.subject.x - l.x;
+      const dy = state.subject.y - l.y;
+      const strength = (l.intensity/100) * (1 - modifierSoftness(l.modifier)*.45);
+      const sx = rect.width*.5 + dx * 10;
+      const sy = rect.height*.73 + dy * 8;
+      previewCtx.save();
+      previewCtx.translate(sx,sy);
+      previewCtx.rotate(Math.atan2(dy,dx));
+      const grad = previewCtx.createRadialGradient(0,0,0,0,0,rect.width*.22);
+      grad.addColorStop(0,`rgba(0,0,0,${.28*strength})`);
+      grad.addColorStop(1,'rgba(0,0,0,0)');
+      previewCtx.fillStyle = grad;
+      previewCtx.scale(1.8,.42 + modifierSoftness(l.modifier)*.3);
+      previewCtx.beginPath();
+      previewCtx.arc(0,0,rect.width*.16,0,Math.PI*2);
+      previewCtx.fill();
+      previewCtx.restore();
+    });
+  }
+
+  function drawSubjectPreview(rect,analysis){
+    const cx = rect.width * .5;
+    const floor = rect.height * .73;
+    const bodyH = Math.min(rect.height*.46,260);
+    const bodyW = bodyH*.32;
+    const headR = bodyH*.13;
+    const lightLeft = clamp(analysis.left / 1.5,0,1);
+    const lightRight = clamp(analysis.right / 1.5,0,1);
+    const keyFromLeft = analysis.left >= analysis.right;
+    const skinGrad = previewCtx.createLinearGradient(cx-bodyW,cx, cx+bodyW,cx);
+    if(keyFromLeft){
+      skinGrad.addColorStop(0,mix('#3b2a27','#f6c6a7',lightLeft));
+      skinGrad.addColorStop(.52,mix('#261f20','#c99278',analysis.front));
+      skinGrad.addColorStop(1,mix('#15171d','#efb995',lightRight));
+    }else{
+      skinGrad.addColorStop(0,mix('#15171d','#efb995',lightLeft));
+      skinGrad.addColorStop(.48,mix('#261f20','#c99278',analysis.front));
+      skinGrad.addColorStop(1,mix('#3b2a27','#f6c6a7',lightRight));
+    }
+
+    previewCtx.save();
+    previewCtx.fillStyle = 'rgba(0,0,0,.28)';
+    previewCtx.beginPath();
+    previewCtx.ellipse(cx,floor+8,bodyW*1.35,16,0,0,Math.PI*2);
+    previewCtx.fill();
+
+    previewCtx.fillStyle = skinGrad;
+    roundedRect(previewCtx,cx-bodyW*.72,floor-bodyH*.55,bodyW*1.44,bodyH*.5,bodyW*.65);
+    previewCtx.fill();
+    previewCtx.beginPath();
+    previewCtx.arc(cx,floor-bodyH*.68,headR,0,Math.PI*2);
+    previewCtx.fill();
+
+    previewCtx.fillStyle = mix('#11151c','#2e3746',clamp(analysis.front+.18,0,1));
+    roundedRect(previewCtx,cx-bodyW,floor-bodyH*.36,bodyW*2,bodyH*.52,12);
+    previewCtx.fill();
+
+    state.lights.forEach(l => {
+      const dx = l.x - state.subject.x;
+      const rim = l.y < state.subject.y ? l.intensity/100 : 0;
+      if(rim > .05){
+        previewCtx.strokeStyle = hexToRgba(l.color,.55*rim);
+        previewCtx.lineWidth = 5 + rim*7;
+        previewCtx.beginPath();
+        const side = dx < 0 ? -1 : 1;
+        previewCtx.moveTo(cx + side*bodyW*.86, floor-bodyH*.58);
+        previewCtx.lineTo(cx + side*bodyW*1.02, floor-bodyH*.08);
+        previewCtx.stroke();
+      }
+    });
+    previewCtx.restore();
+  }
+
+  function drawFalseColor(rect,analysis){
+    const bands = [
+      { v: analysis.exposure < -.8 ? '#2f6fff' : 'transparent' },
+      { v: analysis.exposure > .9 ? '#ff2d4f' : 'transparent' },
+      { v: analysis.ratio > 4 ? '#ffa12b' : 'transparent' }
+    ];
+    bands.forEach((b,i) => {
+      if(b.v !== 'transparent'){
+        previewCtx.fillStyle = b.v;
+        previewCtx.globalAlpha = .18;
+        previewCtx.fillRect(i*rect.width/3,0,rect.width/3,rect.height);
+        previewCtx.globalAlpha = 1;
+      }
+    });
+  }
+
+  function drawCaptureStamp(rect){
+    previewCtx.fillStyle = 'rgba(0,0,0,.72)';
+    previewCtx.strokeStyle = 'rgba(255,255,255,.16)';
+    previewCtx.lineWidth = 1;
+    roundedRect(previewCtx,12,12,Math.min(320,rect.width-24),34,8);
+    previewCtx.fill();
+    previewCtx.stroke();
+    previewCtx.fillStyle = '#eaf2ff';
+    previewCtx.font = '700 12px Inter, system-ui';
+    previewCtx.fillText(captureText,24,34);
+  }
+
+  function analyzeLighting(){
+    let left = 0, right = 0, front = 0, back = 0, total = 0, maxSource = 0;
+    state.lights.forEach(l => {
+      const dx = state.subject.x - l.x;
+      const dy = state.subject.y - l.y;
+      const dist = Math.max(2, Math.hypot(dx,dy));
+      const softness = modifierSoftness(l.modifier);
+      const beam = clamp(l.spread / 75, .18, 1.65);
+      const power = (l.intensity/100) * beam * (1 + softness*.28) / Math.pow(dist/6,1.32);
+      total += power;
+      maxSource = Math.max(maxSource,power);
+      if(l.x < state.subject.x) left += power; else right += power;
+      if(l.y > state.subject.y) front += power; else back += power;
+    });
+    const small = Math.max(.04, Math.min(left,right));
+    const ratio = Math.max(left,right) / small;
+    const exposure = Math.log2(Math.max(.08,total/.9));
+    const fill = Math.round(clamp(small / Math.max(.08, Math.max(left,right)) * 100,0,100));
+    const shadow = Math.round(clamp((1 - small/Math.max(.08,total)) * 100,0,100));
+    return { left,right,front:clamp(front,0,1.45),back,total,maxSource,ratio,exposure,fill,shadow };
+  }
+
+  function renderControls(){
+    const selected = getSelected();
+    backgroundSelect.value = state.background;
+    notesInput.value = state.notes || '';
+    selectionTip.textContent = `Selected: ${selected.name}`;
+
+    entityList.innerHTML = '';
+    [state.subject,state.camera,...state.lights].forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = `entity ${item.id === selectedId ? 'active' : ''}`;
+      btn.dataset.id = item.id;
+      btn.innerHTML = `<span class="entity-color" style="background:${item.color || '#fff'}"></span><span>${escapeHtml(item.name)}</span>`;
+      btn.addEventListener('click', () => { selectedId = item.id; render(); });
+      entityList.appendChild(btn);
+    });
+
+    const isLight = selected.kind === 'light';
+    [typeSelect, modifierSelect, intensityRange, spreadRange, heightRange, nameInput].forEach(el => el.disabled = false);
+    deleteLightBtn.disabled = !isLight;
+    inspectorNotice.classList.toggle('hidden', isLight);
+
+    nameInput.value = selected.name;
+    if(isLight){
+      typeSelect.value = selected.type;
+      modifierSelect.value = selected.modifier;
+      intensityRange.value = selected.intensity;
+      spreadRange.value = selected.spread;
+      heightRange.value = selected.height;
+      intensityValue.textContent = `${selected.intensity}%`;
+      spreadValue.textContent = `${selected.spread} deg`;
+      heightValue.textContent = `${Number(selected.height).toFixed(1)} ft`;
+      inspectorNotice.textContent = '';
+    }else{
+      typeSelect.value = 'led';
+      modifierSelect.value = 'bare';
+      intensityRange.value = 0;
+      spreadRange.value = 60;
+      heightRange.value = 5;
+      intensityValue.textContent = '--';
+      spreadValue.textContent = '--';
+      heightValue.textContent = '--';
+      inspectorNotice.textContent = selected.kind === 'camera'
+        ? 'Camera position changes framing and light direction in the preview.'
+        : 'Subject position changes distance, falloff, and shadow direction.';
+    }
+
+    renderColorSwatches(isLight ? selected.color : state.subject.color);
+  }
+
+  function renderColorSwatches(activeColor){
+    colorRow.innerHTML = '';
+    gels.forEach(g => {
+      const btn = document.createElement('button');
+      btn.className = `swatch ${g.value === activeColor ? 'active' : ''}`;
+      btn.style.background = g.value;
+      btn.title = g.name;
+      btn.setAttribute('aria-label', g.name);
+      btn.addEventListener('click', () => {
+        const selected = getSelected();
+        if(selected.kind === 'light'){
+          selected.color = g.value;
+          render();
+        }
+      });
+      colorRow.appendChild(btn);
+    });
+  }
+
+  function renderMeter(){
+    const a = analyzeLighting();
+    exposureBadge.textContent = `${a.exposure >= 0 ? '+' : ''}${a.exposure.toFixed(1)} EV`;
+    ratioBadge.textContent = `${a.ratio.toFixed(1)}:1`;
+    keyStat.textContent = a.left >= a.right ? 'Left' : 'Right';
+    fillStat.textContent = `${a.fill}%`;
+    shadowStat.textContent = `${a.shadow}%`;
+    const feedback = [];
+    if(a.exposure > 1.05) feedback.push('Highlights are close to clipping. Reduce intensity, move the key back, or add diffusion.');
+    if(a.exposure < -.75) feedback.push('The preview is underexposed. Raise the key or open the exposure target in your notes.');
+    if(a.ratio > 5) feedback.push('Contrast is high. That can work for drama, but check whether shadow detail supports the lesson goal.');
+    if(a.ratio < 1.4) feedback.push('The setup is very even. Add direction or reduce fill for stronger shape.');
+    lessonFeedback.textContent = feedback[0] || lessons.current || lessons.threePoint;
+
+    histogram.innerHTML = '';
+    const bars = makeHistogram(a);
+    bars.forEach(v => {
+      const i = document.createElement('i');
+      i.style.height = `${Math.max(8,Math.round(v*100))}%`;
+      histogram.appendChild(i);
+    });
+  }
+
+  function makeHistogram(a){
+    const bars = [];
+    const center = clamp(.5 + a.exposure*.16, .15, .88);
+    const spread = clamp(.22 + Math.min(a.ratio,6)*.035, .18, .46);
+    for(let i=0;i<18;i++){
+      const x = i/17;
+      const v = Math.exp(-Math.pow((x-center)/spread,2)*2.4) * (.45 + a.total*.28);
+      bars.push(clamp(v, .06, 1));
+    }
+    return bars;
+  }
+
+  function renderShotPlan(){
+    shotPlanBody.innerHTML = '';
+    state.lights.forEach((l, index) => {
+      const tr = document.createElement('tr');
+      const distance = Math.hypot(l.x-state.subject.x,l.y-state.subject.y).toFixed(1);
+      const role = index === 0 ? 'Key' : l.y < state.subject.y ? 'Back/Rim' : 'Fill/Accent';
+      tr.innerHTML = `
+        <td>${escapeHtml(l.name)}</td>
+        <td>${role}</td>
+        <td>${l.type}, ${l.modifier}, ${l.intensity}%, ${l.spread} deg, ${distance} ft</td>
+      `;
+      shotPlanBody.appendChild(tr);
+    });
+  }
+
+  function getSelected(){
+    if(state.subject.id === selectedId) return state.subject;
+    if(state.camera.id === selectedId) return state.camera;
+    return state.lights.find(l => l.id === selectedId) || state.lights[0] || state.subject;
+  }
+
+  function pointerWorld(evt){
+    const rect = planCanvas.getBoundingClientRect();
+    return canvasToWorld(evt.clientX - rect.left, evt.clientY - rect.top);
+  }
+
+  function hitTest(world){
+    const candidates = [state.subject,state.camera,...state.lights];
+    let best = null;
+    let bestDist = Infinity;
+    candidates.forEach(item => {
+      const d = Math.hypot(item.x-world.x,item.y-world.y);
+      if(d < bestDist && d < 1.1){
+        best = item;
+        bestDist = d;
+      }
+    });
+    return best;
+  }
+
+  planCanvas.addEventListener('pointerdown', evt => {
+    const world = pointerWorld(evt);
+    const target = hitTest(world);
+    if(target){
+      selectedId = target.id;
+      dragTarget = target;
+      planCanvas.classList.add('dragging');
+      planCanvas.setPointerCapture(evt.pointerId);
+      render();
+    }
+  });
+  planCanvas.addEventListener('pointermove', evt => {
+    if(!dragTarget) return;
+    const world = pointerWorld(evt);
+    dragTarget.x = Number(world.x.toFixed(1));
+    dragTarget.y = Number(world.y.toFixed(1));
+    render();
+  });
+  planCanvas.addEventListener('pointerup', evt => {
+    dragTarget = null;
+    planCanvas.classList.remove('dragging');
+    try{ planCanvas.releasePointerCapture(evt.pointerId); }catch(err){}
+  });
+
+  nameInput.addEventListener('input', () => { getSelected().name = nameInput.value || 'Untitled'; render(); });
+  typeSelect.addEventListener('change', () => { const s = getSelected(); if(s.kind === 'light'){ s.type = typeSelect.value; render(); } });
+  modifierSelect.addEventListener('change', () => { const s = getSelected(); if(s.kind === 'light'){ s.modifier = modifierSelect.value; render(); } });
+  intensityRange.addEventListener('input', () => { const s = getSelected(); if(s.kind === 'light'){ s.intensity = Number(intensityRange.value); render(); } });
+  spreadRange.addEventListener('input', () => { const s = getSelected(); if(s.kind === 'light'){ s.spread = Number(spreadRange.value); render(); } });
+  heightRange.addEventListener('input', () => { const s = getSelected(); if(s.kind === 'light'){ s.height = Number(heightRange.value); render(); } });
+  backgroundSelect.addEventListener('change', () => { state.background = backgroundSelect.value; render(); });
+  notesInput.addEventListener('input', () => { state.notes = notesInput.value; });
+
+  document.getElementById('addLightBtn').addEventListener('click', () => {
+    const id = `light${Date.now()}`;
+    const newLight = light(id,`Light ${state.lights.length+1}`,'led','bare',6+state.lights.length*2,6,45,52,7,'#fff8e7');
+    state.lights.push(newLight);
+    selectedId = id;
+    render();
+  });
+  deleteLightBtn.addEventListener('click', () => {
+    const selected = getSelected();
+    if(selected.kind !== 'light') return;
+    state.lights = state.lights.filter(l => l.id !== selected.id);
+    selectedId = state.lights[0]?.id || 'subject';
+    render();
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    state = presetState('threePoint');
+    lessons.current = lessons.threePoint;
+    selectedId = 'key';
+    render();
+  });
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.preset;
+      state = presetState(name);
+      lessons.current = lessons[name];
+      selectedId = state.lights[0]?.id || 'subject';
+      render();
+    });
+  });
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b === btn));
+      const view = btn.dataset.view;
+      document.getElementById('planPanel').classList.toggle('hidden', view === 'preview');
+      document.getElementById('previewPanel').classList.toggle('hidden', view === 'plan');
+      setTimeout(render, 30);
+    });
+  });
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    state.notes = notesInput.value;
+    localStorage.setItem('studioLightingLab', JSON.stringify(state));
+    captureText = 'Setup saved in this browser';
+    render();
+  });
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+  document.getElementById('captureBtn').addEventListener('click', () => {
+    const a = analyzeLighting();
+    captureText = `Captured still: ${a.exposure >= 0 ? '+' : ''}${a.exposure.toFixed(1)} EV, ${a.ratio.toFixed(1)}:1 ratio`;
+    render();
+  });
+  document.getElementById('meterModeBtn').addEventListener('click', () => {
+    falseColor = !falseColor;
+    render();
+  });
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const text = makePlanText();
+    try{
+      await navigator.clipboard.writeText(text);
+      captureText = 'Shot plan copied';
+    }catch(err){
+      captureText = 'Shot plan ready in print view';
+    }
+    render();
+  });
+  window.addEventListener('resize', render);
+
+  function makePlanText(){
+    const a = analyzeLighting();
+    const lines = [
+      'Studio Lighting Lab Shot Plan',
+      `Backdrop: ${backgroundSelect.options[backgroundSelect.selectedIndex]?.text || state.background}`,
+      `Exposure: ${a.exposure >= 0 ? '+' : ''}${a.exposure.toFixed(1)} EV`,
+      `Key/fill ratio: ${a.ratio.toFixed(1)}:1`,
+      `Notes: ${state.notes || ''}`,
+      '',
+      'Lights:'
+    ];
+    state.lights.forEach((l,i) => {
+      lines.push(`${i+1}. ${l.name}: ${l.type}, ${l.modifier}, ${l.intensity}%, ${l.spread} deg, ${l.height} ft, x ${l.x}, y ${l.y}`);
+    });
+    return lines.join('\n');
+  }
+
+  function modifierSoftness(mod){
+    return { bare:.22, softbox:.92, umbrella:.78, snoot:.05, bounce:1 }[mod] ?? .35;
+  }
+  function clamp(v,min,max){ return Math.min(max,Math.max(min,v)); }
+  function degToRad(deg){ return deg * Math.PI / 180; }
+  function hexToRgba(hex,alpha){
+    const c = hex.replace('#','');
+    const r = parseInt(c.slice(0,2),16);
+    const g = parseInt(c.slice(2,4),16);
+    const b = parseInt(c.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  function mix(a,b,t){
+    const ca = hexToRgb(a), cb = hexToRgb(b);
+    const r = Math.round(ca.r + (cb.r-ca.r)*t);
+    const g = Math.round(ca.g + (cb.g-ca.g)*t);
+    const bl = Math.round(ca.b + (cb.b-ca.b)*t);
+    return `rgb(${r},${g},${bl})`;
+  }
+  function hexToRgb(hex){
+    const c = hex.replace('#','');
+    return { r:parseInt(c.slice(0,2),16), g:parseInt(c.slice(2,4),16), b:parseInt(c.slice(4,6),16) };
+  }
+  function roundedRect(ctx,x,y,w,h,r){
+    const rr = Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.lineTo(x+w-rr,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+rr);
+    ctx.lineTo(x+w,y+h-rr);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);
+    ctx.lineTo(x+rr,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-rr);
+    ctx.lineTo(x,y+rr);
+    ctx.quadraticCurveTo(x,y,x+rr,y);
+    ctx.closePath();
+  }
+  function escapeHtml(value){
+    return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  lessons.current = lessons.threePoint;
+  render();
+})();
+</script>
+</body>
+</html>
