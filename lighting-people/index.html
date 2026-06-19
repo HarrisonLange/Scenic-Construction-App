@@ -1853,18 +1853,12 @@ async function buildThreeSubject(THREE, STLLoader){
 async function buildStlSubjectHead(THREE, STLLoader){
   if (!STLLoader) return false;
   try {
-    let geometry = await new STLLoader().loadAsync('assets/human_head.stl');
+    const geometry = await new STLLoader().loadAsync('assets/human_head.stl');
     geometry.computeVertexNormals();
     geometry.computeBoundingBox();
     const center = new THREE.Vector3();
     geometry.boundingBox.getCenter(center);
     geometry.translate(-center.x, -center.y, -center.z);
-    geometry.computeBoundingBox();
-    const trimBox = geometry.boundingBox.clone();
-    const trimSize = new THREE.Vector3();
-    trimBox.getSize(trimSize);
-    geometry = trimGeometryBelowZ(THREE, geometry, trimBox.min.z + trimSize.z * .21);
-    geometry.computeVertexNormals();
     geometry.computeBoundingBox();
     const size = new THREE.Vector3();
     geometry.boundingBox.getSize(size);
@@ -1880,22 +1874,6 @@ async function buildStlSubjectHead(THREE, STLLoader){
     console.warn('Could not load STL head, using procedural fallback.', err);
     return false;
   }
-}
-function trimGeometryBelowZ(THREE, geometry, cutoff){
-  const position = geometry.attributes.position;
-  if (!position) return geometry;
-  const vertices = [];
-  for (let i=0; i<position.count; i+=3) {
-    const zAvg = (position.getZ(i) + position.getZ(i+1) + position.getZ(i+2)) / 3;
-    if (zAvg < cutoff) continue;
-    for (let j=0; j<3; j++) {
-      vertices.push(position.getX(i+j), position.getY(i+j), position.getZ(i+j));
-    }
-  }
-  if (vertices.length < 9) return geometry;
-  const trimmed = new THREE.BufferGeometry();
-  trimmed.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  return trimmed;
 }
 function buildThreeLights(THREE){
   LIGHTS.forEach(meta => {

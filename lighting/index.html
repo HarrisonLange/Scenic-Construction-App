@@ -3054,7 +3054,7 @@ function drawPerformers(){
     .forEach(p => drawPerformer(p));
 }
 function drawPerformer(p){
-  drawLowPolyPerformer(p);
+  drawDrawnPerformer(p);
 }
 function drawLowPolyPerformer(p){
   const s = worldToScreen({x:p.x,y:p.y});
@@ -3270,7 +3270,7 @@ function drawPerformerLabel(p, s, scale){
 }
 function drawDrawnPerformer(p){
   const s = worldToScreen({x:p.x,y:p.y});
-  const scale = s.scale * (p.size || 1) * .69;
+  const scale = s.scale * (p.size || 1) * .74;
   const light = performerLighting(p);
   const skinFill = materialGradient(p.skin, light, -18, 18, .62);
   const costumeFill = materialGradient(p.costume, light, -18, 18, .74);
@@ -3296,9 +3296,9 @@ function drawDrawnPerformer(p){
   ctx.globalAlpha = clamp(light.level*.12 + light.front*.06, .03, .24);
   ctx.fillStyle = light.color;
   ctx.beginPath();
-  ctx.ellipse(-5,32,5.8,13,.12,0,Math.PI*2);
-  ctx.ellipse(5,32,5.8,13,-.12,0,Math.PI*2);
-  ctx.ellipse(0,24,13,3.2,0,0,Math.PI*2);
+  ctx.ellipse(-5.5,31,6.3,13.5,.12,0,Math.PI*2);
+  ctx.ellipse(5.5,31,6.3,13.5,-.12,0,Math.PI*2);
+  ctx.ellipse(0,23,14,3.8,0,0,Math.PI*2);
   ctx.fill();
   ctx.restore();
   if (light.back > .08 || Math.max(light.left, light.right) > .16) {
