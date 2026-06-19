@@ -188,6 +188,9 @@
   #stagePanel{position:relative;min-width:0;min-height:0;overflow:hidden;background:#050506}
   #stageCanvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;background:var(--stage)}
   #stageCanvas.dragging{cursor:grabbing}
+  #threeStageCanvas{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;background:#050506}
+  #stagePanel.three-ready #stageCanvas{opacity:0}
+  #stagePanel.three-ready #threeStageCanvas{display:block}
   .stage-hud{
     position:absolute;left:12px;bottom:12px;display:flex;gap:7px;flex-wrap:wrap;max-width:calc(100% - 24px);
     pointer-events:none;
@@ -509,6 +512,7 @@
 
   <section id="stagePanel">
     <canvas id="stageCanvas" tabindex="0" aria-label="Lighting Design Lab stage"></canvas>
+    <canvas id="threeStageCanvas" aria-label="Lighting Design Lab Three.js stage"></canvas>
     <div id="playProgress"><div id="playProgressFill"></div></div>
     <div class="stage-hud">
       <div class="hud-item" id="selectedHud">Chan <b>1</b> Front Warm</div>
@@ -649,7 +653,41 @@
 const $ = id => document.getElementById(id);
 const canvas = $('stageCanvas');
 const ctx = canvas.getContext('2d');
+const threeStageCanvas = $('threeStageCanvas');
 const STORAGE_KEY = 'sdscpa-lighting-trainer-v1';
+const STUDIO_MODEL_W = 192;
+const STUDIO_MODEL_H = 360;
+const studioModel = {
+  ready:false,
+  loading:false,
+  renderer:null,
+  canvas:null,
+  scene:null,
+  camera:null,
+  subject:null,
+  subjectParts:{},
+  skinMaterial:null,
+  costumeMaterial:null,
+  hairMaterial:null,
+  keyLight:null,
+  fillLight:null,
+  rimLight:null,
+  THREE:null
+};
+const stage3d = {
+  ready:false,
+  renderer:null,
+  scene:null,
+  camera:null,
+  floor:null,
+  backdrop:null,
+  grid:null,
+  performers:{},
+  fixtures:{},
+  beams:{},
+  fixtureMeshes:{},
+  materials:{}
+};
 
 const GELS = [
   {label:'Open', color:'#ffffff'},
@@ -2246,6 +2284,228 @@ function sourceFor(f){
   if (f.direction === 'foot') return {x:f.targetX, y:64};
   return {x:f.targetX, y:-22, z:24};
 }
+function threeStagePoint(x,y,height=0){
+  return {x:(x-50)/4.2, y:height, z:(y-30)/4.2};
+}
+function sourceThreePoint(f){
+  const src = sourceFor(f);
+  const p = threeStagePoint(src.x, src.y, 0);
+  const height = src.z != null ? src.z/4 : (f.direction === 'foot' ? .65 : 4.8);
+  return {x:p.x, y:height, z:p.z};
+}
+function targetThreePoint(f){
+  const p = threeStagePoint(Number(f.targetX)||50, Number(f.targetY)||34, 0);
+  return {x:p.x, y:1.42, z:p.z};
+}
+function initThreeStage(THREE){
+  if (stage3d.ready) return;
+  stage3d.scene = new THREE.Scene();
+  stage3d.scene.background = new THREE.Color('#050506');
+  stage3d.camera = new THREE.PerspectiveCamera(42, 1, .1, 80);
+  stage3d.camera.position.set(0, 7.8, 18);
+  stage3d.camera.lookAt(0, 1.35, 0);
+  stage3d.renderer = new THREE.WebGLRenderer({canvas:threeStageCanvas, antialias:true, preserveDrawingBuffer:true});
+  stage3d.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  stage3d.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  stage3d.renderer.shadowMap.enabled = true;
+  stage3d.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  stage3d.scene.add(new THREE.HemisphereLight(0xffffff, 0x111118, .12));
+
+  stage3d.materials.floor = new THREE.MeshStandardMaterial({color:'#2d2a28', roughness:.86});
+  stage3d.materials.backdrop = new THREE.MeshStandardMaterial({color:'#f3efe7', roughness:.82});
+  stage3d.floor = new THREE.Mesh(new THREE.PlaneGeometry(26, 16), stage3d.materials.floor);
+  stage3d.floor.rotation.x = -Math.PI/2;
+  stage3d.floor.receiveShadow = true;
+  stage3d.scene.add(stage3d.floor);
+  stage3d.backdrop = new THREE.Mesh(new THREE.PlaneGeometry(26, 5.4), stage3d.materials.backdrop);
+  stage3d.backdrop.position.set(0, 2.7, -7.15);
+  stage3d.backdrop.receiveShadow = true;
+  stage3d.scene.add(stage3d.backdrop);
+
+  const grid = new THREE.GridHelper(26, 26, 0x8a837a, 0x4a4642);
+  grid.position.y = .012;
+  grid.material.transparent = true;
+  grid.material.opacity = .32;
+  stage3d.scene.add(grid);
+  stage3d.ready = true;
+  $('stagePanel').classList.add('three-ready');
+  renderThreeStage();
+}
+function createThreePerformer(THREE){
+  const group = new THREE.Group();
+  const parts = {};
+  const skinMaterial = new THREE.MeshStandardMaterial({color:'#e0ac69', roughness:.62, metalness:0, flatShading:true});
+  const costumeMaterial = new THREE.MeshStandardMaterial({color:'#92278F', roughness:.72, metalness:0, flatShading:true});
+  const hairMaterial = new THREE.MeshStandardMaterial({color:'#201714', roughness:.78, metalness:0, flatShading:true});
+  const addMesh = (name, geometry, material, position, scale) => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(position[0], position[1], position[2]);
+    mesh.scale.set(scale[0], scale[1], scale[2]);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    parts[name] = mesh;
+    return mesh;
+  };
+  const addLimbPair = (name, radius, length, material, starts, ends) => {
+    starts.forEach((start, i) => {
+      const limb = new THREE.Group();
+      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 10), material);
+      upper.position.y = -length*.38;
+      upper.castShadow = true;
+      limb.add(upper);
+      const lower = new THREE.Mesh(new THREE.CapsuleGeometry(radius*.82, length*.86, 4, 10), material);
+      lower.position.y = -length*.95;
+      lower.castShadow = true;
+      limb.add(lower);
+      const joint = new THREE.Mesh(new THREE.SphereGeometry(radius*.95, 12, 8), material);
+      joint.position.y = -length*.68;
+      joint.castShadow = true;
+      limb.add(joint);
+      const endMat = name === 'arm' ? skinMaterial : costumeMaterial;
+      const end = new THREE.Mesh(
+        name === 'arm' ? new THREE.SphereGeometry(radius*1.12, 12, 8) : new THREE.BoxGeometry(radius*2.6, radius*.86, radius*3.3),
+        endMat
+      );
+      end.position.set(0, -length*1.42, name === 'arm' ? .015 : .11);
+      end.scale.set(name === 'arm' ? .86 : 1, name === 'arm' ? 1.15 : 1, 1);
+      end.castShadow = true;
+      limb.add(end);
+      group.add(limb);
+      parts[`${name}${i}`] = {group:limb, upper, lower, joint, end, start, target:ends[i], length};
+    });
+  };
+  const hips = addMesh('hips', new THREE.SphereGeometry(.36,18,12), costumeMaterial, [0,.9,0], [.86,.36,.62]);
+  const waist = addMesh('waist', new THREE.CapsuleGeometry(.18,.34,4,12), costumeMaterial, [0,1.18,0], [.9,1,.7]);
+  const chest = addMesh('chest', new THREE.CapsuleGeometry(.27,.54,5,14), costumeMaterial, [0,1.55,0], [1.1,1,.72]);
+  const shoulders = addMesh('shoulders', new THREE.SphereGeometry(.38,18,10), costumeMaterial, [0,1.86,0], [1.38,.18,.48]);
+  parts.body = chest; parts.hips = hips; parts.waist = waist; parts.shoulders = shoulders;
+  addMesh('head', new THREE.SphereGeometry(.34,20,15), skinMaterial, [0,2.38,.02], [.88,1.06,.82]);
+  addMesh('hair', new THREE.SphereGeometry(.35,18,10,0,Math.PI*2,0,Math.PI*.56), hairMaterial, [0,2.59,-.04], [.98,.68,.88]);
+  addMesh('neck', new THREE.CylinderGeometry(.11,.15,.28,12), skinMaterial, [0,2.04,0], [1,1,1]);
+  const eyeMat = new THREE.MeshStandardMaterial({color:'#141014', roughness:.7});
+  [-1,1].forEach(side => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.035,10,8), eyeMat);
+    eye.scale.set(1.8,.75,.45);
+    eye.position.set(side*.13,2.43,.29);
+    group.add(eye);
+  });
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(.045,.18,12), skinMaterial);
+  nose.rotation.x = Math.PI/2;
+  nose.position.set(0,2.34,.31);
+  nose.castShadow = true;
+  group.add(nose);
+  addLimbPair('arm', .085, .46, skinMaterial, [[-.42,1.76,0],[.42,1.76,0]], [[-.58,1.18,.04],[.58,1.18,.04]]);
+  addLimbPair('leg', .115, .6, costumeMaterial, [[-.16,.82,0],[.16,.82,0]], [[-.24,.1,.05],[.24,.1,.05]]);
+  group.userData = {parts, skinMaterial, costumeMaterial, hairMaterial};
+  return group;
+}
+function poseThreePerformer(group, pose){
+  const parts = group.userData.parts || {};
+  const presets = {
+    standing:{lean:0,head:0,arm0:[-.08,0,.18],arm1:[.08,0,-.18],leg0:[.03,0,.06],leg1:[-.03,0,-.06]},
+    contrapposto:{lean:.08,head:-.06,arm0:[.1,0,.06],arm1:[-.16,0,-.12],leg0:[-.08,0,-.04],leg1:[.14,0,.12]},
+    open:{lean:0,head:.02,arm0:[.45,0,.45],arm1:[-.45,0,-.45],leg0:[.12,0,-.12],leg1:[-.12,0,.12]},
+    reach:{lean:-.04,head:-.1,arm0:[-1.05,0,.24],arm1:[.12,0,-.08],leg0:[.06,0,-.06],leg1:[-.04,0,.04]},
+    low:{lean:.02,head:.05,arm0:[.25,0,.1],arm1:[-.25,0,-.1],leg0:[.38,0,-.22],leg1:[-.38,0,.22]}
+  };
+  const p = presets[pose] || presets.standing;
+  group.rotation.z = p.lean;
+  if (parts.head) parts.head.rotation.z = p.head;
+  if (parts.hair) parts.hair.rotation.z = p.head;
+  ['arm0','arm1','leg0','leg1'].forEach(key => {
+    const limb = parts[key], rot = p[key];
+    if (!limb || !rot) return;
+    limb.group.position.set(limb.start[0], limb.start[1], limb.start[2]);
+    limb.group.rotation.set(rot[0], rot[1], rot[2]);
+  });
+}
+function ensureThreeFixture(f){
+  const THREE = studioModel.THREE;
+  if (!stage3d.fixtures[f.id]) {
+    const spot = new THREE.SpotLight(0xffffff, 0, 22, Math.PI/5, .55, 1.2);
+    spot.castShadow = true;
+    spot.shadow.mapSize.width = 1024;
+    spot.shadow.mapSize.height = 1024;
+    const target = new THREE.Object3D();
+    stage3d.scene.add(spot, target);
+    spot.target = target;
+    stage3d.fixtures[f.id] = {spot, target};
+    const mesh = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.09,.14,.28,16), new THREE.MeshBasicMaterial({color:f.color || '#ffffff'}));
+    body.rotation.x = Math.PI/2;
+    mesh.add(body);
+    stage3d.scene.add(mesh);
+    stage3d.fixtureMeshes[f.id] = mesh;
+  }
+  return stage3d.fixtures[f.id];
+}
+function updateThreeFixture(f){
+  const THREE = studioModel.THREE;
+  const bundle = ensureThreeFixture(f);
+  const src = sourceThreePoint(f);
+  const target = targetThreePoint(f);
+  bundle.spot.position.set(src.x, src.y, src.z);
+  bundle.target.position.set(target.x, target.y, target.z);
+  bundle.spot.color.set(f.color || '#ffffff');
+  bundle.spot.intensity = f.group === 'Cyc' ? 0 : clamp((Number(f.intensity)||0)/100 * 7.5, 0, 8);
+  bundle.spot.angle = clamp((Number(f.spread)||28) * Math.PI / 360, Math.PI/18, Math.PI/3);
+  const mesh = stage3d.fixtureMeshes[f.id];
+  if (mesh) {
+    mesh.position.set(src.x, src.y, src.z);
+    mesh.lookAt(target.x, target.y, target.z);
+    mesh.children[0].material.color.set(f.color || '#ffffff');
+  }
+}
+function renderThreeStage(){
+  if (!stage3d.ready || !studioModel.THREE) return;
+  const THREE = studioModel.THREE;
+  const rect = threeStageCanvas.getBoundingClientRect();
+  const w = Math.max(1, rect.width);
+  const h = Math.max(1, rect.height);
+  stage3d.camera.aspect = w / h;
+  stage3d.camera.updateProjectionMatrix();
+  stage3d.renderer.setSize(w, h, false);
+  Object.keys(stage3d.performers).forEach(id => {
+    if (!state.performers.find(p => p.id === id)) {
+      stage3d.scene.remove(stage3d.performers[id]);
+      delete stage3d.performers[id];
+    }
+  });
+  Object.keys(stage3d.fixtures).forEach(id => {
+    if (!state.fixtures.find(f => f.id === id)) {
+      stage3d.scene.remove(stage3d.fixtures[id].spot, stage3d.fixtures[id].target);
+      delete stage3d.fixtures[id];
+      if (stage3d.fixtureMeshes[id]) stage3d.scene.remove(stage3d.fixtureMeshes[id]);
+      delete stage3d.fixtureMeshes[id];
+    }
+  });
+  state.performers.forEach(p => {
+    if (!stage3d.performers[p.id]) {
+      stage3d.performers[p.id] = createThreePerformer(THREE);
+      stage3d.scene.add(stage3d.performers[p.id]);
+    }
+    const group = stage3d.performers[p.id];
+    const pos = threeStagePoint(p.x, p.y, 0);
+    group.position.set(pos.x, .04, pos.z);
+    group.scale.setScalar(.9 * (p.size || 1));
+    group.rotation.y = 0;
+    group.userData.skinMaterial.color.set(p.skin || '#e0ac69');
+    group.userData.costumeMaterial.color.set(p.costume || '#92278F');
+    poseThreePerformer(group, p.pose || 'standing');
+  });
+  state.fixtures.forEach(updateThreeFixture);
+  const selected = performerById(state.selectedPerformerId);
+  if (selected) {
+    const pos = threeStagePoint(selected.x, selected.y, 0);
+    stage3d.camera.position.lerp(new THREE.Vector3(pos.x, 7.2, pos.z + 15.5), .08);
+    stage3d.camera.lookAt(pos.x, 1.35, pos.z);
+  } else {
+    stage3d.camera.position.lerp(new THREE.Vector3(0, 7.8, 18), .05);
+    stage3d.camera.lookAt(0, 1.35, 0);
+  }
+  stage3d.renderer.render(stage3d.scene, stage3d.camera);
+}
 function draw(){
   const rect = canvas.getBoundingClientRect();
   const width = rect.width;
@@ -2261,6 +2521,7 @@ function draw(){
   drawPerformers();
   drawFixturePlan();
   drawFocusTarget();
+  renderThreeStage();
 }
 function drawBackground(width,height){
   ctx.fillStyle = '#050506';
@@ -2967,10 +3228,6 @@ function performerPose(id){
       legs:[[[-5,7,-9,16,5.2],[-9,16,-10,27,4.8],[-11.5,28.2,-.12]],[[5,7,9,16,5.2],[9,16,15,25,4.8],[16.4,26.2,.32]]],
       arms:[[[-9,-7,-12,3,4.8],[-12,3,-14,13,4.3],[-14.6,14.2,-.12]],[[9,-7,13,0,4.8],[13,0,17,9,4.3],[17.6,10.2,.24]]]
     },
-    walk:{
-      legs:[[[-5,7,-13,16,5.2],[-13,16,-19,25,4.8],[-20.5,26.2,-.28]],[[5,7,10,17,5.2],[10,17,7,28,4.8],[8.4,29.2,.08]]],
-      arms:[[[-9,-7,-16,0,4.8],[-16,0,-20,10,4.3],[-20.6,11.2,-.18]],[[9,-7,14,-1,4.8],[14,-1,20,5,4.3],[21,6,.34]]]
-    },
     open:{
       legs:[[[-5,7,-11,16,5.2],[-11,16,-17,26,4.8],[-18.2,27.2,-.25]],[[5,7,11,16,5.2],[11,16,17,26,4.8],[18.2,27.2,.25]]],
       arms:[[[-9,-7,-20,-5,4.8],[-20,-5,-27,0,4.3],[-28,1,-.28]],[[9,-7,20,-5,4.8],[20,-5,27,0,4.3],[28,1,.28]]]
@@ -3054,7 +3311,172 @@ function drawPerformers(){
     .forEach(p => drawPerformer(p));
 }
 function drawPerformer(p){
-  drawDrawnPerformer(p);
+  if (studioModel.ready) drawStudioModelPerformer(p);
+  else drawLowPolyPerformer(p);
+}
+async function initStudioPerformerModel(){
+  if (studioModel.ready || studioModel.loading) return;
+  studioModel.loading = true;
+  try {
+    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js');
+    studioModel.THREE = THREE;
+    studioModel.canvas = document.createElement('canvas');
+    studioModel.canvas.width = STUDIO_MODEL_W;
+    studioModel.canvas.height = STUDIO_MODEL_H;
+    studioModel.renderer = new THREE.WebGLRenderer({canvas:studioModel.canvas, alpha:true, antialias:true, preserveDrawingBuffer:true});
+    studioModel.renderer.setPixelRatio(1);
+    studioModel.renderer.setSize(STUDIO_MODEL_W, STUDIO_MODEL_H, false);
+    studioModel.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    studioModel.renderer.setClearColor(0x000000, 0);
+    studioModel.scene = new THREE.Scene();
+    studioModel.camera = new THREE.OrthographicCamera(-.95, .95, 2.78, -.08, .1, 20);
+    studioModel.camera.position.set(0,1.36,6);
+    studioModel.camera.lookAt(0,1.36,0);
+    studioModel.scene.add(new THREE.HemisphereLight(0xffffff, 0x111118, .18));
+    studioModel.keyLight = new THREE.DirectionalLight(0xffffff, 1.65);
+    studioModel.fillLight = new THREE.DirectionalLight(0xffffff, .35);
+    studioModel.rimLight = new THREE.DirectionalLight(0xffffff, .38);
+    studioModel.scene.add(studioModel.keyLight, studioModel.fillLight, studioModel.rimLight);
+    buildStudioSubjectModel(THREE);
+    initThreeStage(THREE);
+    studioModel.ready = true;
+    draw();
+  } catch (err) {
+    console.warn('Studio performer model failed to load', err);
+  } finally {
+    studioModel.loading = false;
+  }
+}
+function buildStudioSubjectModel(THREE){
+  studioModel.subject = new THREE.Group();
+  studioModel.subjectParts = {};
+  studioModel.skinMaterial = new THREE.MeshStandardMaterial({color:'#e0ac69', roughness:.62, metalness:0, flatShading:true});
+  studioModel.costumeMaterial = new THREE.MeshStandardMaterial({color:'#92278F', roughness:.72, metalness:0, flatShading:true});
+  studioModel.hairMaterial = new THREE.MeshStandardMaterial({color:'#201714', roughness:.78, metalness:0, flatShading:true});
+
+  const hips = addStudioSubjectMesh('hips', new THREE.SphereGeometry(.36,18,12), studioModel.costumeMaterial, [0,.9,0], [.86,.36,.62]);
+  const waist = addStudioSubjectMesh('waist', new THREE.CapsuleGeometry(.18,.34,4,12), studioModel.costumeMaterial, [0,1.18,0], [.9,1,.7]);
+  const chest = addStudioSubjectMesh('chest', new THREE.CapsuleGeometry(.27,.54,5,14), studioModel.costumeMaterial, [0,1.55,0], [1.1,1,.72]);
+  const shoulders = addStudioSubjectMesh('shoulders', new THREE.SphereGeometry(.38,18,10), studioModel.costumeMaterial, [0,1.86,0], [1.38,.18,.48]);
+  studioModel.subjectParts.body = chest;
+  studioModel.subjectParts.hips = hips;
+  studioModel.subjectParts.waist = waist;
+  studioModel.subjectParts.shoulders = shoulders;
+
+  addStudioSubjectMesh('head', new THREE.SphereGeometry(.34,20,15), studioModel.skinMaterial, [0,2.38,.02], [.88,1.06,.82]);
+  addStudioSubjectMesh('hair', new THREE.SphereGeometry(.35,18,10,0,Math.PI*2,0,Math.PI*.56), studioModel.hairMaterial, [0,2.59,-.04], [.98,.68,.88]);
+  addStudioSubjectMesh('neck', new THREE.CylinderGeometry(.11,.15,.28,12), studioModel.skinMaterial, [0,2.04,0], [1,1,1]);
+  const eyeMat = new THREE.MeshStandardMaterial({color:'#141014', roughness:.7});
+  [-1,1].forEach(side => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.035,10,8), eyeMat);
+    eye.scale.set(1.8,.75,.45);
+    eye.position.set(side*.13,2.43,.29);
+    studioModel.subject.add(eye);
+  });
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(.045,.18,12), studioModel.skinMaterial);
+  nose.rotation.x = Math.PI/2;
+  nose.position.set(0,2.34,.31);
+  studioModel.subject.add(nose);
+  addStudioLimbPair(THREE, 'arm', .085, .46, studioModel.skinMaterial, [[-.42,1.76,0],[.42,1.76,0]], [[-.58,1.18,.04],[.58,1.18,.04]]);
+  addStudioLimbPair(THREE, 'leg', .115, .6, studioModel.costumeMaterial, [[-.16,.82,0],[.16,.82,0]], [[-.24,.1,.05],[.24,.1,.05]]);
+  studioModel.scene.add(studioModel.subject);
+}
+function addStudioSubjectMesh(name, geometry, material, position, scale){
+  const mesh = new studioModel.THREE.Mesh(geometry, material);
+  mesh.position.set(position[0], position[1], position[2]);
+  mesh.scale.set(scale[0], scale[1], scale[2]);
+  mesh.castShadow = true;
+  studioModel.subject.add(mesh);
+  studioModel.subjectParts[name] = mesh;
+  return mesh;
+}
+function addStudioLimbPair(THREE, name, radius, length, material, starts, ends){
+  starts.forEach((start, i) => {
+    const group = new THREE.Group();
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 10), material);
+    upper.position.y = -length*.38;
+    group.add(upper);
+    const lower = new THREE.Mesh(new THREE.CapsuleGeometry(radius*.82, length*.86, 4, 10), material);
+    lower.position.y = -length*.95;
+    group.add(lower);
+    const joint = new THREE.Mesh(new THREE.SphereGeometry(radius*.95, 12, 8), material);
+    joint.position.y = -length*.68;
+    group.add(joint);
+    const endMat = name === 'arm' ? studioModel.skinMaterial : studioModel.costumeMaterial;
+    const end = new THREE.Mesh(
+      name === 'arm' ? new THREE.SphereGeometry(radius*1.12, 12, 8) : new THREE.BoxGeometry(radius*2.6, radius*.86, radius*3.3),
+      endMat
+    );
+    end.position.set(0, -length*1.42, name === 'arm' ? .015 : .11);
+    end.scale.set(name === 'arm' ? .86 : 1, name === 'arm' ? 1.15 : 1, 1);
+    group.add(end);
+    studioModel.subject.add(group);
+    studioModel.subjectParts[`${name}${i}`] = {group, upper, lower, joint, end, start, target:ends[i], length};
+  });
+}
+function poseStudioSubjectModel(pose){
+  const parts = studioModel.subjectParts || {};
+  const presets = {
+    standing:{lean:0,head:0,arm0:[-.08,0,.18],arm1:[.08,0,-.18],leg0:[.03,0,.06],leg1:[-.03,0,-.06]},
+    contrapposto:{lean:.08,head:-.06,arm0:[.1,0,.06],arm1:[-.16,0,-.12],leg0:[-.08,0,-.04],leg1:[.14,0,.12]},
+    open:{lean:0,head:.02,arm0:[.45,0,.45],arm1:[-.45,0,-.45],leg0:[.12,0,-.12],leg1:[-.12,0,.12]},
+    reach:{lean:-.04,head:-.1,arm0:[-1.05,0,.24],arm1:[.12,0,-.08],leg0:[.06,0,-.06],leg1:[-.04,0,.04]},
+    low:{lean:.02,head:.05,arm0:[.25,0,.1],arm1:[-.25,0,-.1],leg0:[.38,0,-.22],leg1:[-.38,0,.22]}
+  };
+  const p = presets[pose] || presets.standing;
+  if (studioModel.subject) studioModel.subject.rotation.z = p.lean;
+  if (parts.head) parts.head.rotation.z = p.head;
+  if (parts.hair) parts.hair.rotation.z = p.head;
+  ['arm0','arm1','leg0','leg1'].forEach(key => {
+    const limb = parts[key];
+    const rot = p[key];
+    if (!limb || !rot) return;
+    limb.group.position.set(limb.start[0], limb.start[1], limb.start[2]);
+    limb.group.rotation.set(rot[0], rot[1], rot[2]);
+  });
+}
+function updateStudioModelLights(light){
+  const THREE = studioModel.THREE;
+  if (!THREE) return;
+  studioModel.keyLight.color.set(light.color || '#ffffff');
+  studioModel.keyLight.intensity = clamp(.65 + light.level*.9, .45, 2.2);
+  studioModel.keyLight.position.set(clamp(light.keyX || 0, -1, 1) * 3.2, 3.6, 4 - clamp(light.keyY || 0, -1, 1) * 2.4);
+  studioModel.fillLight.color.set(light.frontColor || '#ffffff');
+  studioModel.fillLight.intensity = clamp(.16 + Math.min(light.left, light.right)*.42, .12, .7);
+  studioModel.fillLight.position.set(-(light.keyX || 0) * 3, 2.2, 4.5);
+  studioModel.rimLight.color.set(light.backColor || '#ffffff');
+  studioModel.rimLight.intensity = clamp(light.back*.45, .08, .82);
+  studioModel.rimLight.position.set(0, 2.8, -3.6);
+}
+function drawStudioModelPerformer(p){
+  const s = worldToScreen({x:p.x,y:p.y});
+  const scale = s.scale * (p.size || 1) * .74;
+  const light = performerLighting(p);
+  const selected = p.id === state.selectedPerformerId;
+  const shadowDx = clamp(-(light.keyX || 0) * 20 + (light.left - light.right) * 4, -20, 20);
+  const shadowDy = clamp((light.keyY || 0) * 8, -8, 8);
+  ctx.fillStyle = `rgba(0,0,0,${clamp(.62 - light.level*.15 + light.back*.08, .16, .7)})`;
+  ctx.beginPath();
+  ctx.ellipse(s.x + shadowDx*scale, s.y + (24 + shadowDy)*scale, 27*scale, 7.5*scale, clamp(shadowDx*.018,-.3,.3), 0, Math.PI*2);
+  ctx.fill();
+  studioModel.skinMaterial.color.set(p.skin || '#e0ac69');
+  studioModel.costumeMaterial.color.set(p.costume || '#92278F');
+  poseStudioSubjectModel(p.pose || 'standing');
+  updateStudioModelLights(light);
+  studioModel.renderer.render(studioModel.scene, studioModel.camera);
+  const drawH = 62 * scale;
+  const drawW = drawH * (STUDIO_MODEL_W / STUDIO_MODEL_H);
+  ctx.drawImage(studioModel.canvas, s.x - drawW/2, s.y - drawH + 4*scale, drawW, drawH);
+  if (selected) {
+    ctx.strokeStyle = '#EC008C';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y - 6*scale, 19*scale, 33*scale, 0, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  drawPerformerLabel(p, s, scale);
 }
 function drawLowPolyPerformer(p){
   const s = worldToScreen({x:p.x,y:p.y});
@@ -3193,18 +3615,6 @@ function drawLowPolyTorso(light, costume){
   poly([[-11,-10.8],[11,-10.8],[6.2,-6.5],[-6.2,-6.5]], top, stroke);
   poly([[-6.2,-6.5],[6.2,-6.5],[4.8,8.6],[0,10.4],[-4.8,8.6]], front, stroke);
   poly([[-8.4,7],[-4.8,8.6],[0,10.4],[4.8,8.6],[8.4,7],[5.7,12],[-5.7,12]], waist, stroke);
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = clamp((light.level*.16 + light.top*.12) * clamp((light.level - .12) * 1.15, 0, 1), 0, .32);
-  ctx.fillStyle = light.keyX < 0 ? light.leftColor : light.rightColor;
-  ctx.beginPath();
-  ctx.moveTo(light.keyX < 0 ? -9 : 9, -10);
-  ctx.lineTo(light.keyX < 0 ? -1.5 : 1.5, -12.4);
-  ctx.lineTo(light.keyX < 0 ? -3.5 : 3.5, 8.8);
-  ctx.lineTo(light.keyX < 0 ? -8 : 8, 6.8);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
 }
 function drawLowPolyHead(light, skin){
   const stroke = lowPolyStroke(skin, light, .22);
@@ -3231,12 +3641,6 @@ function drawLowPolyHead(light, skin){
   ctx.rect(1.8,-21.7,.9,.7);
   ctx.fill();
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = `rgba(20,20,20,${clamp((.12 + light.front*.16) * clamp((light.level - .1) * 1.2, 0, 1), 0, .34)})`;
-  ctx.lineWidth = .55;
-  ctx.beginPath();
-  ctx.moveTo(-1.6,-17.7);
-  ctx.lineTo(1.6,-17.7);
-  ctx.stroke();
   if (light.back > .06) {
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -4439,6 +4843,7 @@ function init(){
   bindEvents();
   renderAll();
   resizeCanvas();
+  initStudioPerformerModel();
 }
 init();
 </script>
