@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDSCPA - Lighting People Lab</title>
+<title>SDSCPA - Portrait Lighting Lab</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
 <script type="importmap">
 {
@@ -306,7 +306,7 @@
       </linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="0" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Lighting People Lab</div>
+    <div class="brand-tag">Portrait Lighting Lab</div>
   </div>
   <input id="projectName" class="project-name" type="text" maxlength="50" aria-label="Project name">
   <button class="tbtn" id="saveProjectBtn" title="Save project in this browser">
@@ -1500,7 +1500,7 @@ function drawMagicSheet(g,w,h){
   g.font = `900 ${w < 560 ? 22 : 30}px Arial, sans-serif`;
   g.textAlign = 'left';
   g.textBaseline = 'alphabetic';
-  drawTextLine(g, 'Lighting People Magic Sheet', margin, titleY + 24, w - margin * 2);
+  drawTextLine(g, 'Portrait Lighting Magic Sheet', margin, titleY + 24, w - margin * 2);
   g.font = `700 ${w < 560 ? 11 : 14}px Consolas, monospace`;
   g.fillStyle = '#525252';
   drawTextLine(g, `${state.projectName || 'Untitled project'} / ${new Date().toLocaleString()}`, margin, titleY + 46, w - margin * 2);
@@ -1601,7 +1601,7 @@ function drawSetupSheet(g,x,y,w,h,compact=false){
   drawTextLine(g, state.projectName || 'Untitled project', x+pad, y+(compact ? 30 : 42), cardW);
   g.fillStyle = '#a1a1aa';
   g.font = `700 ${metaSize}px Consolas, monospace`;
-  drawTextLine(g, `${new Date().toLocaleString()} / Lighting People Lab`, x+pad, y+(compact ? 50 : 64), cardW);
+  drawTextLine(g, `${new Date().toLocaleString()} / Portrait Lighting Lab`, x+pad, y+(compact ? 50 : 64), cardW);
   let yy = y+(compact ? 76 : 102);
   LIGHTS.forEach(meta => {
     const l = state.lights[meta.id];
@@ -2099,7 +2099,7 @@ function currentSetupHtml(paper){
     th{color:${dim};text-transform:uppercase;font-size:10px} .analysis{margin-top:14px;color:${dim};font:12px Consolas,monospace}
   </style></head><body>
     <h1>${escapeHtml(state.projectName || 'Untitled project')}</h1>
-    <div class="meta">Lighting People Lab / ${new Date().toLocaleString()}</div>
+    <div class="meta">Portrait Lighting Lab / ${new Date().toLocaleString()}</div>
     <img src="${img}" alt="">
     <table><thead><tr><th>Light</th><th>State</th><th>Intensity</th><th>Kelvin</th><th>Height</th><th>Angle</th><th>Distance</th><th>Beam</th><th>Softness</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="analysis">Pattern: ${patternLabel(state.lights.key)} / Key:Fill: ${keyFillRatio(state.lights.key,state.lights.fill).label} / Contrast: ${contrastLabel(keyFillRatio(state.lights.key,state.lights.fill).raw,state.lights.key.softness,state.lights.fill.intensity)}</div>
@@ -2160,7 +2160,7 @@ function printComparison(paper='white'){
     article{break-inside:avoid;border:1px solid ${dark ? '#333' : '#ddd'};padding:12px;border-radius:8px}
     img{width:100%;height:170px;object-fit:cover;background:#111;border:1px solid ${dark ? '#333' : '#ddd'}}
     h2{font-size:15px;margin:10px 0 6px}p{font:12px/1.5 Consolas,monospace;color:${dim};margin:0}
-  </style></head><body><h1>${escapeHtml(state.projectName)} - Setup Comparison</h1><div class="meta">${new Date().toLocaleString()} / Lighting People Lab</div><main>${cards}</main></body></html>`;
+  </style></head><body><h1>${escapeHtml(state.projectName)} - Setup Comparison</h1><div class="meta">${new Date().toLocaleString()} / Portrait Lighting Lab</div><main>${cards}</main></body></html>`;
   openPrintWindow(html, 'lighting-people-comparison');
 }
 function escapeHtml(text){

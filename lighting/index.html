@@ -188,9 +188,8 @@
   #stagePanel{position:relative;min-width:0;min-height:0;overflow:hidden;background:#050506}
   #stageCanvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;background:var(--stage)}
   #stageCanvas.dragging{cursor:grabbing}
-  #threeStageCanvas{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;background:#050506}
-  #stagePanel.three-ready #stageCanvas{opacity:0}
-  #stagePanel.three-ready #threeStageCanvas{display:block}
+  /* Offscreen WebGL buffer: the solid 3D theatre is rendered here and composited into #stageCanvas. */
+  #threeStageCanvas{position:absolute;inset:0;width:100%;height:100%;display:none;pointer-events:none;background:transparent}
   .stage-hud{
     position:absolute;left:12px;bottom:12px;display:flex;gap:7px;flex-wrap:wrap;max-width:calc(100% - 24px);
     pointer-events:none;
@@ -495,11 +494,17 @@
         <label class="field">Beam
           <input id="spreadRange" type="range" min="10" max="80" value="28">
         </label>
-        <label class="field">Focus X
-          <input id="focusXRange" type="range" min="8" max="92" value="50">
+        <label class="field">Horizontal
+          <input id="posXRange" type="range" min="0" max="100" value="50">
         </label>
-        <label class="field">Focus Y
-          <input id="focusYRange" type="range" min="8" max="56" value="34">
+        <label class="field" id="vertField">Height
+          <input id="vertRange" type="range" min="4" max="28" value="16">
+        </label>
+        <label class="field">Pan
+          <input id="panRange" type="range" min="-180" max="180" value="0">
+        </label>
+        <label class="field">Tilt
+          <input id="tiltRange" type="range" min="8" max="88" value="55">
         </label>
       </div>
     </section>
@@ -686,7 +691,9 @@ const stage3d = {
   fixtures:{},
   beams:{},
   fixtureMeshes:{},
-  materials:{}
+  materials:{},
+  goboTextures:{},
+  mask:null
 };
 
 const GELS = [
@@ -1170,10 +1177,19 @@ function toggleFocusLock(){
   toast(state.focusLocked ? 'Light placement and focus locked.' : 'Light placement and focus unlocked.', state.focusLocked ? 'warn' : 'good');
 }
 function setFixtureControlsDisabled(disabled){
-  ['intensityRange','fixtureColor','goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
+  ['intensityRange','fixtureColor','goboSelect','directionSelect','spreadRange','posXRange','vertRange','panRange','tiltRange'].forEach(id => {
     $(id).disabled = disabled;
     $(id).style.opacity = disabled ? '.45' : '1';
   });
+}
+// The second position slider is Height for normal lights, Upstage/Downstage for tops.
+function setVertControl(isTop, value){
+  const field = $('vertField');
+  const input = $('vertRange');
+  field.firstChild.textContent = isTop ? 'Up/Downstage ' : 'Height ';
+  input.min = isTop ? RIG.depthMin : RIG.heightMin;
+  input.max = isTop ? RIG.depthMax : RIG.heightMax;
+  input.value = value;
 }
 function renderFixtureControls(){
   const f = selectedFixture();
@@ -1186,8 +1202,10 @@ function renderFixtureControls(){
     $('goboSelect').value = 'open';
     $('directionSelect').value = 'front';
     $('spreadRange').value = 28;
-    $('focusXRange').value = 50;
-    $('focusYRange').value = 34;
+    $('posXRange').value = 50;
+    setVertControl(false, 16);
+    $('panRange').value = 0;
+    $('tiltRange').value = 55;
     setFixtureControlsDisabled(true);
     document.querySelectorAll('.swatch').forEach(sw => sw.classList.remove('on'));
     $('selectedHud').innerHTML = 'No channel selected';
@@ -1205,10 +1223,18 @@ function renderFixtureControls(){
   $('goboSelect').value = f.gobo;
   $('directionSelect').value = f.direction;
   $('spreadRange').value = Math.round(f.spread);
-  $('focusXRange').value = Math.round(f.targetX);
-  $('focusYRange').value = Math.round(f.targetY);
+  if (!isCyc){
+    ensureRig(f);
+    const isTop = f.direction === 'top';
+    const s = rigSource(f);
+    $('posXRange').value = Math.round(s.x);
+    setVertControl(isTop, isTop ? Math.round(s.y) : Math.round(s.h));
+    const pt = fixturePanTilt(f);
+    $('panRange').value = Math.round(pt.pan);
+    $('tiltRange').value = Math.round(pt.tilt);
+  }
   setFixtureControlsDisabled(false);
-  ['goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
+  ['goboSelect','directionSelect','spreadRange','posXRange','vertRange','panRange','tiltRange'].forEach(id => {
     const disabled = id === 'goboSelect' ? isCyc : focusDisabled;
     $(id).disabled = disabled;
     $(id).style.opacity = disabled ? '.45' : '1';
@@ -1399,10 +1425,22 @@ function updateFixtureFromControls(pushCommand){
   f.color = $('fixtureColor').value;
   if (f.group !== 'Cyc' && !state.focusLocked) {
     f.gobo = normalizeGobo($('goboSelect').value);
-    f.direction = $('directionSelect').value;
     f.spread = Number($('spreadRange').value);
-    f.targetX = Number($('focusXRange').value);
-    f.targetY = Number($('focusYRange').value);
+    const newDir = $('directionSelect').value;
+    if (newDir !== f.direction) {
+      // Changing the mount resets position + auto-aims at centre stage.
+      f.direction = newDir;
+      resetRigForDirection(f);
+    } else {
+      const isTop = f.direction === 'top';
+      f.posX = clamp(Number($('posXRange').value), 0, 100);
+      const vert = Number($('vertRange').value);
+      if (isTop) f.posY = clamp(vert, 0, 60);
+      else f.height = vert;
+      const t = aimTarget(f, Number($('panRange').value), Number($('tiltRange').value));
+      f.targetX = t.x;
+      f.targetY = t.y;
+    }
   } else if (f.group !== 'Cyc') {
     f.gobo = normalizeGobo($('goboSelect').value);
   }
@@ -2248,7 +2286,22 @@ function audienceProject(wx,wy,wz){
   const f = layout.focal || layout.w*.5;
   return {x:layout.cx + f*cx/depth, y:layout.cy - f*up/depth, depth};
 }
+function cameraProjectStage(pt){
+  // Project a stage point through the live 3D camera so the 2D overlay
+  // (fixture icons, focus marker, labels) lines up exactly with the 3D beams.
+  const THREE = studioModel.THREE;
+  const rect = canvas.getBoundingClientRect();
+  const wp = threeStagePoint(pt.x, pt.y, pt.z || 0);
+  const v = new THREE.Vector3(wp.x, wp.y, wp.z).project(stage3d.camera);
+  const up = new THREE.Vector3(wp.x, wp.y + 1, wp.z).project(stage3d.camera);
+  const x = (v.x * .5 + .5) * rect.width;
+  const y = (-v.y * .5 + .5) * rect.height;
+  const upY = (-up.y * .5 + .5) * rect.height;
+  const scale = clamp(Math.abs(y - upY) / 20, .24, 2.6);
+  return {x, y, scale, depth:clamp(pt.y / 60, 0, 1)};
+}
 function worldToScreen(pt){
+  if (stage3d.ready && studioModel.THREE && stage3d.camera) return cameraProjectStage(pt);
   const w = lightingToAudienceWorld(pt);
   const p = audienceProject(w.x, w.y, w.z || 0) || {x:layout.cx,y:layout.cy,depth:1};
   const depth = clamp(pt.y / 60, 0, 1);
@@ -2262,7 +2315,21 @@ function keepScreenPointVisible(point, margin=22){
     y:clamp(point.y, margin, Math.max(margin, rect.height - margin))
   });
 }
+function cameraUnprojectFloor(pt){
+  // Invert the 3D camera projection onto the stage floor (y=0) for dragging.
+  const THREE = studioModel.THREE;
+  const rect = canvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2((pt.x / rect.width) * 2 - 1, -(pt.y / rect.height) * 2 + 1);
+  const ray = new THREE.Raycaster();
+  ray.setFromCamera(ndc, stage3d.camera);
+  const hit = new THREE.Vector3();
+  if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit)) return {x:50, y:34};
+  const x = hit.x / (AUDIENCE_CAMERA.stageHalfW * 2 / 100) + 50;
+  const y = 60 + hit.z / (AUDIENCE_CAMERA.stageDepth / 60);
+  return {x:clamp(x, 0, 100), y:clamp(y, 0, 60)};
+}
 function screenToWorld(pt){
+  if (stage3d.ready && studioModel.THREE && stage3d.camera) return cameraUnprojectFloor(pt);
   let lo = 0, hi = 60;
   for (let i=0; i<16; i++) {
     const mid = (lo + hi) / 2;
@@ -2276,60 +2343,209 @@ function screenToWorld(pt){
   const x = 100 * (pt.x - left.x) / span;
   return {x, y};
 }
+// --- Rig model -------------------------------------------------------------
+// Each non-cyc light is mounted at a position (Horizontal + Height, or for
+// top lights Horizontal + Upstage/Downstage) set by its Direction, and aimed
+// with Pan + Tilt. targetX/targetY is the derived floor focus the rest of the
+// app already understands; pan/tilt are derived back from source+target for
+// the sliders, so cues/saves keep working with the existing focus fields.
+const RIG = {
+  heightMin:4, heightMax:28, heightDefault:16, footHeight:2,
+  topHeight:22, depthMin:5, depthMax:55,
+  panMin:-180, panMax:180, tiltMin:8, tiltMax:88
+};
+function rigDepthStageY(dir){
+  if (dir === 'back') return -4;
+  if (dir === 'foot') return 60;
+  if (dir === 'left' || dir === 'right') return 30;
+  return 64; // front
+}
+function rigSideDefaultX(dir){
+  return dir === 'left' ? 4 : dir === 'right' ? 96 : 50;
+}
+function rigSource(f){
+  if (f.direction === 'top'){
+    return {
+      x:clamp(Number(f.posX != null ? f.posX : (f.targetX != null ? f.targetX : 50)), 0, 100),
+      y:clamp(Number(f.posY != null ? f.posY : (f.targetY != null ? f.targetY : 34)), 0, 60),
+      h:RIG.topHeight
+    };
+  }
+  const defX = (f.direction === 'left' || f.direction === 'right') ? rigSideDefaultX(f.direction) : (f.targetX != null ? f.targetX : 50);
+  const x = clamp(Number(f.posX != null ? f.posX : defX), 0, 100);
+  const y = rigDepthStageY(f.direction);
+  const h = f.direction === 'foot'
+    ? clamp(Number(f.height != null ? f.height : RIG.footHeight), 0.5, 6)
+    : clamp(Number(f.height != null ? f.height : RIG.heightDefault), RIG.heightMin, RIG.heightMax);
+  return {x, y, h};
+}
+function rigSourceWorld(f){
+  const s = rigSource(f);
+  return threeStagePoint(s.x, s.y, s.h);
+}
+function worldToStageXY(W){
+  return {
+    x:W.x / (AUDIENCE_CAMERA.stageHalfW * 2 / 100) + 50,
+    y:60 + W.z / (AUDIENCE_CAMERA.stageDepth / 60)
+  };
+}
+function aimDirection(pan, tilt){
+  const p = pan * Math.PI / 180;
+  const t = clamp(tilt, RIG.tiltMin, RIG.tiltMax) * Math.PI / 180;
+  const ct = Math.cos(t);
+  return {x:Math.sin(p) * ct, y:-Math.sin(t), z:-Math.cos(p) * ct};
+}
+// Where the beam lands on the stage floor given a source + pan/tilt.
+function aimTarget(f, pan, tilt){
+  const S = rigSourceWorld(f);
+  const d = aimDirection(pan, tilt);
+  const denom = -d.y;
+  const dist = denom > 1e-3 ? S.y / denom : 60;
+  const W = {x:S.x + d.x * dist, z:S.z + d.z * dist};
+  const st = worldToStageXY(W);
+  return {x:clamp(st.x, 0, 100), y:clamp(st.y, 0, 60)};
+}
+// Pan/tilt that aim a fixture's source at a stage focus point (for the sliders).
+function aimAngles(f, targetStage){
+  const S = rigSourceWorld(f);
+  const T = threeStagePoint(clamp(Number(targetStage.x), 0, 100), clamp(Number(targetStage.y), 0, 60), 0);
+  const dx = T.x - S.x, dy = -S.y, dz = T.z - S.z;
+  const horiz = Math.hypot(dx, dz) || 0.001;
+  return {
+    pan:clamp(Math.atan2(dx, -dz) * 180 / Math.PI, RIG.panMin, RIG.panMax),
+    tilt:clamp(Math.atan2(-dy, horiz) * 180 / Math.PI, RIG.tiltMin, RIG.tiltMax)
+  };
+}
+function fixturePanTilt(f){
+  return aimAngles(f, {x:Number(f.targetX) != null ? f.targetX : 50, y:Number(f.targetY) != null ? f.targetY : 34});
+}
+// Fill in rig position fields for fixtures loaded from older saves/cues.
+function ensureRig(f){
+  if (!f || f.group === 'Cyc') return f;
+  if (f.direction === 'top'){
+    if (f.posX == null) f.posX = Number(f.targetX != null ? f.targetX : 50);
+    if (f.posY == null) f.posY = Number(f.targetY != null ? f.targetY : 34);
+  } else {
+    if (f.posX == null) f.posX = (f.direction === 'left' || f.direction === 'right')
+      ? rigSideDefaultX(f.direction)
+      : Number(f.targetX != null ? f.targetX : 50);
+    if (f.height == null) f.height = f.direction === 'foot' ? RIG.footHeight : RIG.heightDefault;
+  }
+  return f;
+}
+// Reset a fixture's mount + aim to sensible defaults for its Direction,
+// auto-aiming at stage center.
+function resetRigForDirection(f){
+  if (f.group === 'Cyc') return;
+  if (f.direction === 'top'){
+    f.posX = 50; f.posY = 34; delete f.height;
+  } else {
+    f.posX = rigSideDefaultX(f.direction);
+    f.height = f.direction === 'foot' ? RIG.footHeight : RIG.heightDefault;
+    delete f.posY;
+  }
+  // auto-aim at centre stage
+  const ang = aimAngles(f, {x:50, y:34});
+  const c = aimTarget(f, ang.pan, ang.tilt);
+  f.targetX = c.x; f.targetY = c.y;
+}
 function sourceFor(f){
-  if (f.direction === 'front') return {x:f.targetX, y:70};
-  if (f.direction === 'back') return {x:f.targetX, y:-9};
-  if (f.direction === 'left') return {x:-4, y:f.targetY};
-  if (f.direction === 'right') return {x:104, y:f.targetY};
-  if (f.direction === 'foot') return {x:f.targetX, y:64};
-  return {x:f.targetX, y:-22, z:24};
+  const s = rigSource(f);
+  return {x:s.x, y:s.y, z:s.h};
 }
 function threeStagePoint(x,y,height=0){
-  return {x:(x-50)/4.2, y:height, z:(y-30)/4.2};
+  return {
+    x:(x - 50) * (AUDIENCE_CAMERA.stageHalfW * 2 / 100),
+    y:height,
+    z:-(60 - y) * (AUDIENCE_CAMERA.stageDepth / 60)
+  };
 }
 function sourceThreePoint(f){
   const src = sourceFor(f);
   const p = threeStagePoint(src.x, src.y, 0);
-  const height = src.z != null ? src.z/4 : (f.direction === 'foot' ? .65 : 4.8);
+  const height = src.z != null ? src.z : (f.direction === 'foot' ? 2.6 : 18);
   return {x:p.x, y:height, z:p.z};
 }
 function targetThreePoint(f){
   const p = threeStagePoint(Number(f.targetX)||50, Number(f.targetY)||34, 0);
-  return {x:p.x, y:1.42, z:p.z};
+  return {x:p.x, y:4.2, z:p.z};
 }
 function initThreeStage(THREE){
   if (stage3d.ready) return;
   stage3d.scene = new THREE.Scene();
-  stage3d.scene.background = new THREE.Color('#050506');
-  stage3d.camera = new THREE.PerspectiveCamera(42, 1, .1, 80);
-  stage3d.camera.position.set(0, 7.8, 18);
-  stage3d.camera.lookAt(0, 1.35, 0);
-  stage3d.renderer = new THREE.WebGLRenderer({canvas:threeStageCanvas, antialias:true, preserveDrawingBuffer:true});
+  stage3d.scene.background = null;
+  stage3d.camera = new THREE.PerspectiveCamera(38, 1, .1, 200);
+  stage3d.renderer = new THREE.WebGLRenderer({canvas:threeStageCanvas, alpha:true, antialias:true, preserveDrawingBuffer:true});
   stage3d.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   stage3d.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  stage3d.renderer.setClearColor(0x000000, 0);
   stage3d.renderer.shadowMap.enabled = true;
   stage3d.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  stage3d.scene.add(new THREE.HemisphereLight(0xffffff, 0x111118, .12));
 
-  stage3d.materials.floor = new THREE.MeshStandardMaterial({color:'#2d2a28', roughness:.86});
-  stage3d.materials.backdrop = new THREE.MeshStandardMaterial({color:'#f3efe7', roughness:.82});
-  stage3d.floor = new THREE.Mesh(new THREE.PlaneGeometry(26, 16), stage3d.materials.floor);
+  // Low ambient so unlit areas stay theatre-dark but shadows still read.
+  stage3d.scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x05050a, .09));
+  stage3d.scene.add(new THREE.AmbientLight(0xffffff, .03));
+
+  // Solid stage deck — matte black floor that catches light and shadow.
+  stage3d.materials.floor = new THREE.MeshStandardMaterial({color:'#0f0f13', roughness:.92, metalness:.03});
+  stage3d.floor = new THREE.Mesh(new THREE.PlaneGeometry(66, 30), stage3d.materials.floor);
   stage3d.floor.rotation.x = -Math.PI/2;
+  stage3d.floor.position.z = -15;
   stage3d.floor.receiveShadow = true;
   stage3d.scene.add(stage3d.floor);
-  stage3d.backdrop = new THREE.Mesh(new THREE.PlaneGeometry(26, 5.4), stage3d.materials.backdrop);
-  stage3d.backdrop.position.set(0, 2.7, -7.15);
-  stage3d.backdrop.receiveShadow = true;
-  stage3d.scene.add(stage3d.backdrop);
 
-  const grid = new THREE.GridHelper(26, 26, 0x8a837a, 0x4a4642);
-  grid.position.y = .012;
+  // Cyclorama back wall — three zones (SL / center / SR) that glow with the
+  // colour of their cyc fixture (emissive) while still catching faint spill.
+  stage3d.cycPanels = [];
+  [-26.7, 0, 26.7].forEach(px => {
+    const mat = new THREE.MeshStandardMaterial({color:'#0b0b10', emissive:'#000000', roughness:.99, metalness:0});
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(28, 30), mat);
+    panel.position.set(px, 13, -30.2);
+    panel.receiveShadow = true;
+    stage3d.scene.add(panel);
+    stage3d.cycPanels.push(panel);
+  });
+
+  // Faint floor grid for staging reference (kept subtle).
+  const grid = new THREE.GridHelper(66, 22, 0x6f6a63, 0x2a2824);
+  grid.position.y = .014;
+  grid.position.z = -15;
   grid.material.transparent = true;
-  grid.material.opacity = .32;
+  grid.material.opacity = .07;
   stage3d.scene.add(grid);
+
+  // Proscenium masking — black teaser (top) and legs (sides) frame the opening
+  // and hide the lighting positions, so the picture reads as a theatre. Unlit
+  // (MeshBasicMaterial) so it always stays solid black and never catches spill.
+  const maskMat = new THREE.MeshBasicMaterial({color:'#000000'});
+  stage3d.materials.mask = maskMat;
+  const mask = new THREE.Group();
+  const teaser = new THREE.Mesh(new THREE.PlaneGeometry(140, 40), maskMat);
+  teaser.position.set(0, 18 + 20, -1.6);
+  mask.add(teaser);
+  [-1, 1].forEach(side => {
+    const leg = new THREE.Mesh(new THREE.PlaneGeometry(44, 80), maskMat);
+    leg.position.set(side * (33 + 22), 18, -1.6);
+    mask.add(leg);
+  });
+  stage3d.scene.add(mask);
+  stage3d.mask = mask;
+
+  // Warm proscenium trim around the opening for a finished theatre frame.
+  const trimMat = new THREE.MeshBasicMaterial({color:'#1b1922'});
+  const trim = new THREE.Group();
+  const trimH = new THREE.Mesh(new THREE.BoxGeometry(72, 1.1, .6), trimMat);
+  trimH.position.set(0, 18.4, -1.2);
+  trim.add(trimH);
+  [-1, 1].forEach(side => {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(1.1, 19, .6), trimMat);
+    post.position.set(side * 35.5, 9.2, -1.2);
+    trim.add(post);
+  });
+  stage3d.scene.add(trim);
+
   stage3d.ready = true;
   $('stagePanel').classList.add('three-ready');
-  renderThreeStage();
 }
 function createThreePerformer(THREE){
   const group = new THREE.Group();
@@ -2420,13 +2636,56 @@ function poseThreePerformer(group, pose){
     limb.group.rotation.set(rot[0], rot[1], rot[2]);
   });
 }
+function stageGoboTexture(gobo){
+  const key = normalizeGobo(gobo);
+  if (key === 'open') return null;
+  if (stage3d.goboTextures[key]) return stage3d.goboTextures[key];
+  const THREE = studioModel.THREE;
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.fillRect(0,0,256,256);
+  g.fillStyle = '#000000';
+  g.strokeStyle = '#000000';
+  g.lineWidth = 13;
+  if (key === 'window') {
+    g.strokeRect(48,68,160,120);
+    g.beginPath(); g.moveTo(128,68); g.lineTo(128,188); g.moveTo(48,128); g.lineTo(208,128); g.stroke();
+  } else if (key === 'blinds') {
+    for (let y=50; y<210; y+=26) {
+      g.beginPath(); g.moveTo(38,y); g.lineTo(218,y+16); g.stroke();
+    }
+  } else if (key === 'branches') {
+    g.lineCap = 'round';
+    for (let i=0; i<8; i++) {
+      const x = 34 + i*28;
+      g.beginPath();
+      g.moveTo(x,226);
+      g.bezierCurveTo(x+22,154,x-28,102,x+12,28);
+      g.stroke();
+    }
+  } else if (key === 'dots') {
+    for (let i=0; i<54; i++) {
+      const x = 128 + Math.sin(i*12.9898) * 92;
+      const y = 128 + Math.cos(i*78.233) * 72;
+      g.beginPath(); g.arc(x,y,7 + (i%5),0,Math.PI*2); g.fill();
+    }
+  }
+  const texture = new THREE.CanvasTexture(c);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  stage3d.goboTextures[key] = texture;
+  return texture;
+}
 function ensureThreeFixture(f){
   const THREE = studioModel.THREE;
   if (!stage3d.fixtures[f.id]) {
-    const spot = new THREE.SpotLight(0xffffff, 0, 22, Math.PI/5, .55, 1.2);
+    const spot = new THREE.SpotLight(0xffffff, 0, 26, Math.PI/5, .5, 1.3);
     spot.castShadow = true;
     spot.shadow.mapSize.width = 1024;
     spot.shadow.mapSize.height = 1024;
+    spot.shadow.bias = -0.0006;
     const target = new THREE.Object3D();
     stage3d.scene.add(spot, target);
     spot.target = target;
@@ -2437,32 +2696,91 @@ function ensureThreeFixture(f){
     mesh.add(body);
     stage3d.scene.add(mesh);
     stage3d.fixtureMeshes[f.id] = mesh;
+    // Volumetric haze beam: additive cone so the shaft reads through the air.
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(.08, 1, 1, 40, 1, true),
+      new THREE.MeshBasicMaterial({
+        color:f.color || '#ffffff',
+        transparent:true,
+        opacity:.08,
+        depthWrite:false,
+        side:THREE.DoubleSide,
+        blending:THREE.AdditiveBlending
+      })
+    );
+    beam.renderOrder = 4;
+    stage3d.scene.add(beam);
+    stage3d.beams[f.id] = beam;
   }
   return stage3d.fixtures[f.id];
 }
 function updateThreeFixture(f){
   const THREE = studioModel.THREE;
   const bundle = ensureThreeFixture(f);
+  const intensity = Number(f.intensity) || 0;
+  const isCyc = f.group === 'Cyc';
+  const mesh = stage3d.fixtureMeshes[f.id];
+  const beam = stage3d.beams[f.id];
+
+  if (isCyc) {
+    // Cyc fixtures glow their zone of the cyclorama (emissive), no shadow/beam.
+    bundle.spot.intensity = 0;
+    bundle.spot.castShadow = false;
+    bundle.spot.map = null;
+    if (mesh) mesh.visible = false;
+    if (beam) beam.visible = false;
+    const panels = stage3d.cycPanels;
+    if (panels && panels.length) {
+      const tx = Number(f.targetX) || 50;
+      const idx = tx < 33.3 ? 0 : tx < 66.6 ? 1 : 2;
+      const panel = panels[idx];
+      if (panel) {
+        panel.material.emissive.set(f.color || '#ffffff');
+        panel.material.emissiveIntensity = clamp(intensity / 100 * .92, 0, 1);
+      }
+    }
+    return;
+  }
+
   const src = sourceThreePoint(f);
   const target = targetThreePoint(f);
   bundle.spot.position.set(src.x, src.y, src.z);
   bundle.target.position.set(target.x, target.y, target.z);
   bundle.spot.color.set(f.color || '#ffffff');
-  bundle.spot.intensity = f.group === 'Cyc' ? 0 : clamp((Number(f.intensity)||0)/100 * 7.5, 0, 8);
+  bundle.spot.castShadow = true;
+  bundle.spot.distance = f.direction === 'back' ? 30 : 34;
+  bundle.spot.penumbra = f.direction === 'foot' ? .82 : .5;
+  bundle.spot.intensity = clamp(intensity / 100 * 6.5, 0, 7.5);
   bundle.spot.angle = clamp((Number(f.spread)||28) * Math.PI / 360, Math.PI/18, Math.PI/3);
-  const mesh = stage3d.fixtureMeshes[f.id];
+  bundle.spot.map = stageGoboTexture(f.gobo);
   if (mesh) {
+    mesh.visible = true;
     mesh.position.set(src.x, src.y, src.z);
     mesh.lookAt(target.x, target.y, target.z);
     mesh.children[0].material.color.set(f.color || '#ffffff');
   }
+  if (beam) {
+    const a = new THREE.Vector3(src.x, src.y, src.z);
+    const b = new THREE.Vector3(target.x, target.y, target.z);
+    const mid = a.clone().lerp(b, .5);
+    const dir = b.clone().sub(a);
+    const len = Math.max(.1, dir.length());
+    const radius = Math.max(.35, Math.tan(bundle.spot.angle) * len * .72);
+    beam.geometry.dispose();
+    beam.geometry = new THREE.CylinderGeometry(.08, radius, len, 40, 1, true);
+    beam.position.copy(mid);
+    beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    beam.material.color.set(f.color || '#ffffff');
+    beam.material.opacity = clamp(intensity / 100 * .2, .02, .22);
+    beam.visible = intensity > 0;
+  }
 }
-function renderThreeStage(){
+function renderThreeStage(width, height){
   if (!stage3d.ready || !studioModel.THREE) return;
   const THREE = studioModel.THREE;
-  const rect = threeStageCanvas.getBoundingClientRect();
-  const w = Math.max(1, rect.width);
-  const h = Math.max(1, rect.height);
+  const rect = (width && height) ? null : threeStageCanvas.getBoundingClientRect();
+  const w = Math.max(1, width || (rect ? rect.width : 1));
+  const h = Math.max(1, height || (rect ? rect.height : 1));
   stage3d.camera.aspect = w / h;
   stage3d.camera.updateProjectionMatrix();
   stage3d.renderer.setSize(w, h, false);
@@ -2478,6 +2796,11 @@ function renderThreeStage(){
       delete stage3d.fixtures[id];
       if (stage3d.fixtureMeshes[id]) stage3d.scene.remove(stage3d.fixtureMeshes[id]);
       delete stage3d.fixtureMeshes[id];
+      if (stage3d.beams[id]) {
+        stage3d.scene.remove(stage3d.beams[id]);
+        stage3d.beams[id].geometry.dispose();
+      }
+      delete stage3d.beams[id];
     }
   });
   state.performers.forEach(p => {
@@ -2488,22 +2811,20 @@ function renderThreeStage(){
     const group = stage3d.performers[p.id];
     const pos = threeStagePoint(p.x, p.y, 0);
     group.position.set(pos.x, .04, pos.z);
-    group.scale.setScalar(.9 * (p.size || 1));
+    group.scale.setScalar(2.08 * (p.size || 1));
     group.rotation.y = 0;
     group.userData.skinMaterial.color.set(p.skin || '#e0ac69');
     group.userData.costumeMaterial.color.set(p.costume || '#92278F');
     poseThreePerformer(group, p.pose || 'standing');
   });
   state.fixtures.forEach(updateThreeFixture);
-  const selected = performerById(state.selectedPerformerId);
-  if (selected) {
-    const pos = threeStagePoint(selected.x, selected.y, 0);
-    stage3d.camera.position.lerp(new THREE.Vector3(pos.x, 7.2, pos.z + 15.5), .08);
-    stage3d.camera.lookAt(pos.x, 1.35, pos.z);
-  } else {
-    stage3d.camera.position.lerp(new THREE.Vector3(0, 7.8, 18), .05);
-    stage3d.camera.lookAt(0, 1.35, 0);
-  }
+  // Fixed audience viewpoint; scroll zoom drives FOV, shift-scroll pans laterally.
+  const zoom = clamp(state.viewZoom || 1, .46, 1.5);
+  const panWorld = clamp(state.viewPanX || 0, -34, 34) / 34 * 16;
+  stage3d.camera.fov = clamp(56 / zoom, 22, 74);
+  stage3d.camera.position.set(panWorld, AUDIENCE_CAMERA.height, AUDIENCE_CAMERA.dist);
+  stage3d.camera.lookAt(panWorld, 2.2, -15);
+  stage3d.camera.updateProjectionMatrix();
   stage3d.renderer.render(stage3d.scene, stage3d.camera);
 }
 function draw(){
@@ -2514,14 +2835,24 @@ function draw(){
   computeLayout(width,height);
   updateZoomHud();
   drawBackground(width,height);
-  drawStageBase();
-  drawCyc();
-  drawStageDressings();
-  drawLightBeams();
-  drawPerformers();
-  drawFixturePlan();
-  drawFocusTarget();
-  renderThreeStage();
+  if (stage3d.ready) {
+    // Solid 3D theatre is rendered offscreen then composited beneath the 2D
+    // diagram overlay (fixture plan, focus target, performer labels).
+    renderThreeStage(width, height);
+    ctx.drawImage(threeStageCanvas, 0, 0, width, height);
+    drawFixturePlan();
+    drawFocusTarget();
+    drawPerformerLabels();
+  } else {
+    // Fallback: legacy painted 2D stage while WebGL loads or if it is unavailable.
+    drawStageBase();
+    drawCyc();
+    drawStageDressings();
+    drawLightBeams();
+    drawPerformers();
+    drawFixturePlan();
+    drawFocusTarget();
+  }
 }
 function drawBackground(width,height){
   ctx.fillStyle = '#050506';
@@ -3309,6 +3640,16 @@ function drawPerformers(){
     .slice()
     .sort((a,b)=>a.y-b.y)
     .forEach(p => drawPerformer(p));
+}
+function drawPerformerLabels(){
+  state.performers
+    .slice()
+    .sort((a,b)=>a.y-b.y)
+    .forEach(p => {
+      const s = worldToScreen({x:p.x,y:p.y});
+      const scale = s.scale * (p.size || 1) * .74;
+      drawPerformerLabel(p, s, scale);
+    });
 }
 function drawPerformer(p){
   if (studioModel.ready) drawStudioModelPerformer(p);
@@ -4664,7 +5005,7 @@ function bindEvents(){
     if (btn) keypadCommand(btn.dataset.cmd);
   });
   $('fixtureSelect').addEventListener('change', e=>{ state.selectedFixtureId = e.target.value || null; renderAll(); save(); });
-  ['intensityRange','fixtureColor','goboSelect','directionSelect','spreadRange','focusXRange','focusYRange'].forEach(id => {
+  ['intensityRange','fixtureColor','goboSelect','directionSelect','spreadRange','posXRange','vertRange','panRange','tiltRange'].forEach(id => {
     $(id).addEventListener('input', () => updateFixtureFromControls(id === 'intensityRange'));
     $(id).addEventListener('change', () => updateFixtureFromControls(false));
   });
