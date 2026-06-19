@@ -244,8 +244,20 @@
   .magic-swatch{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.55)}
   .magic-hit b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;color:#f4f4f5}
   .magic-hit span{color:#a1a1aa;white-space:nowrap}
-  .simple .advanced-only{display:none !important}
-  .simple #right .panel-section:not(#analysisSection){display:none}
+  #quizBar{
+    display:none;height:52px;flex:0 0 52px;align-items:center;gap:10px;
+    padding:6px 14px;background:#060810;border-bottom:1px solid #000;
+  }
+  #quizBar.show{display:flex}
+  .quiz-progress{font-family:var(--mono);font-size:10px;color:var(--text-dim);white-space:nowrap;flex:0 0 auto}
+  .quiz-target{font-size:13px;font-weight:600;white-space:nowrap;flex:0 0 auto}
+  .quiz-target b{color:var(--accent);font-size:15px}
+  #quizTimer{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--amber);min-width:52px;flex:0 0 auto}
+  #quizFeedback{font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:5px;display:none;white-space:nowrap;flex:0 0 auto}
+  .quiz-fb-good{display:block;color:#bbf7d0;background:#0a2518;border:1px solid #166534}
+  .quiz-fb-bad{display:block;color:#fecaca;background:#2c1212;border:1px solid #991b1b}
+  body.quiz-active #presetGrid{opacity:.35;pointer-events:none}
+  body.quiz-active #resetLightsBtn{opacity:.35;pointer-events:none}
 
   .modal-back{
     position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:100;display:none;align-items:center;justify-content:center;
@@ -327,10 +339,10 @@
   </button>
   <span id="saveStatus">Unsaved</span>
   <div class="spacer"></div>
-  <label class="toggle" title="Show project, saved setup, share, and export panels">
-    <input id="advancedToggle" type="checkbox">
-    Advanced
-  </label>
+  <button class="tbtn primary" id="quizStartBtn" title="Start lighting quiz mode">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="9" r="5"/><path d="M8 4V2M6 2h4M8 9V6.5" stroke-linecap="round"/></svg>
+    <span class="txt">Quiz</span>
+  </button>
   <button class="tbtn warn" id="downloadViewBtn" title="Download current portrait view">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2v8"/><path d="M5 7l3 3 3-3"/><path d="M3 14h10"/></svg>
     <span class="txt">3D View</span>
@@ -389,6 +401,15 @@
       </button>
       <div class="spacer"></div>
       <div class="hud-item" id="viewReadout"><b>3D</b> Portrait</div>
+    </div>
+    <div id="quizBar">
+      <span id="quizProgress" class="quiz-progress">Question 1 of 8</span>
+      <span class="quiz-target">Recreate: <b id="quizTargetName">Rembrandt</b></span>
+      <div id="quizTimer">0:00</div>
+      <div id="quizFeedback"></div>
+      <div class="spacer"></div>
+      <button class="tbtn" id="quizSkipBtn">Skip</button>
+      <button class="tbtn primary" id="quizCheckBtn">Check Answer</button>
     </div>
     <div id="viewport">
       <canvas id="stageCanvas"></canvas>
@@ -484,6 +505,26 @@
     <div class="m-actions">
       <button class="tbtn" id="selectCopyBtn">Select</button>
       <button class="tbtn" id="closeCopyBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="quizResultModal">
+  <div class="modal" style="width:560px;max-width:100%">
+    <h3>Quiz Complete!</h3>
+    <div class="m-sub" id="quizResultSub"></div>
+    <div id="quizResultBody" style="margin-bottom:14px;max-height:300px;overflow:auto"></div>
+    <label class="field full" style="margin-bottom:6px">
+      Your Name <span style="color:var(--text-dim);font-size:10px">(for certificate)</span>
+      <input id="quizStudentName" type="text" placeholder="First Last" maxlength="60" style="margin-top:5px">
+    </label>
+    <div class="m-actions">
+      <button class="tbtn" id="retakeQuizBtn">Retake Quiz</button>
+      <button class="tbtn" id="closeQuizResultBtn">Close</button>
+      <button class="tbtn primary" id="downloadCertBtn">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
+        Download Certificate
+      </button>
     </div>
   </div>
 </div>
@@ -620,7 +661,6 @@ function defaultState(){
   return {
     version:1,
     projectName:'Untitled project',
-    advanced:true,
     view:'portrait',
     skin:'#d79a72',
     backdrop:'#17171b',
@@ -1047,8 +1087,6 @@ function renderShareFields(){
   $('toolUrl').value = toolUrl();
 }
 function renderTopState(){
-  document.body.classList.toggle('simple', !state.advanced);
-  $('advancedToggle').checked = !!state.advanced;
   $('projectName').value = state.projectName || 'Untitled project';
   document.querySelectorAll('[data-view]').forEach(btn => btn.classList.toggle('active', btn.dataset.view === state.view));
   const selected = state.lights[state.selectedLight] || state.lights.key;
@@ -1987,7 +2025,6 @@ function currentViewDataUrl(){
 }
 function exportProjectPayload(){
   return Object.assign(snapshot(), {
-    advanced:state.advanced,
     view:state.view,
     setups:clone(state.setups),
     exportedAt:new Date().toISOString()
@@ -2016,7 +2053,6 @@ function loadProjectFromStorage(){
 function importProject(data, announce=true){
   if (!data || !data.lights) throw new Error('Invalid project');
   state.projectName = data.projectName || 'Untitled project';
-  state.advanced = data.advanced !== undefined ? !!data.advanced : true;
   state.view = data.view || 'portrait';
   state.skin = data.skin || state.skin;
   state.backdrop = data.backdrop || state.backdrop;
@@ -2435,10 +2471,6 @@ function bindEvents(){
     setDirty(true);
     renderShareFields();
   });
-  $('advancedToggle').addEventListener('change', e => {
-    state.advanced = e.target.checked;
-    markChanged();
-  });
   $('viewTabs').addEventListener('click', e => {
     const btn = e.target.closest('[data-view]');
     if (!btn) return;
@@ -2446,6 +2478,7 @@ function bindEvents(){
     renderAll();
   });
   $('presetGrid').addEventListener('click', e => {
+    if (quiz && quiz.active) { toast('Presets are disabled during quiz — recreate the look yourself!', 'warn'); return; }
     const btn = e.target.closest('[data-preset]');
     if (!btn) return;
     const preset = PRESETS[btn.dataset.preset];
@@ -2494,6 +2527,7 @@ function bindEvents(){
     }
   });
   $('resetLightsBtn').addEventListener('click', () => {
+    if (quiz && quiz.active) { toast('Reset is disabled during quiz.', 'warn'); return; }
     state.lights = clone(DEFAULT_LIGHTS);
     state.selectedLight = 'key';
     markChanged();
@@ -2588,6 +2622,7 @@ function updateLightInput(input, eventType='change'){
 function init(){
   buildStaticControls();
   bindEvents();
+  initQuiz();
   const loadedHash = loadFromHash();
   if (!loadedHash) loadProjectFromStorage();
   renderAll();
@@ -2595,6 +2630,293 @@ function init(){
   initThree();
 }
 init();
+
+// ─── QUIZ MODE ────────────────────────────────────────────────────────────────
+let quiz = null;
+let quizTimerHandle = null;
+
+const QUIZ_BUFFERS = { intensity:3, kelvin:300, height:5, angle:11, distance:3, softness:3 };
+
+function startQuiz(){
+  const keys = Object.keys(PRESETS).sort(() => Math.random() - 0.5);
+  quiz = { active:true, questions:keys, currentIdx:0, totalStart:Date.now(), questionStart:0, results:[], completedAt:null };
+  document.body.classList.add('quiz-active');
+  advanceQuizQuestion();
+}
+
+function advanceQuizQuestion(){
+  quiz.questionStart = Date.now();
+  const key = quiz.questions[quiz.currentIdx];
+  // Blank slate — all lights off so student builds from scratch
+  Object.keys(state.lights).forEach(id => {
+    state.lights[id] = Object.assign(clone(DEFAULT_LIGHTS[id]), { intensity:0, enabled:false });
+  });
+  state.selectedLight = 'key';
+  markChanged();
+
+  $('quizBar').className = 'show';
+  $('quizTargetName').textContent = PRESETS[key].label;
+  $('quizProgress').textContent = `Question ${quiz.currentIdx + 1} of ${quiz.questions.length}`;
+  $('quizFeedback').className = '';
+  $('quizFeedback').style.display = 'none';
+  $('quizCheckBtn').disabled = false;
+  $('quizSkipBtn').disabled = false;
+
+  clearInterval(quizTimerHandle);
+  quizTimerHandle = setInterval(tickQuizTimer, 500);
+  tickQuizTimer();
+}
+
+function tickQuizTimer(){
+  if (!quiz || !quiz.active) return;
+  const t = $('quizTimer');
+  if (t) t.textContent = fmtTime(Date.now() - quiz.questionStart);
+}
+
+function fmtTime(ms){
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${pad2(s % 60)}`;
+}
+
+function checkQuizAnswer(){
+  if (!quiz || !quiz.active) return;
+  const key = quiz.questions[quiz.currentIdx];
+  const target = PRESETS[key].lights;
+  let allPass = true;
+  const misses = [];
+
+  LIGHTS.forEach(meta => {
+    const id = meta.id;
+    const t = Object.assign({}, DEFAULT_LIGHTS[id], target[id] || {});
+    const s = state.lights[id];
+    if (!!s.enabled !== !!t.enabled) {
+      allPass = false;
+      misses.push(`${meta.name} should be ${t.enabled ? 'ON' : 'OFF'}`);
+      return;
+    }
+    if (!t.enabled) return;
+    Object.keys(QUIZ_BUFFERS).forEach(prop => {
+      if (t[prop] === undefined) return;
+      let diff = Math.abs((Number(s[prop]) || 0) - (Number(t[prop]) || 0));
+      if (prop === 'angle') diff = Math.min(diff, 360 - diff);
+      if (diff > QUIZ_BUFFERS[prop]) {
+        allPass = false;
+        misses.push(`${meta.name} ${prop}`);
+      }
+    });
+  });
+
+  const timeSec = (Date.now() - quiz.questionStart) / 1000;
+  clearInterval(quizTimerHandle);
+  quiz.results.push({ key, label:PRESETS[key].label, passed:allPass, timeSec });
+
+  const fb = $('quizFeedback');
+  if (allPass) {
+    fb.textContent = `✓ Correct! ${fmtTime(timeSec * 1000)}`;
+    fb.className = 'quiz-fb-good';
+    fb.style.display = 'block';
+  } else {
+    fb.textContent = `✗ ${misses.slice(0, 2).join(' · ')}`;
+    fb.className = 'quiz-fb-bad';
+    fb.style.display = 'block';
+  }
+  $('quizCheckBtn').disabled = true;
+  $('quizSkipBtn').disabled = true;
+  setTimeout(() => nextQuizQ(), allPass ? 1400 : 2600);
+}
+
+function skipQuizQuestion(){
+  if (!quiz || !quiz.active) return;
+  clearInterval(quizTimerHandle);
+  quiz.results.push({ key:quiz.questions[quiz.currentIdx], label:PRESETS[quiz.questions[quiz.currentIdx]].label, passed:false, timeSec:(Date.now()-quiz.questionStart)/1000 });
+  nextQuizQ();
+}
+
+function nextQuizQ(){
+  quiz.currentIdx++;
+  if (quiz.currentIdx >= quiz.questions.length) finishQuiz();
+  else advanceQuizQuestion();
+}
+
+function finishQuiz(){
+  quiz.active = false;
+  quiz.completedAt = Date.now();
+  clearInterval(quizTimerHandle);
+  document.body.classList.remove('quiz-active');
+  $('quizBar').className = '';
+  renderAll();
+
+  const passed = quiz.results.filter(r => r.passed).length;
+  const totalMs = quiz.completedAt - quiz.totalStart;
+  const rows = quiz.results.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1e1e26">
+      <span style="font-size:12px;font-weight:600">${escapeHtml(r.label)}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:${r.passed ? '#4ade80' : '#f87171'}">
+        ${r.passed ? '✓ Pass' : '✗ Miss'}&nbsp;·&nbsp;${fmtTime(r.timeSec * 1000)}
+      </span>
+    </div>`).join('');
+
+  $('quizResultSub').innerHTML = `<b>${passed}/${quiz.questions.length}</b> correct &nbsp;·&nbsp; Total time: <b>${fmtTime(totalMs)}</b>`;
+  $('quizResultBody').innerHTML = rows;
+  $('quizStudentName').value = '';
+  $('quizResultModal').classList.add('show');
+}
+
+function downloadCertificate(){
+  if (!quiz || !quiz.completedAt) { toast('No quiz data yet.', 'warn'); return; }
+  const name = ($('quizStudentName').value || '').trim() || 'Student';
+  const passed = quiz.results.filter(r => r.passed).length;
+  const total = quiz.questions.length;
+  const totalMs = quiz.completedAt - quiz.totalStart;
+  const dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const CW = 1200, CH = 820;
+  const off = document.createElement('canvas');
+  off.width = CW; off.height = CH;
+  const g = off.getContext('2d');
+
+  // BG
+  g.fillStyle = '#0d0d10';
+  g.fillRect(0, 0, CW, CH);
+  g.fillStyle = '#13131a';
+  rrect(g, 32, 32, CW-64, CH-64, 16); g.fill();
+
+  // Rainbow border
+  const brd = g.createLinearGradient(0, 0, CW, 0);
+  ['#7AC143','#F7941E','#ED1C45','#EC008C','#92278F','#2E3192','#00AEEF'].forEach((c,i,a) => brd.addColorStop(i/(a.length-1), c));
+  g.strokeStyle = brd; g.lineWidth = 6;
+  rrect(g, 32, 32, CW-64, CH-64, 16); g.stroke();
+
+  // Rainbow top stripe
+  const top = g.createLinearGradient(0, 0, CW, 0);
+  ['#7AC143','#F7941E','#ED1C45','#EC008C','#92278F','#2E3192','#00AEEF'].forEach((c,i,a) => top.addColorStop(i/(a.length-1), c));
+  g.fillStyle = top; g.fillRect(32, 32, CW-64, 6);
+
+  g.textAlign = 'center';
+
+  // SDSCPA
+  g.font = '900 68px "Arial Black",Arial,sans-serif';
+  g.fillStyle = '#00AEEF';
+  g.fillText('SDSCPA', CW/2, 150);
+
+  // Certificate label
+  g.font = '400 14px Arial';
+  g.fillStyle = '#44445a';
+  g.fillText('C E R T I F I C A T E   O F   C O M P L E T I O N', CW/2, 188);
+
+  // Lab name
+  g.font = '700 36px Arial';
+  g.fillStyle = '#dde0ec';
+  g.fillText('Portrait Lighting Lab', CW/2, 252);
+
+  // Divider
+  g.strokeStyle = '#2a2a38'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(140, 278); g.lineTo(CW-140, 278); g.stroke();
+
+  // "This certifies that"
+  g.font = '300 17px Arial';
+  g.fillStyle = '#44445a';
+  g.fillText('This certifies that', CW/2, 328);
+
+  // Student name
+  g.font = '700 54px Georgia,serif';
+  g.fillStyle = '#ffffff';
+  g.fillText(name, CW/2, 406);
+
+  // Description
+  g.font = '300 17px Arial';
+  g.fillStyle = '#44445a';
+  g.fillText('has demonstrated knowledge of portrait lighting styles', CW/2, 454);
+
+  // Score + time box
+  g.fillStyle = '#1a1a24';
+  rrect(g, CW/2-270, 486, 540, 76, 10); g.fill();
+  g.strokeStyle = '#2a2a3a'; g.lineWidth = 1;
+  rrect(g, CW/2-270, 486, 540, 76, 10); g.stroke();
+
+  // Vertical divider in box
+  g.beginPath(); g.moveTo(CW/2, 496); g.lineTo(CW/2, 552); g.stroke();
+
+  g.font = '800 30px Arial';
+  g.fillStyle = '#00AEEF';
+  g.fillText(`${passed} / ${total}`, CW/2 - 90, 528);
+  g.font = '400 11px Arial';
+  g.fillStyle = '#44445a';
+  g.fillText('SCORE', CW/2 - 90, 550);
+
+  g.font = '800 30px Arial';
+  g.fillStyle = '#fbbf24';
+  g.fillText(fmtTime(totalMs), CW/2 + 90, 528);
+  g.font = '400 11px Arial';
+  g.fillStyle = '#44445a';
+  g.fillText('TOTAL TIME', CW/2 + 90, 550);
+
+  // Per-question results (2 columns)
+  const startY = 594, rowH = 28;
+  quiz.results.forEach((r, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const x = col === 0 ? CW/2 - 240 : CW/2 + 20;
+    const y = startY + row * rowH;
+    g.textAlign = 'left';
+    g.font = '600 13px Arial';
+    g.fillStyle = r.passed ? '#4ade80' : '#f87171';
+    g.fillText(`${r.passed ? '✓' : '✗'} ${r.label}`, x, y);
+    g.textAlign = 'right';
+    g.font = '400 11px Arial';
+    g.fillStyle = '#44445a';
+    g.fillText(fmtTime(r.timeSec * 1000), x + 210, y);
+  });
+
+  // Footer
+  g.textAlign = 'center';
+  g.strokeStyle = '#1e1e2a'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(140, CH - 72); g.lineTo(CW-140, CH - 72); g.stroke();
+  g.font = '400 13px Arial';
+  g.fillStyle = '#33334a';
+  g.fillText(dateStr, CW/2, CH - 46);
+
+  off.toBlob(blob => {
+    if (!blob) { toast('Certificate export failed.', 'bad'); return; }
+    downloadBlob(blob, `SDSCPA-Portrait-Lighting-Certificate-${nowStamp()}.png`);
+    toast('Certificate downloaded!', 'good');
+  }, 'image/png');
+}
+
+function rrect(g, x, y, w, h, r){
+  g.beginPath();
+  g.moveTo(x+r, y);
+  g.lineTo(x+w-r, y);
+  g.arcTo(x+w, y, x+w, y+r, r);
+  g.lineTo(x+w, y+h-r);
+  g.arcTo(x+w, y+h, x+w-r, y+h, r);
+  g.lineTo(x+r, y+h);
+  g.arcTo(x, y+h, x, y+h-r, r);
+  g.lineTo(x, y+r);
+  g.arcTo(x, y, x+r, y, r);
+  g.closePath();
+}
+
+function initQuiz(){
+  $('quizStartBtn').addEventListener('click', () => {
+    $('quizResultModal').classList.remove('show');
+    startQuiz();
+  });
+  $('quizCheckBtn').addEventListener('click', checkQuizAnswer);
+  $('quizSkipBtn').addEventListener('click', skipQuizQuestion);
+  $('retakeQuizBtn').addEventListener('click', () => {
+    $('quizResultModal').classList.remove('show');
+    startQuiz();
+  });
+  $('closeQuizResultBtn').addEventListener('click', () => {
+    $('quizResultModal').classList.remove('show');
+    quiz = null;
+  });
+  $('downloadCertBtn').addEventListener('click', downloadCertificate);
+  $('quizResultModal').addEventListener('click', e => {
+    if (e.target === $('quizResultModal')) $('quizResultModal').classList.remove('show');
+  });
+}
 </script>
 </body>
 </html>

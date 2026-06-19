@@ -219,10 +219,19 @@
       <div class="field">
         <label for="strokeWidth">Line weight</label>
         <select id="strokeWidth">
-          <option value="1">Thin</option>
-          <option value="1.6" selected>Medium</option>
-          <option value="2.4">Heavy</option>
-          <option value="3.2">Profile</option>
+          <option value="1|solid">Thin</option>
+          <option value="1.6|solid" selected>Medium</option>
+          <option value="2.4|solid">Heavy</option>
+          <option value="3.2|solid">Profile</option>
+          <option value="1.6|dash">Dashed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fillMode">Fill</label>
+        <select id="fillMode">
+          <option value="none" selected>None</option>
+          <option value="solid">Solid</option>
+          <option value="hatch">Hash line</option>
         </select>
       </div>
       <div class="style-row" id="swatches"></div>
@@ -290,6 +299,8 @@ let objSnap = true;
 let undoStack = [];
 let stroke = '#17324d';
 let strokeWidth = 1.6;
+let lineDash = false;
+let fillMode = 'none';
 let textWorld = null;
 let exportDataUrl = '';
 let exportFileName = '';
@@ -531,7 +542,6 @@ function drawLegend(g){
 }
 function strokeObj(g, o, selected){
   g.strokeStyle = o.stroke || '#17324d';
-  g.fillStyle = o.stroke || '#17324d';
   g.lineWidth = (o.strokeWidth || 1.6) / (g === ctx ? cam.z : 1);
   g.setLineDash(o.dash ? [8/(g===ctx?cam.z:1),5/(g===ctx?cam.z:1)] : []);
   if (selected){
@@ -539,8 +549,46 @@ function strokeObj(g, o, selected){
     g.shadowBlur = 8 / (g === ctx ? cam.z : 1);
   }
 }
+function hexToRgba(hex, alpha){
+  const n = parseInt(String(hex || '#17324d').replace('#',''), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return 'rgba('+r+','+g+','+b+','+alpha+')';
+}
+function canFill(o){
+  return o.type === 'rect' || o.type === 'circle';
+}
+function buildFillPath(g, o){
+  g.beginPath();
+  if (o.type === 'rect') g.rect(o.x,o.y,o.w,o.h);
+  else if (o.type === 'circle') g.arc(o.x,o.y,Math.abs(o.r),0,Math.PI*2);
+}
+function fillObject(g, o){
+  if (!canFill(o) || !o.fill || o.fill === 'none') return;
+  const k = g === ctx ? 1/cam.z : 1;
+  g.save();
+  buildFillPath(g, o);
+  if (o.fill === 'solid'){
+    g.fillStyle = hexToRgba(o.stroke || '#17324d', .16);
+    g.fill();
+  } else if (o.fill === 'hatch'){
+    g.clip();
+    const b = objectBounds(o);
+    const spacing = 12 * k;
+    g.strokeStyle = hexToRgba(o.stroke || '#17324d', .55);
+    g.lineWidth = 1 * k;
+    g.setLineDash([]);
+    g.beginPath();
+    for (let d = -b.h; d < b.w + b.h; d += spacing){
+      g.moveTo(b.x + d, b.y + b.h);
+      g.lineTo(b.x + d + b.h, b.y);
+    }
+    g.stroke();
+  }
+  g.restore();
+}
 function drawObject(g, o, selected){
   g.save();
+  fillObject(g, o);
   strokeObj(g, o, selected);
   if (o.type === 'line'){
     g.beginPath(); g.moveTo(o.x1,o.y1); g.lineTo(o.x2,o.y2); g.stroke();
@@ -682,9 +730,9 @@ function hitObject(x,y){
 }
 
 function makeObject(type, a, b){
-  const base = {id:0, type, stroke, strokeWidth};
+  const base = {id:0, type, stroke, strokeWidth, dash:lineDash, fill:fillMode};
   if (type === 'line') return Object.assign(base, {x1:a.x,y1:a.y,x2:b.x,y2:b.y});
-  if (type === 'dimension') return Object.assign(base, {x1:a.x,y1:a.y,x2:b.x,y2:b.y, stroke:'#b3402a', strokeWidth:1.4});
+  if (type === 'dimension') return Object.assign(base, {x1:a.x,y1:a.y,x2:b.x,y2:b.y, stroke:'#b3402a', strokeWidth:1.4, dash:false, fill:'none'});
   if (type === 'rect'){
     const o = Object.assign(base, {x:a.x,y:a.y,w:b.x-a.x,h:b.y-a.y});
     normalizeRect(o); return o;
@@ -901,7 +949,7 @@ textInput.addEventListener('keydown', e=>{
     const text = textInput.value.trim();
     if (text && textWorld){
       pushUndo();
-      const o = {id:idSeq++, type:'text', x:textWorld[0], y:textWorld[1], text, size:14, stroke, strokeWidth};
+      const o = {id:idSeq++, type:'text', x:textWorld[0], y:textWorld[1], text, size:14, stroke, strokeWidth, dash:false, fill:'none'};
       objects.push(o); selectedId = o.id; save(); syncInspector(); draw();
     }
     hideTextInput();
@@ -917,6 +965,7 @@ function field(id, label, value){
 function syncInspector(){
   const body = $('inspectorBody');
   const o = selectedObject();
+  syncAttributeControls(o);
   if (!o){ body.className='muted'; body.innerHTML='Select a line or object to edit its dimensions.'; return; }
   body.className = '';
   let html = '<div class="muted" style="margin-bottom:8px"><b style="color:#f0f0f0">'+objectLabel(o)+'</b> #' + o.id + '</div>';
@@ -979,6 +1028,23 @@ function bindInspector(o){
   });
   $('deleteBtn').addEventListener('click', deleteSelected);
 }
+function lineChoiceValue(o){
+  const w = String(o ? (o.strokeWidth || 1.6) : strokeWidth);
+  return w + '|' + ((o ? o.dash : lineDash) ? 'dash' : 'solid');
+}
+function syncAttributeControls(o){
+  const strokeSel = $('strokeWidth');
+  const fillSel = $('fillMode');
+  const lineValue = lineChoiceValue(o);
+  if ([...strokeSel.options].some(opt=>opt.value === lineValue)) strokeSel.value = lineValue;
+  else strokeSel.value = (o && o.dash) || lineDash ? '1.6|dash' : '1.6|solid';
+  fillSel.value = o && canFill(o) ? (o.fill || 'none') : fillMode;
+}
+function applyStrokeChoice(value){
+  const parts = String(value || '1.6|solid').split('|');
+  strokeWidth = parseFloat(parts[0]) || 1.6;
+  lineDash = parts[1] === 'dash';
+}
 function deleteSelected(){
   if (!selectedId) return;
   pushUndo();
@@ -992,9 +1058,14 @@ $('scaleSel').addEventListener('change', e=>setScale(e.target.value));
 $('gridSnap').addEventListener('change', e=>{ gridSnap = e.target.checked; });
 $('objSnap').addEventListener('change', e=>{ objSnap = e.target.checked; });
 $('strokeWidth').addEventListener('change', e=>{
-  strokeWidth = parseFloat(e.target.value) || 1.6;
+  applyStrokeChoice(e.target.value);
   const o = selectedObject();
-  if (o){ pushUndo(); o.strokeWidth = strokeWidth; save(); draw(); }
+  if (o){ pushUndo(); o.strokeWidth = strokeWidth; o.dash = lineDash; save(); draw(); }
+});
+$('fillMode').addEventListener('change', e=>{
+  fillMode = e.target.value;
+  const o = selectedObject();
+  if (o && canFill(o)){ pushUndo(); o.fill = fillMode; save(); draw(); }
 });
 $('undoBtn').addEventListener('click', undo);
 $('fitBtn').addEventListener('click', ()=>{ fitView(); draw(); });
