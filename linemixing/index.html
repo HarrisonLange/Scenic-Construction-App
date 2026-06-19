@@ -51,17 +51,53 @@
   .tbtn svg{width:14px;height:14px}
   .tbtn.go{background:var(--go-dark);border-color:var(--go);color:#eafff0}
   .tbtn.go:hover{background:#1f9c33}
+  .tbtn.stop{background:rgba(239,68,68,.16);border-color:var(--bad);color:#fecaca}
+  .tbtn.stop:hover{background:rgba(239,68,68,.28)}
   .tbtn.magenta{background:rgba(236,0,140,.16);border-color:var(--magenta);color:#ffb8e3}
   .seg{display:inline-flex;border:1px solid var(--ui-dark3);border-radius:8px;overflow:hidden}
   .seg button{background:var(--panel2);border:none;color:var(--text-dim);padding:6px 14px;font-size:12px;font-weight:700;letter-spacing:.4px}
   .seg button.active{background:var(--accent);color:#fff}
   .seg button:not(.active):hover{background:#262626;color:var(--text-light)}
 
-  /* ── Stage / highway ── */
-  #stage{flex:1;position:relative;min-height:0;background:
-      radial-gradient(900px 500px at 50% -10%, rgba(59,130,246,.07), transparent 70%),
+  /* ── Stage: teleprompter (top half) over highway (bottom half) ── */
+  #stage{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  #playfield{flex:1;position:relative;min-width:0;min-height:0;background:
+      radial-gradient(900px 420px at 50% 120%, rgba(59,130,246,.07), transparent 70%),
       var(--ui-dark);overflow:hidden}
   #hwy{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+  /* ── Teleprompter (top half) ── */
+  #prompter{
+    flex:0 0 44%;background:linear-gradient(180deg,#0b0b0e,#0f0f13);
+    display:flex;flex-direction:column;min-height:0;position:relative;
+  }
+  #prompter::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--rainbow);opacity:.3}
+  .pr-head{
+    padding:7px 14px;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+    color:var(--text-dim);display:flex;align-items:center;gap:7px;flex:0 0 auto;justify-content:center;
+  }
+  .pr-head svg{width:13px;height:13px;color:var(--accent)}
+  .pr-list{
+    flex:1;overflow-y:auto;padding:13% 16px;scroll-behavior:smooth;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent);
+    mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent);
+  }
+  .pr-list::-webkit-scrollbar{width:0}
+  .pr-line{
+    max-width:780px;margin:5px auto;padding:6px 18px;border-radius:10px;opacity:.3;
+    border-left:3px solid transparent;
+    transition:opacity .25s,background .25s,transform .25s;
+  }
+  .pr-line .pr-who{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--c,#888)}
+  .pr-line .pr-txt{font-size:16px;line-height:1.45;color:#cfd3da;margin-top:2px}
+  .pr-line.done{opacity:.2}
+  .pr-line.cur{
+    opacity:1;background:color-mix(in srgb,var(--c,#888) 15%,transparent);
+    border-left-color:var(--c,#888);transform:scale(1.02);
+  }
+  .pr-line.cur .pr-who{font-size:12px}
+  .pr-line.cur .pr-txt{color:#fff;font-size:21px;line-height:1.4}
+  .pr-empty{max-width:560px;margin:40px auto;text-align:center;color:var(--text-dim);font-size:13px;line-height:1.7;opacity:1}
 
   /* HUD */
   .hud{position:absolute;pointer-events:none;z-index:5}
@@ -76,15 +112,6 @@
   #hudCombo .cnt{font-size:11px;color:var(--text-dim);letter-spacing:1px}
   #hudAcc{top:54px;right:16px;text-align:right;font-size:11px;color:var(--text-dim)}
   #hudAcc b{color:#dfe3ea;font-family:var(--mono)}
-
-  /* now-playing line */
-  #lineNow{
-    position:absolute;left:50%;bottom:16px;transform:translateX(-50%);
-    max-width:min(820px,92%);text-align:center;z-index:5;pointer-events:none;
-  }
-  #lineNow .who{font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
-  #lineNow .txt{font-size:17px;line-height:1.4;color:#eef0f4;font-style:italic;
-    text-shadow:0 2px 12px rgba(0,0,0,.9)}
 
   /* overlays */
   .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -117,8 +144,23 @@
   .dca::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--dca,#666)}
   .dca .name{font-size:12px;font-weight:800;letter-spacing:.3px;white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;max-width:100%;color:#e7eaf0}
-  .dca .fader{width:100%;height:8px;border-radius:5px;background:#000;overflow:hidden}
-  .dca .fader i{display:block;height:100%;width:0;background:var(--dca,#666);transition:width .05s}
+  /* vertical console fader: rides to 0 dB when held, drops to -inf on release */
+  .dca .fader{display:flex;align-items:flex-start;gap:6px;height:66px;padding-top:2px}
+  .fader-track{position:relative;width:7px;height:62px;background:#050505;border:1px solid var(--ui-dark3);border-radius:4px}
+  .fader-fill{position:absolute;left:0;right:0;bottom:0;height:4%;background:var(--dca,#666);border-radius:4px;
+    transition:height .16s cubic-bezier(.22,.9,.3,1);opacity:.85}
+  .fader-track .unity{position:absolute;left:-3px;right:-3px;top:33%;height:1px;background:#6a6a6a}
+  .fader-track .tick{position:absolute;left:0;width:3px;height:1px;background:#333}
+  .fader-cap{position:absolute;left:50%;width:21px;height:11px;margin-left:-10.5px;bottom:4%;
+    background:linear-gradient(#454545,#1c1c1c);border:1px solid #5a5a5a;border-radius:3px;
+    box-shadow:0 1px 2px rgba(0,0,0,.7);transition:bottom .16s cubic-bezier(.22,.9,.3,1)}
+  .fader-cap::after{content:"";position:absolute;left:3px;right:3px;top:50%;height:1px;margin-top:-.5px;background:#888}
+  .fader-scale{display:flex;flex-direction:column;justify-content:space-between;height:62px;
+    font-family:var(--mono);font-size:7px;color:#4a4a4a;line-height:1}
+  .db-read{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--text-dim);min-width:30px;text-align:center}
+  .dca.live .fader-fill{height:67%;opacity:1}
+  .dca.live .fader-cap{bottom:67%;border-color:var(--dca)}
+  .dca.live .db-read{color:var(--dca)}
   .dca .cap{font-family:var(--mono);font-weight:800;font-size:15px;background:#000;border:1px solid var(--ui-dark3);
     border-bottom-width:3px;border-radius:6px;padding:1px 0;width:30px;text-align:center;color:#cfd3da}
   .dca.live{box-shadow:0 0 0 2px var(--dca),0 0 22px var(--dca);transform:translateY(1px)}
@@ -206,33 +248,41 @@
 </div>
 
 <div id="stage">
-  <canvas id="hwy"></canvas>
-
-  <div class="hud" id="hudScore"><div class="lbl">Score</div><div class="val" id="scoreVal">0</div></div>
-  <div class="hud" id="hudCombo"></div>
-  <div class="hud" id="hudTimer"><div class="lbl" id="timerLbl">Time</div><div class="val" id="timerVal">5:00</div></div>
-  <div class="hud" id="hudAcc"></div>
-
-  <div id="lineNow"><div class="who" id="lineWho"></div><div class="txt" id="lineTxt"></div></div>
-
-  <!-- start / idle overlay -->
-  <div class="overlay" id="startOverlay">
-    <h1 id="ovTitle">🎚️ Line Mixing Lab</h1>
-    <div class="sub" id="ovSub">
-      Each character is on a DCA bound to a key on the bottom row of your keyboard
-      (<span class="keycap">Z</span>–<span class="keycap">M</span>). As each line falls toward the
-      <b>mix line</b>, press &amp; <b>hold</b> that character's key for the whole line, then release when it ends.
-      Open only the person who's speaking — that's line mixing.
+  <aside id="prompter">
+    <div class="pr-head">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="12" height="9" rx="1"/><path d="M5 14h6M8 11v3"/></svg>
+      Teleprompter
     </div>
-    <button class="big-btn" id="ovStart">
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M4 3l9 5-9 5z"/></svg>
-      <span id="ovStartLabel">Start Practice</span>
-    </button>
-    <div class="sub" style="font-size:12px;color:var(--text-dim)" id="ovHint"></div>
-  </div>
+    <div id="prList" class="pr-list"><div class="pr-empty">The script appears here as you play, each line in its character's color. Start a scene to follow along.</div></div>
+  </aside>
 
-  <!-- countdown -->
-  <div class="overlay hidden" id="cdOverlay"><div id="countdown">3</div></div>
+  <div id="playfield">
+    <canvas id="hwy"></canvas>
+
+    <div class="hud" id="hudScore"><div class="lbl">Score</div><div class="val" id="scoreVal">0</div></div>
+    <div class="hud" id="hudCombo"></div>
+    <div class="hud" id="hudTimer"><div class="lbl" id="timerLbl">Time</div><div class="val" id="timerVal">5:00</div></div>
+    <div class="hud" id="hudAcc"></div>
+
+    <!-- start / idle overlay -->
+    <div class="overlay" id="startOverlay">
+      <h1 id="ovTitle">🎚️ Line Mixing Lab</h1>
+      <div class="sub" id="ovSub">
+        Each character is on a DCA bound to a key on the bottom row of your keyboard
+        (<span class="keycap">Z</span>–<span class="keycap">M</span>). As each line falls toward the
+        <b>mix line</b>, open that channel in the <b>lead-in zone</b>, <b>hold</b> through the line, and
+        close in the <b>trail zone</b>. Open only the person who's speaking — that's line mixing.
+      </div>
+      <button class="big-btn" id="ovStart">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M4 3l9 5-9 5z"/></svg>
+        <span id="ovStartLabel">Start Practice</span>
+      </button>
+      <div class="sub" style="font-size:12px;color:var(--text-dim)" id="ovHint"></div>
+    </div>
+
+    <!-- countdown -->
+    <div class="overlay hidden" id="cdOverlay"><div id="countdown">3</div></div>
+  </div>
 </div>
 
 <div id="console"></div>
@@ -290,8 +340,8 @@ Use "== Scene Name ==" to start a new scene (optional).</div>
     <p class="note">Line mixing is what a live A1 does on a musical: open each performer's channel (DCA) only while they speak or sing, so the mix stays clean and feedback-free.</p>
     <ul style="font-size:13px;line-height:1.8;color:#cdd1d9;padding-left:18px">
       <li>Every character sits on a DCA bound to a key: <span class="keycap">Z</span> <span class="keycap">X</span> <span class="keycap">C</span> <span class="keycap">V</span> <span class="keycap">B</span> <span class="keycap">N</span> <span class="keycap">M</span>.</li>
-      <li>Lines fall down their lane. <b>Press &amp; hold</b> the key as the bar crosses the <b>mix line</b>, and <b>release</b> when the bar passes.</li>
-      <li>Holding the right DCA for the full line = <b>Perfect</b>. Opening the wrong DCA hurts your score.</li>
+      <li>Each line falls as a bar with a faint <b>lead-in zone</b> below it and a <b>trail zone</b> above it. <b>Open</b> the channel as the lead-in zone reaches the <b>mix line</b>, <b>hold</b> through the line, and <b>close</b> as the trail zone passes.</li>
+      <li>Opening early and closing late (covering the whole zone) = <b>Perfect</b>. Just catching the spoken part = <b>Good</b>. Opening the wrong DCA hurts your score.</li>
       <li>You can also click/tap the DCA buttons at the bottom.</li>
       <li><b>Practice</b> runs one random scene with no pressure. <b>Quiz</b> runs 5 minutes from a random spot, scored like Guitar Hero — finish for a certificate.</li>
     </ul>
@@ -462,9 +512,11 @@ const BUILTIN = [
 
 /* ───────────────────────── State ───────────────────────── */
 const QUIZ_SECONDS = 300;
-const TRAVEL_MS = 2400;            // time for a note to fall from top to mix line
+const TRAVEL_MS = 4200;            // time for a note to fall from top to mix line (calm, readable)
 const LEAD_MS = TRAVEL_MS + 700;   // pre-roll before first note lands
-const GAP_MS = 360;                // gap between consecutive lines
+const PRE_MS = 350;                // "open early" lead-in zone before a line
+const POST_MS = 350;               // "close late" trail zone after a line
+const GAP_MS = 820;                // gap between lines (> PRE+POST, leaves a fully-closed beat)
 
 let scripts = [];
 let current = null;     // current script object
@@ -474,8 +526,21 @@ let charMap = {};       // name -> char obj
 
 let game = null;        // active game session
 let keyDown = {};       // key -> bool
+let cdTimer = null;     // countdown interval id
+let LANES = [];         // canvas lane geometry, aligned to the DCA strips below
 const cvs = $('hwy'), ctx = cvs.getContext('2d');
 let dpr = 1, W = 0, H = 0;
+
+/* Measure each DCA strip and map it to a canvas lane so highway lanes sit
+   directly above their fader. Canvas and console share the viewport x-origin. */
+function computeLanes(){
+  if(!cvs) return;
+  const pf = cvs.getBoundingClientRect();
+  LANES = [...document.querySelectorAll('#console .dca')].map(el=>{
+    const r = el.getBoundingClientRect();
+    return { left:r.left-pf.left, width:r.width };
+  });
+}
 
 /* ───────────────────────── Script loading ───────────────────────── */
 function loadScripts(){
@@ -520,9 +585,18 @@ function buildConsole(){
     const el = document.createElement('div');
     el.className = 'dca'; el.dataset.key = ch.key;
     el.style.setProperty('--dca', ch.color);
-    el.innerHTML = `<div class="cap">${ch.key.toUpperCase()}</div>
+    el.innerHTML = `<div class="fader">
+        <div class="fader-track">
+          <span class="tick" style="top:0"></span><span class="unity"></span>
+          <span class="tick" style="top:50%"></span><span class="tick" style="bottom:0"></span>
+          <div class="fader-fill"></div>
+          <div class="fader-cap"></div>
+        </div>
+        <div class="fader-scale"><span>+10</span><span>0</span><span>-20</span><span>-∞</span></div>
+      </div>
+      <div class="db-read">-∞</div>
       <div class="name">${ch.name}</div>
-      <div class="fader"><i></i></div>`;
+      <div class="cap">${ch.key.toUpperCase()}</div>`;
     const press = e=>{ e.preventDefault(); setKey(ch.key, true); };
     const release = e=>{ e.preventDefault(); setKey(ch.key, false); };
     el.addEventListener('pointerdown', press);
@@ -531,20 +605,21 @@ function buildConsole(){
     el.addEventListener('pointercancel', release);
     c.appendChild(el);
   });
+  computeLanes();
 }
 function refreshConsole(){
   document.querySelectorAll('.dca').forEach(el=>{
     const k = el.dataset.key;
     el.classList.toggle('live', !!keyDown[k]);
-    const f = el.querySelector('.fader i');
-    if(f) f.style.width = keyDown[k] ? '100%' : '0';
+    const r = el.querySelector('.db-read');
+    if(r) r.textContent = keyDown[k] ? '0.0' : '-∞';
   });
 }
 
 /* ───────────────────────── Timeline ───────────────────────── */
 function lineDuration(text){
   const words = text.trim().split(/\s+/).length;
-  return clamp(words*300 + 550, 950, 7000);
+  return clamp(words*240 + 450, 800, 3600);
 }
 /* Build a note list from an ordered array of [who,text]; lays out start/end times. */
 function buildNotes(lineArr, startTime){
@@ -554,8 +629,12 @@ function buildNotes(lineArr, startTime){
     const ch = charMap[who];
     if(!ch) { return; } // speaker not on a DCA (e.g. minor character) — skip but keep flow
     const dur = lineDuration(text);
+    const start = t, end = t+dur;
     notes.push({ who, text, lane:ch.lane, key:ch.key, color:ch.color,
-                 start:t, end:t+dur, dur, heldCorrect:0, heldWrong:0, scored:false });
+                 start, end, dur,
+                 winStart:start-PRE_MS, winEnd:end+POST_MS, winDur:dur+PRE_MS+POST_MS,
+                 openedEarly:false, closedClean:true,
+                 heldCorrect:0, heldWrong:0, scored:false });
     t += dur + GAP_MS;
   });
   return {notes, end:t};
@@ -563,11 +642,35 @@ function buildNotes(lineArr, startTime){
 
 /* ───────────────────────── Game control ───────────────────────── */
 function buildPractice(){
-  const sc = current.scenes[Math.floor(Math.random()*current.scenes.length)];
-  const {notes} = buildNotes(sc.lines, LEAD_MS);
-  return { mode:'practice', sceneName:sc.name, notes, started:0, t:0,
-           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
-           lastFrame:0, running:false, finished:false, lastFlash:null };
+  // Start at a random scene, then run on through the script (looping) forever.
+  const flat = []; current.scenes.forEach(sc=>sc.lines.forEach(l=>flat.push(l)));
+  const sceneIdx = Math.floor(Math.random()*current.scenes.length);
+  let startIdx = 0; for(let s=0;s<sceneIdx;s++) startIdx += current.scenes[s].lines.length;
+  const g = { mode:'practice', sceneName:current.scenes[sceneIdx].name, notes:[], started:0, t:0,
+              score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
+              lastFrame:0, running:false, finished:false, lastFlash:null,
+              src:flat, srcIdx:startIdx, appendT:LEAD_MS };
+  appendLines(g, 24);   // initial buffer; loop() tops it up so practice never ends
+  return g;
+}
+/* Append `count` more playable lines (cycling the source), extending the timeline
+   and — if the teleprompter is built — its scrolling list. Used for endless practice. */
+function appendLines(g, count){
+  let added = 0, guard = 0;
+  while(added < count && guard < count*5){
+    guard++;
+    const [who,text] = g.src[g.srcIdx % g.src.length]; g.srcIdx++;
+    const ch = charMap[who]; if(!ch) continue;   // minor speaker, no DCA — skip
+    const dur = lineDuration(text);
+    const start = g.appendT, end = start+dur;
+    const note = { who, text, lane:ch.lane, key:ch.key, color:ch.color, start, end, dur,
+                   winStart:start-PRE_MS, winEnd:end+POST_MS, winDur:dur+PRE_MS+POST_MS,
+                   openedEarly:false, heldCorrect:0, heldWrong:0, scored:false };
+    g.notes.push(note);
+    g.appendT = end + GAP_MS;
+    if(g.prEls) appendPromptRow(g, note);
+    added++;
+  }
 }
 function buildQuiz(){
   // Flatten all scenes into one ordered list, start at a random line, loop to fill 5 min.
@@ -595,16 +698,19 @@ function startGame(){
   if(!current) return;
   game = (mode==='quiz') ? buildQuiz() : buildPractice();
   keyDown = {}; refreshConsole();
+  buildPrompter();
   $('startOverlay').classList.add('hidden');
   $('scoreVal').textContent = '0';
+  setStartBtn(true);
   // countdown 3-2-1
   let n = 3;
   $('cdOverlay').classList.remove('hidden');
   $('countdown').textContent = n;
-  const tick = setInterval(()=>{
+  if(cdTimer) clearInterval(cdTimer);
+  cdTimer = setInterval(()=>{
     n--;
     if(n<=0){
-      clearInterval(tick);
+      clearInterval(cdTimer); cdTimer = null;
       $('cdOverlay').classList.add('hidden');
       game.running = true;
       game.started = performance.now();
@@ -615,18 +721,73 @@ function startGame(){
   }, 800);
 }
 
+/* ───────────────────────── Teleprompter ───────────────────────── */
+function buildPrompter(){
+  const list = $('prList');
+  list.innerHTML='';
+  game.prEls = game.notes.map(n=>{
+    const el = document.createElement('div');
+    el.className='pr-line';
+    el.style.setProperty('--c', n.color);
+    el.innerHTML = `<div class="pr-who">${escapeHtml(n.who)}</div><div class="pr-txt">${escapeHtml(n.text)}</div>`;
+    list.appendChild(el);
+    return el;
+  });
+  game.prCur = -1;
+}
+function appendPromptRow(g, note){
+  const el = document.createElement('div');
+  el.className='pr-line';
+  el.style.setProperty('--c', note.color);
+  el.innerHTML = `<div class="pr-who">${escapeHtml(note.who)}</div><div class="pr-txt">${escapeHtml(note.text)}</div>`;
+  $('prList').appendChild(el);
+  g.prEls.push(el);
+}
+function updatePrompter(){
+  if(!game || !game.prEls) return;
+  // highlight the line currently in play; during the closed beat, the upcoming line
+  let idx = game.notes.findIndex(n=> game.t <= n.winEnd);
+  if(idx<0) idx = game.notes.length-1;
+  if(idx===game.prCur) return;
+  game.prCur = idx;
+  game.prEls.forEach((el,i)=>{
+    el.classList.toggle('cur', i===idx);
+    el.classList.toggle('done', i<idx);
+  });
+  const cur = game.prEls[idx], list = $('prList');
+  if(cur) list.scrollTo({top: cur.offsetTop - list.clientHeight/2 + cur.clientHeight/2, behavior:'smooth'});
+}
+
 function endGame(){
   game.running = false; game.finished = true;
   keyDown = {}; refreshConsole();
-  if(game.mode==='quiz'){ showResults(); }
-  else { showPracticeSummary(); }
+  setStartBtn(false);
+  showResults();   // only quiz reaches here; practice runs until the student stops
+}
+function stopGame(){
+  if(cdTimer){ clearInterval(cdTimer); cdTimer = null; }
+  game = null;
+  keyDown = {}; refreshConsole();
+  setStartBtn(false);
+  $('cdOverlay').classList.add('hidden');
+  $('startOverlay').classList.remove('hidden');
+  setOverlayText();
+}
+function setStartBtn(running){
+  const b = $('startBtn');
+  b.classList.toggle('go', !running);
+  b.classList.toggle('stop', running);
+  $('startLabel').textContent = running ? 'Stop' : (mode==='quiz' ? 'Start Quiz' : 'Start');
+  const svg = b.querySelector('svg');
+  if(svg) svg.innerHTML = running ? '<rect x="4" y="4" width="8" height="8" rx="1.5"/>'
+                                   : '<path d="M4 3l9 5-9 5z"/>';
 }
 
 /* ───────────────────────── Scoring ───────────────────────── */
 function finalizeNote(n){
   n.scored = true;
-  const acc = n.heldCorrect / n.dur;
-  const wrong = n.heldWrong / n.dur;
+  const acc = n.heldCorrect / n.winDur;     // full window = lead-in + line + trail
+  const wrong = n.heldWrong / n.winDur;
   game.accSum += clamp(acc - wrong*0.5, 0, 1); game.accCount++;
   let grade, base;
   if(acc>=0.85 && wrong<0.15){ grade='PERFECT'; base=100; }
@@ -680,6 +841,7 @@ function resize(){
   cvs.width = Math.max(1,Math.floor(W*dpr));
   cvs.height = Math.max(1,Math.floor(H*dpr));
   ctx.setTransform(dpr,0,0,dpr,0,0);
+  computeLanes();
 }
 window.addEventListener('resize', resize);
 
@@ -691,63 +853,61 @@ function loop(now){
     game.lastFrame = now;
     game.t += dt;
 
-    // per-frame hold accounting on active notes
+    // per-frame hold accounting across the full window (lead-in + line + trail)
     game.notes.forEach(n=>{
       if(n.scored) return;
-      if(game.t>=n.start && game.t<=n.end){
-        if(keyDown[n.key]) n.heldCorrect += dt;
+      if(game.t>=n.winStart && game.t<=n.winEnd){
+        if(keyDown[n.key]){
+          n.heldCorrect += dt;
+          if(game.t < n.start) n.openedEarly = true;   // opened during the lead-in zone
+        }
         for(const k of DCA_KEYS){ if(k!==n.key && keyDown[k]){ n.heldWrong += dt; break; } }
-      } else if(game.t>n.end){
+      } else if(game.t>n.winEnd){
         finalizeNote(n);
       }
     });
 
-    // quiz timer / practice end
+    // quiz ends on the timer; practice runs forever (top up the buffer)
     if(game.mode==='quiz'){
       if(game.t >= game.quizEnd){ endGame(); }
     } else {
       const last = game.notes[game.notes.length-1];
-      if(last && game.t > last.end + 1200){ endGame(); }
+      if(last && last.start - game.t < 30000){ appendLines(game, 16); }
     }
   }
   draw();
   updateHud();
+  updatePrompter();
 }
 
 function draw(){
   ctx.clearRect(0,0,W,H);
   if(!chars.length) return;
   const laneCount = chars.length;
-  const hwW = Math.min(W-40, laneCount*150 + 40);
-  const x0 = (W-hwW)/2;
-  const laneW = hwW/laneCount;
-  const hitY = H - 38;
-  const topPad = 64;
+  if(LANES.length < laneCount) computeLanes();
+  if(LANES.length < laneCount) return;
+  const hitY = H - 30;
+  const topPad = 48;
   const pxPerMs = (hitY - topPad) / TRAVEL_MS;
+  const x0 = LANES[0].left, xR = LANES[laneCount-1].left + LANES[laneCount-1].width;
 
-  // highway backdrop
-  ctx.fillStyle = 'rgba(255,255,255,.015)';
-  ctx.fillRect(x0,0,hwW,H);
-  // lane separators + headers
+  // lane columns + headers (each aligned to its DCA fader below)
   for(let i=0;i<laneCount;i++){
-    const ch = chars[i];
-    const lx = x0 + i*laneW;
-    // lane tint
+    const ch = chars[i], L = LANES[i];
+    const lx = L.left, laneW = L.width;
+    // lane column tint
     const grd = ctx.createLinearGradient(0,0,0,hitY);
-    grd.addColorStop(0,'rgba(0,0,0,0)');
-    grd.addColorStop(1, hexA(ch.color,.06));
-    ctx.fillStyle = grd; ctx.fillRect(lx,0,laneW,hitY);
-    // separators
-    ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(lx+.5,0); ctx.lineTo(lx+.5,H); ctx.stroke();
+    grd.addColorStop(0,'rgba(255,255,255,.02)');
+    grd.addColorStop(1, hexA(ch.color,.07));
+    ctx.fillStyle = grd; roundRect(ctx, lx, 6, laneW, hitY-6, 11); ctx.fill();
     // lane label (key + name) at top
     ctx.textAlign='center';
     ctx.fillStyle = hexA(ch.color,.9);
     ctx.font='800 13px '+monoFont();
-    ctx.fillText(ch.key.toUpperCase(), lx+laneW/2, 24);
+    ctx.fillText(ch.key.toUpperCase(), lx+laneW/2, 22);
     ctx.fillStyle='#9aa0aa';
     ctx.font='700 11px Inter,sans-serif';
-    ctx.fillText(truncate(ch.name, laneW-14, ctx, '700 11px Inter,sans-serif'), lx+laneW/2, 42);
+    ctx.fillText(truncate(ch.name, laneW-14, ctx, '700 11px Inter,sans-serif'), lx+laneW/2, 38);
     // target ring at hit line
     const tgtOn = keyDown[ch.key];
     ctx.beginPath();
@@ -756,53 +916,47 @@ function draw(){
     roundRect(ctx, lx+8, hitY-4, laneW-16, 22, 6);
     ctx.fill(); ctx.stroke();
   }
-  ctx.lineWidth=1;
-  ctx.strokeStyle='rgba(255,255,255,.06)';
-  ctx.beginPath(); ctx.moveTo(x0+hwW+.5,0); ctx.lineTo(x0+hwW+.5,H); ctx.stroke();
 
   // mix line
   ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(x0,hitY+8.5); ctx.lineTo(x0+hwW,hitY+8.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0,hitY+8.5); ctx.lineTo(xR,hitY+8.5); ctx.stroke();
   ctx.fillStyle='rgba(255,255,255,.45)'; ctx.font='700 9px Inter,sans-serif';
-  ctx.textAlign='left'; ctx.fillText('MIX LINE', x0+4, hitY+4);
+  ctx.textAlign='left'; ctx.fillText('MIX LINE', x0+2, hitY+4);
 
   if(!game) return;
 
-  // notes
-  let nowLine = null;
+  // notes (lead-in zone + spoken line + trail zone)
   game.notes.forEach(n=>{
-    const headY = hitY - (n.start - game.t)*pxPerMs;  // start edge
-    const tailY = headY - n.dur*pxPerMs;               // end edge
-    if(headY < -20 || tailY > H+20) return;            // off-screen
-    const lx = x0 + n.lane*laneW;
-    const pad = 8;
-    const top = tailY, bot = Math.min(headY, hitY+18);
-    const active = game.t>=n.start && game.t<=n.end;
-    // body
-    ctx.fillStyle = hexA(n.color, n.scored? (active?.85:.32) : (active?1:.8));
-    roundRect(ctx, lx+pad, top, laneW-pad*2, Math.max(6,bot-top), 7);
-    ctx.fill();
-    // head highlight
-    if(headY < hitY+18){
-      ctx.fillStyle = hexA('#ffffff',.85);
-      roundRect(ctx, lx+pad, Math.min(headY-4,hitY+14), laneW-pad*2, 4, 2);
-      ctx.fill();
-    }
-    if(active){
+    const headY = hitY - (n.start - game.t)*pxPerMs;   // line-start edge
+    const tailY = headY - n.dur*pxPerMs;                // line-end edge
+    const preY  = headY + PRE_MS*pxPerMs;              // bottom of lead-in (leads)
+    const postY = tailY - POST_MS*pxPerMs;             // top of trail (trails)
+    if(postY > H+24 || preY < -24) return;             // fully off-screen
+    const L = LANES[n.lane];
+    const pad = 7, w = L.width-pad*2, x = L.left+pad;
+    const inWin  = game.t>=n.winStart && game.t<=n.winEnd;
+    const spoken = game.t>=n.start && game.t<=n.end;
+    const dim = n.scored ? .28 : 1;
+    // lead-in & trail zones (translucent)
+    ctx.fillStyle = hexA(n.color, .18*dim);
+    roundRect(ctx, x, headY, w, Math.max(2,preY-headY), 6); ctx.fill();
+    roundRect(ctx, x, postY, w, Math.max(2,tailY-postY), 6); ctx.fill();
+    // dashed outline around the whole window
+    ctx.setLineDash([4,4]); ctx.lineWidth=1.5; ctx.strokeStyle=hexA(n.color,.5*dim);
+    roundRect(ctx, x, postY, w, Math.max(6,preY-postY), 7); ctx.stroke();
+    ctx.setLineDash([]);
+    // spoken-line bar (solid)
+    ctx.fillStyle = hexA(n.color, (spoken?1:.82)*dim);
+    roundRect(ctx, x, tailY, w, Math.max(6,headY-tailY), 7); ctx.fill();
+    // bright edges = exact line start (head) and end (tail)
+    ctx.fillStyle = hexA('#ffffff',.9*dim);
+    roundRect(ctx, x, headY-2, w, 3, 1.5); ctx.fill();
+    roundRect(ctx, x, tailY-1, w, 3, 1.5); ctx.fill();
+    if(inWin){
       ctx.strokeStyle='#fff'; ctx.lineWidth=2;
-      roundRect(ctx, lx+pad, top, laneW-pad*2, Math.max(6,bot-top), 7); ctx.stroke();
-      nowLine = n;
+      roundRect(ctx, x, postY, w, Math.max(6,preY-postY), 7); ctx.stroke();
     }
   });
-
-  // current line text
-  if(nowLine){
-    $('lineWho').textContent = nowLine.who;
-    $('lineWho').style.color = nowLine.color;
-    $('lineTxt').textContent = '“'+nowLine.text+'”';
-  } else {
-    $('lineWho').textContent=''; $('lineTxt').textContent='';
-  }
 
   // hit flash
   if(game.lastFlash && game.t - game.lastFlash.at < 650){
@@ -811,11 +965,11 @@ function draw(){
     ctx.textAlign='center';
     ctx.fillStyle=game.lastFlash.color;
     ctx.font='900 34px Inter,sans-serif';
-    const fy = hitY - 30 - age*18;
-    ctx.fillText(game.lastFlash.grade, W/2, fy);
+    const fy = hitY - 30 - age*18, fx = (x0+xR)/2;
+    ctx.fillText(game.lastFlash.grade, fx, fy);
     if(game.lastFlash.mult>1){
       ctx.font='800 16px '+monoFont();
-      ctx.fillText('×'+game.lastFlash.mult, W/2, fy+22);
+      ctx.fillText('×'+game.lastFlash.mult, fx, fy+22);
     }
     ctx.globalAlpha=1;
   }
@@ -833,7 +987,7 @@ function updateHud(){
     $('timerVal').textContent = fmtClock(remain);
     $('timerVal').style.color = remain<30 ? '#ef4444' : 'var(--amber)';
   } else if(game && game.mode==='practice'){
-    $('timerLbl').textContent='Scene';
+    $('timerLbl').textContent='Practice';
     $('timerVal').textContent = '∞';
     $('timerVal').style.color='var(--text-dim)';
   }
@@ -863,12 +1017,6 @@ function showResults(){
   $('resCombo').textContent = s.combo;
   $('resLines').textContent = s.lines;
   $('resultModal').classList.add('show');
-}
-function showPracticeSummary(){
-  const s = gameStats();
-  toast(`Scene done — ${s.acc}% accuracy, ${s.lines} lines, best combo ×${s.combo}.`, 'good', 4200);
-  $('startOverlay').classList.remove('hidden');
-  setOverlayText();
 }
 
 /* ───────────────────────── Certificate ───────────────────────── */
@@ -957,6 +1105,7 @@ function rr(g,x,y,w,h,r){ roundRect(g,x,y,w,h,r); }
 function truncate(text,maxW,c,font){ c.font=font; if(c.measureText(text).width<=maxW) return text;
   let t=text; while(t.length>1 && c.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
 function monoFont(){ return "'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace"; }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function fmtClock(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+String(s).padStart(2,'0'); }
 function stamp(){ const d=new Date(); const p=n=>String(n).padStart(2,'0');
   return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
@@ -970,7 +1119,7 @@ function setOverlayText(){
   if(mode==='quiz'){
     $('ovHint').innerHTML = `Quiz picks a random spot in <b>${current?current.title:'the script'}</b> and scores you for 5 minutes — Guitar-Hero style. Earn a certificate at the end.`;
   } else {
-    $('ovHint').innerHTML = `Practice plays one random scene from <b>${current?current.title:'the script'}</b>. No timer, no pressure.`;
+    $('ovHint').innerHTML = `Practice starts at a random scene in <b>${current?current.title:'the script'}</b> and keeps going as long as you like. Press <span class="keycap">Esc</span> or <b>Stop</b> when you're done.`;
   }
 }
 
@@ -985,18 +1134,25 @@ function init(){
 
   $('scriptSel').addEventListener('change', e=>{
     const s = scripts.find(x=>x.id===e.target.value);
-    if(s){ setCurrent(s); setOverlayText(); }
+    if(s){ if(game) stopGame(); setCurrent(s); setOverlayText(); }
   });
   $('modeSeg').querySelectorAll('button').forEach(b=>{
     b.addEventListener('click', ()=>{
       mode = b.dataset.mode;
       $('modeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('active', x===b));
-      setOverlayText();
+      if(game) stopGame();
+      setOverlayText(); setStartBtn(false);
       $('startOverlay').classList.remove('hidden');
     });
   });
-  $('startBtn').addEventListener('click', startGame);
+  $('startBtn').addEventListener('click', ()=>{
+    if(cdTimer || (game && game.running)) stopGame();
+    else startGame();
+  });
   $('ovStart').addEventListener('click', startGame);
+  window.addEventListener('keydown', e=>{
+    if(e.key==='Escape' && (cdTimer || (game && game.running))) stopGame();
+  });
   $('helpBtn').addEventListener('click', ()=>$('helpModal').classList.add('show'));
   $('helpClose').addEventListener('click', ()=>$('helpModal').classList.remove('show'));
 
