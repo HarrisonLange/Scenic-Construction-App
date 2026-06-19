@@ -400,8 +400,10 @@ function nowStamp(){return new Date().toISOString().slice(0,19).replace(/[:T]/g,
 function selected(){return state.objects.find(o=>o.id===state.selectedId)||null;}
 function objLabel(o){return o.name||TEMPLATES[o.type]?.name||'Piece';}
 function hexToRgb(hex){const c=(hex||'#000').replace('#','');const n=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
+function rgbToHex(r,g,b){return '#'+[r,g,b].map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('');}
 function shade(hex,f){const c=hexToRgb(hex);const m=(v)=>clamp(Math.round(f<1?v*f:v+(255-v)*(f-1)),0,255);return `rgb(${m(c.r)},${m(c.g)},${m(c.b)})`;}
 function rgba(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
+function mixColor(a,b,t){const ca=hexToRgb(a),cb=hexToRgb(b);return rgbToHex(lerp(ca.r,cb.r,t),lerp(ca.g,cb.g,t),lerp(ca.b,cb.b,t));}
 
 function toast(msg,type=''){
   const t=$('toast');t.textContent=msg;t.className=type;t.style.display='block';
@@ -890,26 +892,161 @@ function paintBillboard(c,f){
     return;
   }
   if(f.billboard==='figure'){
-    const bx=f.bx,by=f.by,topY=f.ty,wpx=f.wpx,hpx=by-topY,col=o.color;
-    const headR=Math.max(2,wpx*0.34), headCy=topY+headR;
-    const shY=headCy+headR*1.15;            // shoulders
-    const hipY=topY+hpx*0.54;
-    const sw=wpx*0.5;                        // half shoulder width
-    // legs
-    c.fillStyle=shade(col,.62);
-    c.beginPath();c.moveTo(bx-wpx*0.22,hipY);c.lineTo(bx-wpx*0.02,hipY);c.lineTo(bx-wpx*0.04,by);c.lineTo(bx-wpx*0.20,by);c.closePath();c.fill();
-    c.beginPath();c.moveTo(bx+wpx*0.22,hipY);c.lineTo(bx+wpx*0.02,hipY);c.lineTo(bx+wpx*0.04,by);c.lineTo(bx+wpx*0.20,by);c.closePath();c.fill();
-    // arms
-    c.fillStyle=shade(col,.82);
-    c.fillRect(bx-sw,shY,wpx*0.16,hipY-shY+hpx*0.06);
-    c.fillRect(bx+sw-wpx*0.16,shY,wpx*0.16,hipY-shY+hpx*0.06);
-    // torso
-    c.beginPath();c.moveTo(bx-sw*0.78,shY);c.lineTo(bx+sw*0.78,shY);c.lineTo(bx+wpx*0.3,hipY+hpx*0.02);c.lineTo(bx-wpx*0.3,hipY+hpx*0.02);c.closePath();
-    c.fillStyle=col;c.fill();
-    // neck + head
-    c.fillStyle='#e8c39e';c.fillRect(bx-headR*0.32,headCy+headR*0.6,headR*0.64,headR*0.7);
-    c.beginPath();c.arc(bx,headCy,headR,0,Math.PI*2);c.fill();
-    c.lineWidth=sel?2:1;c.strokeStyle=sel?'#fff':shade(col,.45);c.stroke();
+    drawStudioPerformerBillboard(c,f,o,sel);
+  }
+}
+function scenicActorLight(o){
+  const side=clamp(o.x/STAGE.prosHalf,-1,1);
+  const depth=clamp((o.y||0)/STAGE.actDepth,0,1);
+  const level=clamp(.82-depth*.2+(o.z||0)*.03,.45,1.15);
+  return {
+    color:'#ffd7a6',
+    left:clamp(.42-side*.22,0,1.2),
+    right:clamp(.42+side*.22,0,1.2),
+    front:clamp(.72-depth*.2,0,1.2),
+    back:clamp(.18+depth*.28,0,1.1),
+    top:.36,
+    leftColor:'#ffe2bd',
+    rightColor:'#ffd7a6',
+    frontColor:'#ffd7a6',
+    backColor:'#8ab4ff',
+    topColor:'#ffffff',
+    level,
+    keyX:side*.45,
+    keyY:.45-depth*.65
+  };
+}
+function studioPerformerPose(id){
+  const poses={
+    standing:{
+      legs:[[[-5,7,-8,16,5.2],[-8,16,-11,27,4.8],[-12.5,28.2,-.18]],[[5,7,8,16,5.2],[8,16,11,27,4.8],[12.5,28.2,.18]]],
+      arms:[[[-9,-7,-15,2,4.8],[-15,2,-18,12,4.3],[-18.4,13.2,-.22]],[[9,-7,15,2,4.8],[15,2,18,12,4.3],[18.4,13.2,.22]]]
+    },
+    contrapposto:{
+      legs:[[[-5,7,-9,16,5.2],[-9,16,-10,27,4.8],[-11.5,28.2,-.12]],[[5,7,9,16,5.2],[9,16,15,25,4.8],[16.4,26.2,.32]]],
+      arms:[[[-9,-7,-12,3,4.8],[-12,3,-14,13,4.3],[-14.6,14.2,-.12]],[[9,-7,13,0,4.8],[13,0,17,9,4.3],[17.6,10.2,.24]]]
+    }
+  };
+  return poses[id]||poses.standing;
+}
+function drawStudioPerformerBillboard(c,f,o,sel){
+  const bx=f.bx,by=f.by,topY=f.ty,wpx=Math.max(8,f.wpx),hpx=Math.max(28,by-topY);
+  const sy=hpx/58.4;
+  const sx=Math.max(wpx/38,sy*.36);
+  const light=scenicActorLight(o);
+  const pose=studioPerformerPose(Math.abs(Math.round((o.rot||0)/90))%2?'contrapposto':'standing');
+  const skin=o.skin||'#e0ac69';
+  const costume=o.color||'#3b82f6';
+  c.save();
+  c.translate(bx,by-28.2*sy);
+  c.scale(sx,sy);
+  const shadowDx=clamp(-(light.keyX||0)*20+(light.left-light.right)*4,-20,20);
+  const shadowDy=clamp((light.keyY||0)*8,-8,8);
+  c.fillStyle=`rgba(0,0,0,${clamp(.62-light.level*.15+light.back*.08,.16,.7)})`;
+  c.beginPath();c.ellipse(shadowDx,24+shadowDy,27,7.5,clamp(shadowDx*.018,-.3,.3),0,Math.PI*2);c.fill();
+  c.save();
+  c.globalCompositeOperation='screen';
+  c.fillStyle=rgba(light.color,clamp(light.level*.16,.04,.34));
+  c.beginPath();c.ellipse(-shadowDx*.15,22,25,8,0,0,Math.PI*2);c.fill();
+  c.restore();
+  drawStudioLowPolyLimbs(c,pose.legs,skin,light,'leg');
+  drawStudioLowPolyLimbs(c,pose.arms,skin,light,'arm');
+  drawStudioLowPolyNeck(c,light,skin);
+  drawStudioLowPolyTorso(c,light,costume);
+  drawStudioLowPolyHead(c,light,skin);
+  if(sel){
+    c.strokeStyle='#fff';
+    c.lineWidth=1.8/Math.max(sx,sy);
+    c.setLineDash([5/Math.max(sx,sy),4/Math.max(sx,sy)]);
+    c.beginPath();c.ellipse(0,-6,19,33,0,0,Math.PI*2);c.stroke();
+    c.setLineDash([]);
+  }
+  c.restore();
+}
+function studioLowPolyShade(base,light,normal,boost=1){
+  const nx=normal.x||0,ny=normal.y||0,nz=normal.z||0;
+  const reveal=clamp((light.level-.12)*1.1,0,1);
+  const key=clamp(nx*(light.keyX||0)+ny*(-(light.keyY||0))+nz*.64,-.7,1);
+  const side=nx<0?light.left:nx>0?light.right:0;
+  const sideColor=nx<0?light.leftColor:light.rightColor;
+  const face=ny<0?light.front:ny>0?light.back:0;
+  const faceColor=ny<0?light.frontColor:light.backColor;
+  let color=mixColor(base,'#050506',clamp(.47-light.level*.08-key*.1*reveal,.12,.58));
+  color=mixColor(color,light.color,clamp((light.level*.12*boost+Math.max(key,0)*.24)*reveal,0,.62));
+  color=mixColor(color,sideColor,clamp(side*.24*Math.abs(nx)*boost*reveal,0,.44));
+  color=mixColor(color,faceColor,clamp(face*.22*Math.abs(ny)*boost*reveal,0,.4));
+  color=mixColor(color,light.topColor,clamp(light.top*.22*Math.max(nz,0)*boost*reveal,0,.38));
+  return color;
+}
+function studioLowPolyStroke(base,light,strength=.28){
+  const reveal=clamp((light.level-.16)*1.25,0,1);
+  return rgba(mixColor(base,'#050506',.58),clamp(reveal*strength,0,strength));
+}
+function studioPoly(c,points,fill,stroke,alpha=1){
+  c.save();c.globalAlpha=alpha;c.fillStyle=fill;c.beginPath();c.moveTo(points[0][0],points[0][1]);
+  for(let i=1;i<points.length;i++)c.lineTo(points[i][0],points[i][1]);
+  c.closePath();c.fill();
+  if(stroke){c.strokeStyle=stroke;c.lineWidth=.75;c.stroke();}
+  c.restore();
+}
+function drawStudioLowPolySegment(c,x1,y1,x2,y2,width,base,light,kind){
+  const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+  const px=-uy*width/2,py=ux*width/2,taper=kind==='leg'?.78:.7;
+  const p1=[x1+px,y1+py],p2=[x1-px,y1-py],p3=[x2-px*taper,y2-py*taper],p4=[x2+px*taper,y2+py*taper];
+  const stroke=studioLowPolyStroke(base,light,.22),center=[(x1+x2)/2,(y1+y2)/2-width*.18];
+  studioPoly(c,[p1,p2,p3,p4],studioLowPolyShade(base,light,{x:0,y:-.22,z:.42},.84),null,.98);
+  studioPoly(c,[p1,center,p4],studioLowPolyShade(base,light,{x:-.68,y:-.2,z:.52},1.1),stroke);
+  studioPoly(c,[p2,p3,center],studioLowPolyShade(base,light,{x:.68,y:-.16,z:.45},1.08),stroke);
+  studioPoly(c,[p1,p2,center],studioLowPolyShade(base,light,{x:0,y:-.8,z:.35},.95),stroke,.96);
+  studioPoly(c,[p4,center,p3],studioLowPolyShade(base,light,{x:0,y:.36,z:.22},.82),stroke,.94);
+}
+function drawStudioLowPolyLimbs(c,limbs,base,light,kind){
+  limbs.forEach(limb=>{
+    drawStudioLowPolySegment(c,limb[0][0],limb[0][1],limb[0][2],limb[0][3],limb[0][4],base,light,kind);
+    drawStudioLowPolySegment(c,limb[1][0],limb[1][1],limb[1][2],limb[1][3],limb[1][4],base,light,kind);
+    const rx=kind==='arm'?3.2:5.5,ry=kind==='arm'?2.2:2.8,end=limb[2];
+    drawStudioLowPolyDiamond(c,end[0],end[1],rx,ry,end[2],base,light);
+  });
+}
+function drawStudioLowPolyDiamond(c,cx,cy,rx,ry,rot,base,light){
+  c.save();c.translate(cx,cy);c.rotate(rot||0);
+  const stroke=studioLowPolyStroke(base,light,.22);
+  studioPoly(c,[[0,-ry],[rx,0],[0,ry],[-rx,0]],studioLowPolyShade(base,light,{x:0,y:-.5,z:.68},1.06),stroke);
+  studioPoly(c,[[0,-ry],[rx,0],[0,0]],studioLowPolyShade(base,light,{x:.7,y:-.12,z:.44},1.08),stroke,.9);
+  studioPoly(c,[[0,0],[-rx,0],[0,ry]],studioLowPolyShade(base,light,{x:-.7,y:.18,z:.32},.96),stroke,.9);
+  c.restore();
+}
+function drawStudioLowPolyNeck(c,light,skin){
+  const stroke=studioLowPolyStroke(skin,light,.18);
+  studioPoly(c,[[-3.4,-15],[3.4,-15],[2.8,-9.4],[-2.8,-9.4]],studioLowPolyShade(skin,light,{x:0,y:-.44,z:.58},.98),stroke);
+  studioPoly(c,[[-3.4,-15],[-2.8,-9.4],[0,-10.2],[0,-15.4]],studioLowPolyShade(skin,light,{x:-.72,y:-.18,z:.45},.96),stroke);
+  studioPoly(c,[[3.4,-15],[2.8,-9.4],[0,-10.2],[0,-15.4]],studioLowPolyShade(skin,light,{x:.72,y:-.18,z:.45},.96),stroke);
+}
+function drawStudioLowPolyTorso(c,light,costume){
+  const stroke=studioLowPolyStroke(costume,light,.2);
+  studioPoly(c,[[-11,-10.8],[0,-13.2],[0,10.4],[-8.4,7]],studioLowPolyShade(costume,light,{x:-.78,y:-.18,z:.36},1.18),stroke);
+  studioPoly(c,[[11,-10.8],[0,-13.2],[0,10.4],[8.4,7]],studioLowPolyShade(costume,light,{x:.78,y:-.18,z:.36},1.18),stroke);
+  studioPoly(c,[[-11,-10.8],[11,-10.8],[6.2,-6.5],[-6.2,-6.5]],studioLowPolyShade(costume,light,{x:0,y:-.22,z:.92},1.1),stroke);
+  studioPoly(c,[[-6.2,-6.5],[6.2,-6.5],[4.8,8.6],[0,10.4],[-4.8,8.6]],studioLowPolyShade(costume,light,{x:0,y:-.86,z:.42},1.2),stroke);
+  studioPoly(c,[[-8.4,7],[-4.8,8.6],[0,10.4],[4.8,8.6],[8.4,7],[5.7,12],[-5.7,12]],studioLowPolyShade(costume,light,{x:0,y:.28,z:.28},.9),stroke);
+}
+function drawStudioLowPolyHead(c,light,skin){
+  const stroke=studioLowPolyStroke(skin,light,.22),hair=mixColor(skin,'#050506',.82);
+  studioPoly(c,[[-5.8,-24.5],[-2.2,-28.8],[2.8,-28.4],[6.1,-24.1],[4.8,-17.4],[0,-14.5],[-4.8,-17.5]],studioLowPolyShade(skin,light,{x:0,y:-.92,z:.32},1.24),stroke);
+  studioPoly(c,[[-5.8,-24.5],[-7.1,-20.6],[-4.8,-17.5],[-1.1,-20.4],[-2.2,-28.8]],studioLowPolyShade(skin,light,{x:-.78,y:-.22,z:.42},1.08),stroke);
+  studioPoly(c,[[6.1,-24.1],[7.1,-20.2],[4.8,-17.4],[1.1,-20.4],[2.8,-28.4]],studioLowPolyShade(skin,light,{x:.78,y:-.22,z:.42},1.08),stroke);
+  studioPoly(c,[[-2.2,-28.8],[2.8,-28.4],[4.2,-26.2],[-4.1,-26.4]],studioLowPolyShade(skin,light,{x:0,y:-.28,z:.95},1.12),stroke);
+  studioPoly(c,[[-4.8,-17.5],[0,-14.5],[4.8,-17.4],[1.2,-16.8],[-1.2,-16.8]],studioLowPolyShade(skin,light,{x:0,y:-.72,z:-.18},.92),stroke);
+  c.save();c.globalCompositeOperation='multiply';c.globalAlpha=clamp(.28+light.level*.22,.28,.72);
+  studioPoly(c,[[-6.1,-26],[-2.5,-30.2],[3.4,-29.4],[6.2,-25.2],[3.7,-26],[-1.2,-27.2],[-5.4,-24.4]],hair,'rgba(0,0,0,.45)',.95);
+  c.restore();
+  c.fillStyle=mixColor(mixColor(skin,'#050506',.58),light.frontColor,clamp(light.front*.18,0,.32));
+  c.globalAlpha=clamp(light.front*.48+light.top*.18,.04,.64);
+  c.beginPath();c.rect(-2.5,-21.7,.9,.7);c.rect(1.8,-21.7,.9,.7);c.fill();
+  c.globalAlpha=1;
+  if(light.back>.06){
+    c.save();c.globalCompositeOperation='screen';c.globalAlpha=clamp(light.back*.28,.08,.38);c.strokeStyle=light.backColor;c.lineWidth=1.8;
+    c.beginPath();c.moveTo(-5.8,-24.5);c.lineTo(-7.1,-20.6);c.moveTo(6.1,-24.1);c.lineTo(7.1,-20.2);c.stroke();c.restore();
   }
 }
 function drawProsceniumMask(c,view,cam,W,H){

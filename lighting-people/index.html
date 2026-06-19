@@ -494,10 +494,10 @@ const LIGHTS = [
 ];
 
 const DEFAULT_LIGHTS = {
-  key:{enabled:true,intensity:80,kelvin:5500,height:30,angle:45,distance:50,softness:30,gel:'#ffffff'},
-  fill:{enabled:true,intensity:40,kelvin:5500,height:10,angle:315,distance:50,softness:30,gel:'#ffffff'},
-  back:{enabled:true,intensity:60,kelvin:6500,height:50,angle:180,distance:40,softness:30,gel:'#ffffff'},
-  hair:{enabled:true,intensity:50,kelvin:5500,height:70,angle:180,distance:40,softness:20,gel:'#ffffff'}
+  key:{enabled:true,intensity:80,kelvin:5500,height:30,angle:45,distance:50,beam:46,softness:30,gel:'#ffffff'},
+  fill:{enabled:true,intensity:40,kelvin:5500,height:10,angle:315,distance:50,beam:62,softness:30,gel:'#ffffff'},
+  back:{enabled:true,intensity:60,kelvin:6500,height:50,angle:180,distance:40,beam:42,softness:30,gel:'#ffffff'},
+  hair:{enabled:true,intensity:50,kelvin:5500,height:70,angle:180,distance:40,beam:30,softness:20,gel:'#ffffff'}
 };
 
 const PRESETS = {
@@ -591,6 +591,7 @@ let three = {
   renderer:null,
   controls:null,
   subject:null,
+  subjectMode:null,
   skinMaterial:null,
   hairMaterial:null,
   lights:{},
@@ -711,6 +712,18 @@ function lightDirection(light){
   const len = Math.hypot(p.x, p.y, p.z) || 1;
   return {x:p.x/len,y:p.y/len,z:p.z/len};
 }
+function smoothstep(edge0, edge1, x){
+  const t = clamp((x - edge0) / Math.max(.0001, edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+function beamAngleDeg(light){
+  return 8 + (Number(light.beam ?? 46) / 100) * 58;
+}
+function beamCoverage(light, dot){
+  const cutoff = Math.cos(beamAngleDeg(light) * Math.PI / 180);
+  const edgeWidth = .025 + (Number(light.softness) / 100) * .26;
+  return smoothstep(cutoff - edgeWidth, cutoff + edgeWidth, dot);
+}
 function angleFromPoint(dx, dy){
   return mod360(Math.atan2(dx, dy) * 180 / Math.PI);
 }
@@ -743,6 +756,7 @@ function mergeLights(saved){
     next[id].kelvin = clamp(Number(next[id].kelvin) || 5500, 2500, 10000);
     next[id].height = clamp(Number(next[id].height) || 0, -50, 100);
     next[id].distance = clamp(Number(next[id].distance) || 50, 10, 100);
+    next[id].beam = clamp(Number(next[id].beam ?? DEFAULT_LIGHTS[id].beam) || DEFAULT_LIGHTS[id].beam, 10, 100);
     next[id].softness = clamp(Number(next[id].softness) || 0, 0, 100);
     next[id].gel = next[id].gel || '#ffffff';
     next[id].enabled = !!next[id].enabled;
@@ -785,6 +799,7 @@ function renderLights(){
           ${rangeControl(meta.id,'height','Height',-50,100,1,l.height,'')}
           ${rangeControl(meta.id,'angle','Angle',0,360,1,l.angle,'deg')}
           ${rangeControl(meta.id,'distance','Distance',10,100,1,l.distance,'')}
+          ${rangeControl(meta.id,'beam','Beam Size',10,100,1,l.beam,'%')}
           ${rangeControl(meta.id,'softness','Softness',0,100,1,l.softness,'%')}
           <div class="color-row">
             <label>Gel</label>
@@ -809,13 +824,13 @@ function rangeControl(light, prop, label, min, max, step, value, suffix){
 function renderLightControlOutputs(id){
   const l = state.lights[id];
   if (!l) return;
-  ['intensity','kelvin','height','angle','distance','softness'].forEach(prop => {
+  ['intensity','kelvin','height','angle','distance','beam','softness'].forEach(prop => {
     const input = document.querySelector(`input[data-light="${id}"][data-prop="${prop}"]`);
     if (!input) return;
     input.value = l[prop];
     const output = input.closest('.range-row')?.querySelector('output');
     if (!output) return;
-    if (prop === 'intensity' || prop === 'softness') output.textContent = `${Math.round(l[prop])}%`;
+    if (prop === 'intensity' || prop === 'beam' || prop === 'softness') output.textContent = `${Math.round(l[prop])}%`;
     else if (prop === 'kelvin') output.textContent = `${Math.round(l[prop])}K`;
     else if (prop === 'angle') output.innerHTML = `${Math.round(l[prop])}&deg;`;
     else output.textContent = `${Math.round(l[prop])}`;
@@ -843,6 +858,7 @@ function renderAnalysis(){
     ['Color temp diff', `${Math.round(diff)}K`, diff > 1000 ? 'Mixed warm/cool tones will be visible.' : 'Active sources are close in color temperature.'],
     ['Key light stops', `${lightEv(key.intensity).toFixed(1)} EV`, 'Relative exposure value from intensity percentage.'],
     ['Fill light stops', `${lightEv(fill.intensity).toFixed(1)} EV`, 'Relative exposure value from intensity percentage.'],
+    ['Key beam size', `${Math.round(key.beam)}%`, 'Controls beam width independently from edge hardness.'],
     ['ISL falloff key', `${distanceStops(key.distance) >= 0 ? '+' : ''}${distanceStops(key.distance).toFixed(1)} stops`, 'Relative to a reference distance of 50.'],
     ['Contrast', contrast, 'Based on key:fill ratio and key softness.']
   ];
@@ -888,6 +904,7 @@ function magicSheetRows(){
       color:hit.color.toUpperCase(),
       boardIntensity:Math.round(hit.light.intensity),
       hitIntensity:Math.round(hit.effective),
+      beam:Math.round(hit.light.beam),
       kelvin:Math.round(hit.light.kelvin),
       top:hit.top
     }))
@@ -898,7 +915,7 @@ function magicSheetText(){
     const lines = [sheet.performer.name];
     if (!sheet.hits.length) return `${sheet.performer.name}\nNo active lights.`;
     sheet.hits.forEach(hit => {
-      lines.push(`${hit.name} | from ${hit.source} | ${hit.color} | ${hit.kelvin}K | board ${hit.boardIntensity}% | hit ${hit.hitIntensity}%`);
+      lines.push(`${hit.name} | from ${hit.source} | ${hit.color} | ${hit.kelvin}K | board ${hit.boardIntensity}% | beam ${hit.beam}% | hit ${hit.hitIntensity}%`);
     });
     return lines.join('\n');
   }).join('\n\n');
@@ -951,7 +968,7 @@ function renderMagicSheetPanel(){
     <div class="magic-hit">
       <i class="magic-swatch" style="background:${hit.color}"></i>
       <b>${escapeHtml(hit.name)}</b>
-      <span>${hit.source} / ${hit.hitIntensity}%</span>
+      <span>${hit.source} / B ${hit.beam}% / ${hit.hitIntensity}%</span>
     </div>
   `).join('') : '<div class="small-note">No active lights.</div>';
   $('magicSheetPanel').innerHTML = `${performerCompassSvg(108)}<div class="magic-hit-list">${hitHtml}</div>`;
@@ -1027,8 +1044,9 @@ function renderTopState(){
   $('viewReadout').innerHTML = `<b>${viewLabel[0]}</b> ${viewLabel[1]}`;
   $('viewport').classList.toggle('three-on', state.view === 'portrait' && three.ready);
   if (three.ready) {
+    const subjectLabel = three.subjectMode === 'stl' ? ' / STL head' : ' / procedural head';
     $('threeStatus').className = 'hud-item';
-    $('threeStatus').innerHTML = '<b>Renderer</b> Three.js';
+    $('threeStatus').innerHTML = `<b>Renderer</b> Three.js${subjectLabel}`;
   } else {
     $('threeStatus').className = three.failed ? 'hud-item warn' : 'hud-item';
     $('threeStatus').innerHTML = three.failed ? '<b>Renderer</b> Canvas fallback' : '<b>Renderer</b> Loading 3D';
@@ -1211,9 +1229,10 @@ function drawShadedHead(g,cx,cy,headW,headH){
         const falloff = Math.pow(50 / Math.max(10, light.distance), 2);
         const soft = Number(light.softness) / 100;
         const dot = nx*dir.x*flip + ny*dir.y + nz*dir.z;
-        const diffuse = Math.max(0, dot) * (1-soft*0.45) + Math.max(0, dot*0.5+0.5) * soft * 0.22;
+        const coverage = beamCoverage(light, dot);
+        const diffuse = coverage * (Math.max(0, dot) * (1-soft*0.45) + Math.max(0, dot*0.5+0.5) * soft * 0.22);
         const rim = dir.z < -0.18 ? Math.pow(Math.max(0, 1-nz), 1.7) * Math.abs(dir.z) * 0.8 : 0;
-        const power = (Number(light.intensity) / 100) * falloff * (diffuse + rim);
+        const power = (Number(light.intensity) / 100) * falloff * (diffuse + rim * coverage);
         lr += (color.r/255) * power;
         lg += (color.g/255) * power;
         lb += (color.b/255) * power;
@@ -1265,6 +1284,8 @@ function drawHair(g,cx,cy,headW,headH){
 function drawFaceFeatures(g,cx,cy,headW,headH){
   const yaw = clamp(state.camera.yaw / 45, -1, 1) * (state.camera.flip ? -1 : 1);
   const feature = colorLuma(state.skin) > .45 ? 'rgba(42,28,22,.55)' : 'rgba(25,15,12,.72)';
+  const softShadow = colorLuma(state.skin) > .45 ? 'rgba(47,30,22,.18)' : 'rgba(15,9,7,.28)';
+  const highlight = 'rgba(255,232,204,.20)';
   g.save();
   g.strokeStyle = feature;
   g.fillStyle = feature;
@@ -1272,20 +1293,67 @@ function drawFaceFeatures(g,cx,cy,headW,headH){
   const eyeY = cy - headH*.08;
   const eyeDX = headW*.17;
   const shift = yaw * headW*.055;
+  g.fillStyle = softShadow;
   g.beginPath();
-  g.ellipse(cx-eyeDX+shift, eyeY, headW*.045, headH*.012, 0, 0, Math.PI*2);
-  g.ellipse(cx+eyeDX+shift, eyeY, headW*.045, headH*.012, 0, 0, Math.PI*2);
+  g.ellipse(cx-headW*.19+shift, eyeY-headH*.045, headW*.115, headH*.025, -.08, 0, Math.PI*2);
+  g.ellipse(cx+headW*.19+shift, eyeY-headH*.045, headW*.115, headH*.025, .08, 0, Math.PI*2);
+  g.fill();
+  g.strokeStyle = feature;
+  g.beginPath();
+  g.moveTo(cx-headW*.30+shift, eyeY-headH*.07);
+  g.quadraticCurveTo(cx-headW*.18+shift, eyeY-headH*.105, cx-headW*.07+shift, eyeY-headH*.07);
+  g.moveTo(cx+headW*.07+shift, eyeY-headH*.07);
+  g.quadraticCurveTo(cx+headW*.18+shift, eyeY-headH*.105, cx+headW*.30+shift, eyeY-headH*.07);
+  g.stroke();
+  g.fillStyle = 'rgba(245,236,224,.72)';
+  g.beginPath();
+  g.ellipse(cx-eyeDX+shift, eyeY, headW*.057, headH*.017, 0, 0, Math.PI*2);
+  g.ellipse(cx+eyeDX+shift, eyeY, headW*.057, headH*.017, 0, 0, Math.PI*2);
+  g.fill();
+  g.fillStyle = '#171112';
+  g.beginPath();
+  g.ellipse(cx-eyeDX+shift, eyeY, headW*.027, headH*.012, 0, 0, Math.PI*2);
+  g.ellipse(cx+eyeDX+shift, eyeY, headW*.027, headH*.012, 0, 0, Math.PI*2);
+  g.fill();
+  g.strokeStyle = softShadow;
+  g.lineWidth = Math.max(1, headW*.008);
+  g.beginPath();
+  g.moveTo(cx-headW*.32+shift, cy+headH*.03);
+  g.quadraticCurveTo(cx-headW*.21+shift, cy+headH*.08, cx-headW*.13+shift, cy+headH*.16);
+  g.moveTo(cx+headW*.32+shift, cy+headH*.03);
+  g.quadraticCurveTo(cx+headW*.21+shift, cy+headH*.08, cx+headW*.13+shift, cy+headH*.16);
+  g.stroke();
+  g.strokeStyle = feature;
+  g.lineWidth = Math.max(1.2, headW * 0.01);
+  g.fillStyle = highlight;
+  g.beginPath();
+  g.ellipse(cx+shift+headW*.018, cy+headH*.015, headW*.045, headH*.125, -.08, 0, Math.PI*2);
   g.fill();
   g.beginPath();
-  g.moveTo(cx+shift, cy-headH*.02);
-  g.quadraticCurveTo(cx+headW*.055+shift, cy+headH*.08, cx+headW*.018+shift, cy+headH*.16);
+  g.moveTo(cx-headW*.025+shift, cy-headH*.045);
+  g.quadraticCurveTo(cx+headW*.050+shift, cy+headH*.05, cx+headW*.032+shift, cy+headH*.15);
   g.stroke();
+  g.fillStyle = softShadow;
   g.beginPath();
-  g.arc(cx+shift, cy+headH*.17, headW*.055, 0, Math.PI);
-  g.stroke();
+  g.ellipse(cx-headW*.045+shift, cy+headH*.15, headW*.020, headH*.012, 0, 0, Math.PI*2);
+  g.ellipse(cx+headW*.060+shift, cy+headH*.15, headW*.020, headH*.012, 0, 0, Math.PI*2);
+  g.fill();
+  g.strokeStyle = feature;
   g.beginPath();
-  g.ellipse(cx+shift, cy+headH*.30, headW*.13, headH*.018, 0, 0, Math.PI);
+  g.arc(cx+shift, cy+headH*.17, headW*.06, .05, Math.PI-.05);
   g.stroke();
+  g.fillStyle = 'rgba(102,54,44,.30)';
+  g.beginPath();
+  g.ellipse(cx+shift, cy+headH*.295, headW*.13, headH*.026, 0, Math.PI, 0);
+  g.fill();
+  g.strokeStyle = feature;
+  g.beginPath();
+  g.ellipse(cx+shift, cy+headH*.30, headW*.14, headH*.020, 0, 0, Math.PI);
+  g.stroke();
+  g.fillStyle = 'rgba(255,225,200,.12)';
+  g.beginPath();
+  g.ellipse(cx+shift, cy+headH*.37, headW*.16, headH*.035, 0, 0, Math.PI);
+  g.fill();
   g.restore();
 }
 function drawDiagram(g,w,h){
@@ -1358,7 +1426,7 @@ function drawDiagramLight(g, meta, layout){
     g.fillStyle = color;
     g.beginPath();
     g.moveTo(x,y);
-    const spread = (16 + light.softness * .46) * Math.PI / 180;
+    const spread = beamAngleDeg(light) * Math.PI / 180;
     const targetA = Math.atan2(layout.cy-y, layout.cx-x);
     g.arc(x,y,layout.scale*1.3,targetA-spread,targetA+spread);
     g.closePath();
@@ -1473,7 +1541,7 @@ function drawMagicSheet(g,w,h){
       ty += 16;
       g.fillStyle = '#525252';
       g.font = `700 ${compact ? 10 : 11}px Consolas, monospace`;
-      drawTextLine(g, `${hit.source} / ${hit.color.toUpperCase()} / ${Math.round(hit.light.kelvin)}K / board ${Math.round(hit.light.intensity)}% / hit ${Math.round(hit.effective)}%`, tx + 18, ty, maxW - 18);
+      drawTextLine(g, `${hit.source} / ${hit.color.toUpperCase()} / ${Math.round(hit.light.kelvin)}K / board ${Math.round(hit.light.intensity)}% / beam ${Math.round(hit.light.beam)}% / hit ${Math.round(hit.effective)}%`, tx + 18, ty, maxW - 18);
       ty += compact ? 25 : 31;
     });
   }
@@ -1526,7 +1594,7 @@ function drawSetupSheet(g,x,y,w,h,compact=false){
     g.fillText(meta.name, x+pad+36, yy+(compact ? 22 : 26));
     g.fillStyle = '#a1a1aa';
     g.font = `${compact ? 9 : 11}px Consolas, monospace`;
-    const row = `${l.enabled ? 'ON' : 'OFF'} / ${Math.round(l.intensity)}% / ${Math.round(l.kelvin)}K / H ${Math.round(l.height)} / A ${Math.round(l.angle)} / D ${Math.round(l.distance)} / S ${Math.round(l.softness)}%`;
+    const row = `${l.enabled ? 'ON' : 'OFF'} / ${Math.round(l.intensity)}% / ${Math.round(l.kelvin)}K / H ${Math.round(l.height)} / A ${Math.round(l.angle)} / D ${Math.round(l.distance)} / B ${Math.round(l.beam)}% / S ${Math.round(l.softness)}%`;
     drawTextLine(g,row,x+pad+36,yy+(compact ? 42 : 49),cardW-54);
     yy += cardH + cardGap;
   });
@@ -1635,6 +1703,7 @@ async function initThree(){
   try {
     const THREE = await import('three');
     const {OrbitControls} = await import('three/addons/controls/OrbitControls.js');
+    const {STLLoader} = await import('three/addons/loaders/STLLoader.js');
     three.api = THREE;
     three.scene = new THREE.Scene();
     three.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
@@ -1649,7 +1718,7 @@ async function initThree(){
     three.controls.maxDistance = 7.4;
     three.raycaster = new THREE.Raycaster();
     three.pointer = new THREE.Vector2();
-    buildThreeSubject(THREE);
+    await buildThreeSubject(THREE, STLLoader);
     buildThreeLights(THREE);
     three.ready = true;
     three.failed = false;
@@ -1662,11 +1731,50 @@ async function initThree(){
     renderAll();
   }
 }
-function buildThreeSubject(THREE){
+async function buildThreeSubject(THREE, STLLoader){
   three.subject = new THREE.Group();
   three.skinMaterial = new THREE.MeshStandardMaterial({color:state.skin, roughness:.62, metalness:0});
   three.hairMaterial = new THREE.MeshStandardMaterial({color:'#201714', roughness:.74, metalness:0});
-  const head = new THREE.Mesh(new THREE.SphereGeometry(1,64,48), three.skinMaterial);
+  const featureMaterial = new THREE.MeshStandardMaterial({color:'#171112', roughness:.68, metalness:0});
+  const lipMaterial = new THREE.MeshStandardMaterial({color:'#8f5145', roughness:.74, metalness:0});
+  const eyeWhiteMaterial = new THREE.MeshStandardMaterial({color:'#efe7df', roughness:.48, metalness:0});
+  function ellipsoid(geo, mat, pos, scale, rot=[0,0,0]){
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(pos[0], pos[1], pos[2]);
+    mesh.scale.set(scale[0], scale[1], scale[2]);
+    mesh.rotation.set(rot[0], rot[1], rot[2]);
+    three.subject.add(mesh);
+    return mesh;
+  }
+  function finalizeSubject(){
+    three.scene.add(three.subject);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x111118, .25);
+    three.scene.add(hemi);
+    three.target = new THREE.Object3D();
+    three.target.position.set(0,.78,.54);
+    three.scene.add(three.target);
+  }
+  if (await buildStlSubjectHead(THREE, STLLoader)) {
+    three.subjectMode = 'stl';
+    finalizeSubject();
+    return;
+  }
+  three.subjectMode = 'procedural';
+  const headGeo = new THREE.SphereGeometry(1,96,64);
+  const hp = headGeo.attributes.position;
+  for (let i=0; i<hp.count; i++) {
+    const x = hp.getX(i);
+    const y = hp.getY(i);
+    const z = hp.getZ(i);
+    const jaw = clamp((-y - .18) / .82, 0, 1);
+    const temple = clamp((y - .18) / .62, 0, 1);
+    const front = z > 0 ? 1 : 0;
+    hp.setX(i, x * (1 - jaw*.26 + temple*.06));
+    hp.setY(i, y * (1 + jaw*.04));
+    hp.setZ(i, z * (1 + front*.06 - jaw*.08));
+  }
+  headGeo.computeVertexNormals();
+  const head = new THREE.Mesh(headGeo, three.skinMaterial);
   head.scale.set(.78,1.08,.64);
   head.position.set(0,.78,0);
   three.subject.add(head);
@@ -1683,31 +1791,68 @@ function buildThreeSubject(THREE){
     ear.scale.set(.58,.95,.32);
     ear.position.set(side*.77,.79,-.03);
     three.subject.add(ear);
+    ellipsoid(new THREE.TorusGeometry(.095,.018,18,32), three.skinMaterial, [side*.785,.79,.00], [.72,1.08,.38], [0,Math.PI/2,0]);
+    ellipsoid(new THREE.SphereGeometry(.055,18,12), three.skinMaterial, [side*.77,.71,.04], [.65,.9,.38]);
   });
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(.105,.42,24), three.skinMaterial);
-  nose.rotation.x = Math.PI/2;
-  nose.position.set(0,.73,.64);
-  three.subject.add(nose);
-  const eyeMat = new THREE.MeshStandardMaterial({color:'#161112', roughness:.7});
+  const cheekGeo = new THREE.SphereGeometry(.16,32,18);
   [-1,1].forEach(side => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(.035,16,10), eyeMat);
-    eye.scale.set(1.8,.55,.35);
-    eye.position.set(side*.24,.89,.62);
-    three.subject.add(eye);
+    ellipsoid(cheekGeo, three.skinMaterial, [side*.28,.69,.56], [.82,.30,.20], [0,0,side*.12]);
+    ellipsoid(new THREE.SphereGeometry(.075,24,14), three.skinMaterial, [side*.24,.97,.59], [1.05,.22,.18], [0,0,side*.08]);
   });
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(.26,.018,.025), eyeMat);
-  mouth.position.set(0,.48,.65);
-  three.subject.add(mouth);
+  ellipsoid(new THREE.SphereGeometry(.16,32,16), three.skinMaterial, [0,.30,.45], [1.0,.26,.38]);
+  ellipsoid(new THREE.CylinderGeometry(.045,.060,.36,24), three.skinMaterial, [0,.77,.65], [.72,1,.70], [0,0,0]);
+  ellipsoid(new THREE.SphereGeometry(.115,32,18), three.skinMaterial, [0,.61,.72], [.82,.70,.78]);
+  [-1,1].forEach(side => {
+    ellipsoid(new THREE.SphereGeometry(.055,18,12), three.skinMaterial, [side*.075,.61,.69], [.86,.58,.68]);
+    ellipsoid(new THREE.SphereGeometry(.024,14,8), featureMaterial, [side*.052,.585,.782], [1.55,.62,.45]);
+  });
+  [-1,1].forEach(side => {
+    ellipsoid(new THREE.SphereGeometry(.045,24,12), eyeWhiteMaterial, [side*.23,.89,.625], [1.55,.44,.28]);
+    ellipsoid(new THREE.SphereGeometry(.025,18,10), featureMaterial, [side*.23,.887,.646], [1.0,.72,.24]);
+    ellipsoid(new THREE.SphereGeometry(.055,24,12), three.skinMaterial, [side*.23,.925,.635], [1.65,.30,.25]);
+    ellipsoid(new THREE.SphereGeometry(.042,20,10), three.skinMaterial, [side*.23,.858,.63], [1.45,.24,.20]);
+  });
+  ellipsoid(new THREE.SphereGeometry(.058,24,12), lipMaterial, [0,.465,.676], [2.05,.24,.16]);
+  ellipsoid(new THREE.SphereGeometry(.068,24,12), lipMaterial, [0,.420,.672], [2.20,.30,.17]);
+  ellipsoid(new THREE.BoxGeometry(.28,.014,.014), featureMaterial, [0,.452,.704], [1,1,1]);
   const hair = new THREE.Mesh(new THREE.SphereGeometry(.83,48,24,0,Math.PI*2,0,Math.PI*.54), three.hairMaterial);
   hair.scale.set(1.02,.78,.82);
   hair.position.set(0,1.15,-.04);
   three.subject.add(hair);
-  three.scene.add(three.subject);
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x111118, .25);
-  three.scene.add(hemi);
-  three.target = new THREE.Object3D();
-  three.target.position.set(0,.78,.54);
-  three.scene.add(three.target);
+  finalizeSubject();
+}
+async function buildStlSubjectHead(THREE, STLLoader){
+  if (!STLLoader) return false;
+  try {
+    const geometry = await new STLLoader().loadAsync('assets/human_head.stl');
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    const center = new THREE.Vector3();
+    geometry.boundingBox.getCenter(center);
+    geometry.translate(-center.x, -center.y, -center.z);
+    geometry.computeBoundingBox();
+    const size = new THREE.Vector3();
+    geometry.boundingBox.getSize(size);
+    const maxAxis = Math.max(size.x, size.y, size.z) || 1;
+    const head = new THREE.Mesh(geometry, three.skinMaterial);
+    head.scale.setScalar(2.08 / maxAxis);
+    head.rotation.set(-Math.PI / 2, 0, 0);
+    head.position.set(0, .78, .02);
+    head.receiveShadow = true;
+    three.subject.add(head);
+
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(.24,.31,.62,32), three.skinMaterial);
+    neck.position.set(0,-.36,0);
+    three.subject.add(neck);
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(1,48,20), three.skinMaterial);
+    shoulder.scale.set(1.42,.26,.56);
+    shoulder.position.set(0,-.64,0);
+    three.subject.add(shoulder);
+    return true;
+  } catch (err) {
+    console.warn('Could not load STL head, using procedural fallback.', err);
+    return false;
+  }
 }
 function buildThreeLights(THREE){
   LIGHTS.forEach(meta => {
@@ -1741,7 +1886,7 @@ function updateThreeScene(){
     const spot = three.lights[meta.id];
     spot.color = color;
     spot.intensity = power;
-    spot.angle = (12 + l.softness*.38) * Math.PI / 180;
+    spot.angle = beamAngleDeg(l) * Math.PI / 180;
     spot.penumbra = clamp(l.softness / 100, .05, .95);
     spot.position.set(pos.x, pos.y, pos.z);
     spot.target.position.copy(targetPos);
@@ -1923,7 +2068,7 @@ function currentSetupHtml(paper){
   const dim = dark ? '#a1a1aa' : '#525252';
   const rows = LIGHTS.map(meta => {
     const l = state.lights[meta.id];
-    return `<tr><td>${meta.name}</td><td>${l.enabled ? 'On' : 'Off'}</td><td>${Math.round(l.intensity)}%</td><td>${Math.round(l.kelvin)}K</td><td>${Math.round(l.height)}</td><td>${Math.round(l.angle)}&deg;</td><td>${Math.round(l.distance)}</td><td>${Math.round(l.softness)}%</td></tr>`;
+    return `<tr><td>${meta.name}</td><td>${l.enabled ? 'On' : 'Off'}</td><td>${Math.round(l.intensity)}%</td><td>${Math.round(l.kelvin)}K</td><td>${Math.round(l.height)}</td><td>${Math.round(l.angle)}&deg;</td><td>${Math.round(l.distance)}</td><td>${Math.round(l.beam)}%</td><td>${Math.round(l.softness)}%</td></tr>`;
   }).join('');
   return `<!doctype html><html><head><title>${escapeHtml(state.projectName)}</title><style>
     body{margin:28px;font-family:Arial,sans-serif;background:${bg};color:${fg}}
@@ -1935,7 +2080,7 @@ function currentSetupHtml(paper){
     <h1>${escapeHtml(state.projectName || 'Untitled project')}</h1>
     <div class="meta">Lighting People Lab / ${new Date().toLocaleString()}</div>
     <img src="${img}" alt="">
-    <table><thead><tr><th>Light</th><th>State</th><th>Intensity</th><th>Kelvin</th><th>Height</th><th>Angle</th><th>Distance</th><th>Softness</th></tr></thead><tbody>${rows}</tbody></table>
+    <table><thead><tr><th>Light</th><th>State</th><th>Intensity</th><th>Kelvin</th><th>Height</th><th>Angle</th><th>Distance</th><th>Beam</th><th>Softness</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="analysis">Pattern: ${patternLabel(state.lights.key)} / Key:Fill: ${keyFillRatio(state.lights.key,state.lights.fill).label} / Contrast: ${contrastLabel(keyFillRatio(state.lights.key,state.lights.fill).raw,state.lights.key.softness,state.lights.fill.intensity)}</div>
   </body></html>`;
 }

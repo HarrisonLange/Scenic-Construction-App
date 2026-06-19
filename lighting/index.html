@@ -462,10 +462,9 @@
         <label class="field" style="flex:1">Gobo
           <select id="goboSelect">
             <option value="open">Open</option>
-            <option value="breakup">Breakup</option>
-            <option value="leaf">Leaf</option>
             <option value="window">Window</option>
-            <option value="stripes">Stripes</option>
+            <option value="blinds">Blinds</option>
+            <option value="branches">Branches</option>
             <option value="dots">Dots</option>
           </select>
         </label>
@@ -759,6 +758,12 @@ function addLightColor(acc, color, amount){
   acc.b += c.b * amount;
   acc.a += amount;
 }
+function normalizeGobo(gobo){
+  const value = (gobo || 'open').toLowerCase();
+  if (value === 'stripes') return 'blinds';
+  if (value === 'leaf' || value === 'breakup') return 'branches';
+  return ['open','window','blinds','branches','dots'].includes(value) ? value : 'open';
+}
 function fixtureById(id){ return state.fixtures.find(f=>f.id===id) || null; }
 function fixtureByChannel(channel){ return state.fixtures.find(f=>f.channel === channel); }
 function performerById(id){ return state.performers.find(p=>p.id===id) || null; }
@@ -827,7 +832,7 @@ function fixtureMutable(f){
   return {
     id:f.id, channel:f.channel, name:f.name, group:f.group, direction:f.direction,
     targetX:f.targetX, targetY:f.targetY, spread:f.spread, color:f.color,
-    intensity:f.intensity, gobo:f.gobo
+    intensity:f.intensity, gobo:normalizeGobo(f.gobo)
   };
 }
 function fixtureCueMutable(f){
@@ -835,7 +840,12 @@ function fixtureCueMutable(f){
     id:f.id,
     channel:f.channel,
     intensity:Number(f.intensity) || 0,
-    color:f.color || '#ffffff'
+    color:f.color || '#ffffff',
+    direction:f.direction,
+    targetX:Number(f.targetX),
+    targetY:Number(f.targetY),
+    spread:Number(f.spread),
+    gobo:normalizeGobo(f.gobo)
   };
 }
 function performerMutable(p){
@@ -847,7 +857,12 @@ function performerMutable(p){
 function mergeSavedFixture(def, saved){
   return Object.assign({}, def, {
     intensity:saved && saved.intensity != null ? Number(saved.intensity) || 0 : def.intensity,
-    color:saved && saved.color ? saved.color : def.color
+    color:saved && saved.color ? saved.color : def.color,
+    direction:saved && saved.direction ? saved.direction : def.direction,
+    targetX:saved && saved.targetX != null ? clamp(Number(saved.targetX) || def.targetX, 0, 100) : def.targetX,
+    targetY:saved && saved.targetY != null ? clamp(Number(saved.targetY) || def.targetY, 0, 60) : def.targetY,
+    spread:saved && saved.spread != null ? clamp(Number(saved.spread) || def.spread, 10, 80) : def.spread,
+    gobo:normalizeGobo(saved && saved.gobo ? saved.gobo : def.gobo)
   });
 }
 function makeSnapshot(){
@@ -864,7 +879,12 @@ function normalizeSnapshot(snapshot){
       : null;
     return Object.assign({}, base, {
       intensity:s && s.intensity != null ? Number(s.intensity) || 0 : Number(base.intensity) || 0,
-      color:s && s.color ? s.color : base.color
+      color:s && s.color ? s.color : base.color,
+      direction:s && s.direction ? s.direction : base.direction,
+      targetX:s && s.targetX != null ? clamp(Number(s.targetX) || base.targetX, 0, 100) : base.targetX,
+      targetY:s && s.targetY != null ? clamp(Number(s.targetY) || base.targetY, 0, 60) : base.targetY,
+      spread:s && s.spread != null ? clamp(Number(s.spread) || base.spread, 10, 80) : base.spread,
+      gobo:normalizeGobo(s && s.gobo ? s.gobo : base.gobo)
     });
   });
   const performers = snapshot && Array.isArray(snapshot.performers)
@@ -888,7 +908,12 @@ function interpolateSnapshot(from, to, t){
     const fb = b.fixtures.find(f=>f.id===base.id || f.channel===base.channel) || base;
     return Object.assign({}, base, {
       color: mixColor(fa.color, fb.color, k),
-      intensity: lerp(Number(fa.intensity)||0, Number(fb.intensity)||0, k)
+      intensity: lerp(Number(fa.intensity)||0, Number(fb.intensity)||0, k),
+      direction:k < .5 ? fa.direction : fb.direction,
+      targetX:lerp(Number(fa.targetX)||base.targetX, Number(fb.targetX)||base.targetX, k),
+      targetY:lerp(Number(fa.targetY)||base.targetY, Number(fb.targetY)||base.targetY, k),
+      spread:lerp(Number(fa.spread)||base.spread, Number(fb.spread)||base.spread, k),
+      gobo:k < .5 ? normalizeGobo(fa.gobo) : normalizeGobo(fb.gobo)
     });
   });
   state.performers = b.performers.map(bp => {
@@ -911,6 +936,11 @@ function makeCue(number, label, fade, hold, trigger, overrides, performerLayout)
     if (f) {
       if (item.intensity != null) f.intensity = item.intensity;
       if (item.color) f.color = item.color;
+      if (item.direction) f.direction = item.direction;
+      if (item.targetX != null) f.targetX = clamp(Number(item.targetX) || f.targetX, 0, 100);
+      if (item.targetY != null) f.targetY = clamp(Number(item.targetY) || f.targetY, 0, 60);
+      if (item.spread != null) f.spread = clamp(Number(item.spread) || f.spread, 10, 80);
+      if (item.gobo) f.gobo = normalizeGobo(item.gobo);
     }
   });
   const performers = clone(START_PERFORMERS);
@@ -1133,6 +1163,7 @@ function renderFixtureControls(){
   $('intensityValue').textContent = Math.round(f.intensity) + '%';
   $('fixtureColor').value = f.color;
   $('colorLabel').textContent = f.color.toUpperCase();
+  f.gobo = normalizeGobo(f.gobo);
   $('goboSelect').value = f.gobo;
   $('directionSelect').value = f.direction;
   $('spreadRange').value = Math.round(f.spread);
@@ -1155,7 +1186,7 @@ function renderFixtureControls(){
 function renderChannelList(){
   $('channelList').innerHTML = state.fixtures.map(f => {
     const on = f.id === state.selectedFixtureId ? ' on' : '';
-    const sub = f.group === 'Cyc' ? 'fixed cyc zone' : `${escapeHtml(f.direction)} ${escapeHtml(f.gobo)}`;
+    const sub = f.group === 'Cyc' ? 'fixed cyc zone' : `${escapeHtml(f.direction)} ${escapeHtml(normalizeGobo(f.gobo))}`;
     return `<div class="channel-row${on}" data-id="${f.id}">
       <div class="row-main"><b>Chan ${f.channel}</b><span>${escapeHtml(f.name)}</span><strong>${Math.round(f.intensity)}%</strong></div>
       <div class="level-track"><div class="level-fill" style="width:${clamp(f.intensity,0,100)}%;background:${f.color}"></div></div>
@@ -1329,13 +1360,13 @@ function updateFixtureFromControls(pushCommand){
   f.intensity = Number($('intensityRange').value);
   f.color = $('fixtureColor').value;
   if (f.group !== 'Cyc' && !state.focusLocked) {
-    f.gobo = $('goboSelect').value;
+    f.gobo = normalizeGobo($('goboSelect').value);
     f.direction = $('directionSelect').value;
     f.spread = Number($('spreadRange').value);
     f.targetX = Number($('focusXRange').value);
     f.targetY = Number($('focusYRange').value);
   } else if (f.group !== 'Cyc') {
-    f.gobo = $('goboSelect').value;
+    f.gobo = normalizeGobo($('goboSelect').value);
   }
   if (pushCommand) setCommandText(`Chan ${f.channel} At ${Math.round(f.intensity)}`);
   renderFixtureControls();
@@ -2514,7 +2545,7 @@ function fixtureConeGeometry(f){
   const px = -uy;
   const py = ux;
   const spread = Number(f.spread) || 24;
-  return {src,target,len,ux,uy,px,py,nearWidth:Math.max(1.2, spread*.05),farWidth:Math.max(2, spread*.58)};
+  return {src,target,len,ux,uy,px,py,nearWidth:Math.max(1.2, spread*.045),farWidth:Math.max(2, spread*.48)};
 }
 function fixtureConeAt(f, x, y){
   if (!f || f.intensity <= 0 || f.group === 'Cyc') return 0;
@@ -2522,15 +2553,50 @@ function fixtureConeAt(f, x, y){
   const dx = x - cone.src.x;
   const dy = y - cone.src.y;
   const along = dx*cone.ux + dy*cone.uy;
-  if (along < 0 || along > cone.len) return 0;
+  if (along < 0 || along > cone.len + 8) return 0;
   const cross = Math.abs(dx*cone.uy - dy*cone.ux);
-  const t = clamp(along / cone.len, 0, 1);
+  const t = clamp(along / Math.max(1, cone.len), 0, 1);
   const halfWidth = lerp(cone.nearWidth, cone.farWidth, Math.pow(t, .82));
-  const edge = clamp(1 - cross / halfWidth, 0, 1);
+  const edge = clamp(1 - cross / Math.max(1, halfWidth), 0, 1);
   if (edge <= 0) return 0;
-  const throwFalloff = clamp(.38 + t * .9, .28, 1.08);
-  const focusBoost = Math.pow(clamp(1 - Math.hypot(x - cone.target.x, y - cone.target.y) / Math.max(4, (Number(f.spread)||24)*.72), 0, 1), 1.35) * .28;
-  return Math.pow(edge, 1.45) * throwFalloff * (1 + focusBoost) * (f.intensity/100);
+  const distanceFalloff = clamp(1.22 - cone.len/52, .45, 1.1);
+  const directionModifier = f.direction === 'top' ? 1.15 : f.direction === 'foot' ? .78 : .95;
+  return Math.pow(edge, .96) * (f.intensity/100) * directionModifier * distanceFalloff * goboMaskAt(f, x, y);
+}
+function goboMaskAt(f, x, y){
+  const gobo = normalizeGobo(f && f.gobo);
+  if (gobo === 'open') return 1;
+  const cone = fixtureConeGeometry(f);
+  const radius = Math.max(3, (Number(f.spread)||24) * .44);
+  const dx = x - cone.target.x;
+  const dy = y - cone.target.y;
+  const gx = (dx*cone.px + dy*cone.py) / radius;
+  const gy = (dx*cone.ux + dy*cone.uy) / radius;
+  if (Math.hypot(gx, gy) > 1.05) return .15;
+  if (gobo === 'window') {
+    const inFrame = Math.abs(gx) < .5 && Math.abs(gy) < .35;
+    const bar = Math.abs(gx) < .045 || Math.abs(gy) < .055;
+    return inFrame && !bar ? 1 : .08;
+  }
+  if (gobo === 'blinds') {
+    const stripe = Math.abs((((gy + gx*.18 + 1.2) % .24) + .24) % .24 - .12);
+    return stripe < .055 ? .08 : 1;
+  }
+  if (gobo === 'branches') {
+    const trunk = Math.abs(Math.sin((gx*3.2 + gy*7.5) * Math.PI)) < .13;
+    const twig = Math.abs(Math.sin((gx*8.5 - gy*4.2) * Math.PI)) < .08 && gy < .45;
+    return trunk || twig ? .1 : 1;
+  }
+  if (gobo === 'dots') {
+    const cellX = Math.floor((gx + 1) * 7);
+    const cellY = Math.floor((gy + 1) * 6);
+    const localX = ((gx + 1) * 7) % 1 - .5;
+    const localY = ((gy + 1) * 6) % 1 - .5;
+    const seed = Math.sin(cellX*12.9898 + cellY*78.233) * 43758.5453;
+    const radiusDot = .14 + (seed - Math.floor(seed)) * .16;
+    return Math.hypot(localX, localY) < radiusDot ? .08 : 1;
+  }
+  return 1;
 }
 function floorCirclePath(cx, cy, radiusWorld, steps=72){
   for (let i=0; i<=steps; i++) {
@@ -2566,6 +2632,13 @@ function drawBeam(f){
   ctx.strokeStyle = rgba(f.color, alpha*.18);
   ctx.lineWidth = Math.max(1, target.scale * 1.2);
   ctx.stroke();
+  if (f.direction !== 'top' && normalizeGobo(f.gobo) !== 'open') {
+    ctx.save();
+    ctx.translate(target.x,target.y);
+    ctx.rotate(Math.atan2(dy, dx));
+    drawGoboPattern(f, radius);
+    ctx.restore();
+  }
   if (f.direction === 'top') {
     const floorRadius = Math.max(2, (Number(f.spread) || 24) * .58);
     ctx.save();
@@ -2593,6 +2666,7 @@ function drawBeam(f){
 }
 function drawGoboPattern(f, radius){
   const alpha = clamp(f.intensity/100,0,1);
+  const gobo = normalizeGobo(f.gobo);
   ctx.save();
   ctx.beginPath();
   ctx.ellipse(0,0,radius*.88,radius*.44,0,0,Math.PI*2);
@@ -2601,43 +2675,32 @@ function drawGoboPattern(f, radius){
   ctx.strokeStyle = f.color;
   ctx.fillStyle = f.color;
   ctx.lineWidth = Math.max(1.2, radius*.025);
-  if (f.gobo === 'window') {
-    for (let x=-radius; x<=radius; x+=radius*.22) {
-      ctx.beginPath(); ctx.moveTo(x,-radius*.48); ctx.lineTo(x,radius*.48); ctx.stroke();
-    }
-    for (let y=-radius*.44; y<=radius*.44; y+=radius*.18) {
-      ctx.beginPath(); ctx.moveTo(-radius,y); ctx.lineTo(radius,y); ctx.stroke();
-    }
-  } else if (f.gobo === 'stripes') {
+  if (gobo === 'window') {
+    ctx.lineWidth = Math.max(2, radius*.035);
+    ctx.strokeRect(-radius*.45, -radius*.3, radius*.9, radius*.6);
+    ctx.beginPath(); ctx.moveTo(0,-radius*.3); ctx.lineTo(0,radius*.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-radius*.45,0); ctx.lineTo(radius*.45,0); ctx.stroke();
+  } else if (gobo === 'blinds') {
     ctx.rotate(-.65);
-    for (let x=-radius*1.4; x<=radius*1.4; x+=radius*.17) {
+    for (let x=-radius*1.4; x<=radius*1.4; x+=radius*.18) {
       ctx.beginPath(); ctx.moveTo(x,-radius); ctx.lineTo(x,radius); ctx.stroke();
     }
-  } else if (f.gobo === 'dots') {
+  } else if (gobo === 'dots') {
     for (let i=0; i<44; i++) {
       const x = Math.sin(i*12.9898)*radius*.82;
       const y = Math.cos(i*78.233)*radius*.38;
       ctx.beginPath(); ctx.arc(x,y,Math.max(2,radius*.035),0,Math.PI*2); ctx.fill();
     }
-  } else if (f.gobo === 'leaf') {
-    for (let i=0; i<18; i++) {
-      const x = Math.sin(i*4.11)*radius*.72;
-      const y = Math.cos(i*3.37)*radius*.34;
-      ctx.save();
-      ctx.translate(x,y);
-      ctx.rotate(i*.83);
+  } else if (gobo === 'branches') {
+    ctx.lineWidth = Math.max(1.4, radius*.026);
+    for (let i=0; i<26; i++) {
+      const x = -radius*.78 + (i/25)*radius*1.56;
+      const y = Math.sin(i*1.7)*radius*.35;
+      const len = radius*(.18 + (i%5)*.025);
       ctx.beginPath();
-      ctx.ellipse(0,0,radius*.09,radius*.026,0,0,Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    }
-  } else {
-    for (let i=0; i<34; i++) {
-      const x = Math.sin(i*8.41)*radius*.8;
-      const y = Math.cos(i*5.97)*radius*.38;
-      ctx.beginPath();
-      ctx.ellipse(x,y,radius*(.05 + (i%5)*.012),radius*(.022 + (i%4)*.01),i*.43,0,Math.PI*2);
-      ctx.fill();
+      ctx.moveTo(x,y);
+      ctx.lineTo(x + Math.cos(i*.8)*len, y + Math.sin(i*.53)*len*.55);
+      ctx.stroke();
     }
   }
   ctx.restore();
@@ -2780,36 +2843,28 @@ function addToAcc(acc, color, amount){
 }
 function performerLighting(p){
   const buckets = {
-    total:{r:10,g:11,b:16,a:.09},
+    total:{r:0,g:0,b:0,a:0},
     left:{r:0,g:0,b:0,a:0},
     right:{r:0,g:0,b:0,a:0},
     front:{r:0,g:0,b:0,a:0},
     back:{r:0,g:0,b:0,a:0},
     top:{r:0,g:0,b:0,a:0},
-    cyc:{r:0,g:0,b:0,a:0},
-    vector:{x:0,y:0,a:0}
+    cyc:{r:0,g:0,b:0,a:0}
   };
   state.fixtures.forEach(f => {
     if (f.intensity <= 0) return;
-    let amount = 0;
     if (f.group === 'Cyc') return;
-    amount = fixtureConeAt(f, p.x, p.y) * 1.42;
+    const amount = fixtureConeAt(f, p.x, p.y);
     if (amount <= 0) return;
     const src = sourceFor(f);
     const sx = src.x - p.x;
     const sy = src.y - p.y;
-    const srcLen = Math.hypot(sx, sy) || 1;
-    const sideBias = clamp(Math.abs(sx) / 48, 0, 1);
-    const frontBias = clamp(Math.abs(sy) / 58, 0, 1);
-    addToAcc(buckets.total, f.color, amount*1.2);
-    addToAcc(buckets.left, f.color, amount * (sx < -4 ? .72 + 1.2*sideBias : .14));
-    addToAcc(buckets.right, f.color, amount * (sx > 4 ? .72 + 1.2*sideBias : .14));
-    addToAcc(buckets.front, f.color, amount * (sy > 5 ? .8 + 1.08*frontBias : .18));
-    addToAcc(buckets.back, f.color, amount * (sy < -5 ? .82 + 1.08*frontBias : .18));
-    addToAcc(buckets.top, f.color, amount * (f.direction === 'top' ? 1.55 : .34));
-    buckets.vector.x += (sx / srcLen) * amount;
-    buckets.vector.y += (sy / srcLen) * amount;
-    buckets.vector.a += amount;
+    addToAcc(buckets.total, f.color, amount);
+    if (sx < 0) addToAcc(buckets.left, f.color, amount);
+    else addToAcc(buckets.right, f.color, amount);
+    if (sy > 0) addToAcc(buckets.front, f.color, amount);
+    else addToAcc(buckets.back, f.color, amount);
+    if (f.direction === 'top') addToAcc(buckets.top, f.color, amount);
   });
   const totalColor = accColor(buckets.total, '#4a4a50');
   const leftColor = accColor(buckets.left, totalColor);
@@ -2818,9 +2873,15 @@ function performerLighting(p){
   const backColor = accColor(buckets.back, totalColor);
   const topColor = accColor(buckets.top, totalColor);
   const cycColor = accColor(buckets.cyc, backColor);
-  const level = clamp(buckets.total.a, .06, 2.65);
-  const keyX = buckets.vector.a ? clamp(buckets.vector.x / buckets.vector.a, -1, 1) : 0;
-  const keyY = buckets.vector.a ? clamp(buckets.vector.y / buckets.vector.a, -1, 1) : .18;
+  const left = buckets.left.a;
+  const right = buckets.right.a;
+  const front = buckets.front.a;
+  const back = buckets.back.a;
+  const top = buckets.top.a;
+  const total = buckets.total.a;
+  const small = Math.max(.04, Math.min(left,right));
+  const keyX = (right - left) / Math.max(.05,left + right);
+  const keyY = (front - back) / Math.max(.05,front + back);
   return {
     color:totalColor,
     leftColor,
@@ -2829,15 +2890,19 @@ function performerLighting(p){
     backColor,
     topColor,
     cycColor,
-    level,
+    level:clamp(total,0,1.8),
     keyX,
     keyY,
-    left:clamp(buckets.left.a,0,1.8),
-    right:clamp(buckets.right.a,0,1.8),
-    front:clamp(buckets.front.a,0,1.8),
-    back:clamp(buckets.back.a,0,1.8),
-    top:clamp(buckets.top.a,0,1.8),
-    cyc:clamp(buckets.cyc.a,0,2.4)
+    left:clamp(left,0,1.8),
+    right:clamp(right,0,1.8),
+    front:clamp(front,0,1.8),
+    back:clamp(back,0,1.8),
+    top:clamp(top,0,1.8),
+    cyc:clamp(buckets.cyc.a,0,2.4),
+    ratio:Math.max(left,right) / small,
+    exposure:Math.log2(Math.max(.08,total/.82)),
+    fill:Math.round(clamp(small / Math.max(.08,Math.max(left,right)) * 100,0,100)),
+    shadow:Math.round(clamp((1 - small/Math.max(.08,total)) * 100,0,100))
   };
 }
 function materialTone(base, lt, strength){

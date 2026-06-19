@@ -56,6 +56,19 @@
     font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);
     margin-bottom:16px;padding-left:2px;
   }
+  .category + .category{margin-top:30px}
+  .category-head{
+    display:flex;align-items:center;gap:12px;margin-bottom:12px;
+    font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#d7dbe3;
+  }
+  .category-head::after{
+    content:"";height:1px;flex:1;background:var(--ui-dark3);
+  }
+  .grid>.category-head{
+    grid-column:1/-1;
+    margin-top:10px;
+  }
+  .grid>.category-head:first-child{margin-top:0}
   .grid{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;
   }
@@ -139,8 +152,12 @@
 <main>
   <div class="grid-head">Choose a lab</div>
   <div class="grid">
+    <div class="category-head" style="order:10">Costumes</div>
+    <div class="category-head" style="order:20">Lighting</div>
+    <div class="category-head" style="order:30">Scenic</div>
+    <div class="category-head" style="order:40">Sound</div>
 
-    <a class="card" href="scenic/" style="--card-accent:#fbbf24;--card-tint:rgba(251,191,36,.16)">
+    <a class="card" href="scenic/" style="order:31;--card-accent:#92278F;--card-tint:rgba(146,39,143,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="1.5"/>
@@ -154,7 +171,7 @@
       </span>
     </a>
 
-    <a class="card" href="sound/" style="--card-accent:#3b82f6;--card-tint:rgba(59,130,246,.16)">
+    <a class="card" href="sound/" style="order:41;--card-accent:#00AEEF;--card-tint:rgba(0,174,239,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M11 5L6 9H3v6h3l5 4V5z"/>
@@ -168,7 +185,7 @@
       </span>
     </a>
 
-    <a class="card" href="costume/" style="--card-accent:#EC008C;--card-tint:rgba(236,0,140,.16)">
+    <a class="card" href="costume/" style="order:11;--card-accent:#7AC143;--card-tint:rgba(122,193,67,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3a2 2 0 0 1 2 2c0 1.5-2 2.2-2 3.5"/>
@@ -183,7 +200,7 @@
       </span>
     </a>
 
-    <a class="card" href="designlab/" style="--card-accent:#7AC143;--card-tint:rgba(122,193,67,.16)">
+    <a class="card" href="designlab/" style="order:32;--card-accent:#2E3192;--card-tint:rgba(46,49,146,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 20h18"/>
@@ -199,7 +216,7 @@
       </span>
     </a>
 
-    <a class="card" href="lighting/" style="--card-accent:#00AEEF;--card-tint:rgba(0,174,239,.16)">
+    <a class="card" href="lighting/" style="order:21;--card-accent:#F7941E;--card-tint:rgba(247,148,30,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 3h12l-2 6H8L6 3z"/>
@@ -216,7 +233,7 @@
       </span>
     </a>
 
-    <a class="card" href="studiolab/" style="--card-accent:#58c46f;--card-tint:rgba(88,196,111,.16)">
+    <a class="card" href="studiolab/" style="order:23;--card-accent:#EC008C;--card-tint:rgba(236,0,140,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19h16"/>
@@ -233,7 +250,7 @@
       </span>
     </a>
 
-    <a class="card" href="lighting-people/" style="--card-accent:#F7941E;--card-tint:rgba(247,148,30,.16)">
+    <a class="card" href="lighting-people/" style="order:22;--card-accent:#ED1C45;--card-tint:rgba(237,28,69,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/>
