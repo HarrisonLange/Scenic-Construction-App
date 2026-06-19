@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDSCPA · Line Mixing Lab</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237AC143'/><stop offset='.33' stop-color='%23ED1C45'/><stop offset='.66' stop-color='%2392278F'/><stop offset='1' stop-color='%2300AEEF'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='24' font-family='Arial,sans-serif' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
+<style>
+  :root{
+    --ui-dark:#0a0a0a; --ui-dark2:#1a1a1a; --ui-dark3:#333333;
+    --panel:#141414; --panel2:#1d1d1d; --line:#2b2b2b;
+    --accent:#3b82f6; --violet:#8b5cf6; --amber:#fbbf24;
+    --ok:#22c55e; --bad:#ef4444; --go:#27c93f; --go-dark:#1a8a2c;
+    --magenta:#EC008C;
+    --text-light:#f0f0f0; --text-dim:#888888;
+    --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
+    --rainbow:linear-gradient(90deg,#7AC143,#F7941E,#ED1C45,#EC008C,#92278F,#2E3192,#00AEEF);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    background:var(--ui-dark);color:var(--text-light);
+    height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px;
+  }
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit}
+
+  /* ── Topbar ── */
+  #topbar{
+    display:flex;align-items:center;gap:14px;padding:8px 14px;
+    background:var(--ui-dark2);border-bottom:1px solid #000;position:relative;flex:0 0 auto;flex-wrap:wrap;
+  }
+  #topbar::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:2px;background:var(--rainbow);opacity:.9}
+  .back-hub{
+    display:inline-flex;align-items:center;gap:5px;text-decoration:none;color:var(--text-dim);
+    font-size:12px;font-weight:600;padding:5px 9px;border:1px solid var(--ui-dark3);border-radius:8px;
+  }
+  .back-hub:hover{color:var(--text-light);border-color:#555}
+  .brand-logo{height:24px;width:auto;display:block}
+  .brand-tag{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;border-left:1px solid var(--ui-dark3);padding-left:12px}
+  .spacer{flex:1}
+  select,.tbtn{
+    background:var(--panel2);border:1px solid var(--ui-dark3);color:var(--text-light);
+    border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;
+  }
+  select{min-width:200px}
+  select:focus{outline:none;border-color:var(--accent)}
+  .tbtn{display:inline-flex;align-items:center;gap:6px}
+  .tbtn:hover{border-color:#555;background:#262626}
+  .tbtn svg{width:14px;height:14px}
+  .tbtn.go{background:var(--go-dark);border-color:var(--go);color:#eafff0}
+  .tbtn.go:hover{background:#1f9c33}
+  .tbtn.magenta{background:rgba(236,0,140,.16);border-color:var(--magenta);color:#ffb8e3}
+  .seg{display:inline-flex;border:1px solid var(--ui-dark3);border-radius:8px;overflow:hidden}
+  .seg button{background:var(--panel2);border:none;color:var(--text-dim);padding:6px 14px;font-size:12px;font-weight:700;letter-spacing:.4px}
+  .seg button.active{background:var(--accent);color:#fff}
+  .seg button:not(.active):hover{background:#262626;color:var(--text-light)}
+
+  /* ── Stage / highway ── */
+  #stage{flex:1;position:relative;min-height:0;background:
+      radial-gradient(900px 500px at 50% -10%, rgba(59,130,246,.07), transparent 70%),
+      var(--ui-dark);overflow:hidden}
+  #hwy{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+  /* HUD */
+  .hud{position:absolute;pointer-events:none;z-index:5}
+  #hudScore{top:12px;left:16px}
+  #hudScore .lbl{font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase}
+  #hudScore .val{font-size:30px;font-weight:800;font-family:var(--mono);color:#fff;line-height:1}
+  #hudTimer{top:12px;right:16px;text-align:right}
+  #hudTimer .lbl{font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase}
+  #hudTimer .val{font-size:30px;font-weight:800;font-family:var(--mono);color:var(--amber);line-height:1}
+  #hudCombo{top:14px;left:50%;transform:translateX(-50%);text-align:center}
+  #hudCombo .mult{font-size:22px;font-weight:900;color:var(--go);letter-spacing:.5px}
+  #hudCombo .cnt{font-size:11px;color:var(--text-dim);letter-spacing:1px}
+  #hudAcc{top:54px;right:16px;text-align:right;font-size:11px;color:var(--text-dim)}
+  #hudAcc b{color:#dfe3ea;font-family:var(--mono)}
+
+  /* now-playing line */
+  #lineNow{
+    position:absolute;left:50%;bottom:16px;transform:translateX(-50%);
+    max-width:min(820px,92%);text-align:center;z-index:5;pointer-events:none;
+  }
+  #lineNow .who{font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+  #lineNow .txt{font-size:17px;line-height:1.4;color:#eef0f4;font-style:italic;
+    text-shadow:0 2px 12px rgba(0,0,0,.9)}
+
+  /* overlays */
+  .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:18px;z-index:20;text-align:center;padding:24px;
+    background:rgba(8,8,10,.78);backdrop-filter:blur(3px)}
+  .overlay.hidden{display:none}
+  .overlay h1{font-size:30px;font-weight:800;letter-spacing:.5px}
+  .overlay .sub{font-size:14px;color:#b9bcc2;max-width:560px;line-height:1.6}
+  .overlay .big-btn{
+    background:var(--go-dark);border:1px solid var(--go);color:#eafff0;border-radius:12px;
+    padding:14px 34px;font-size:17px;font-weight:800;letter-spacing:.5px;display:inline-flex;align-items:center;gap:9px;
+  }
+  .overlay .big-btn:hover{background:#1f9c33}
+  #countdown{font-size:120px;font-weight:900;color:#fff;font-family:var(--mono);
+    text-shadow:0 0 40px rgba(59,130,246,.6)}
+
+  .keycap{display:inline-block;font-family:var(--mono);font-weight:800;background:#000;
+    border:1px solid var(--ui-dark3);border-bottom-width:3px;border-radius:6px;padding:1px 8px;color:#dfe3ea}
+
+  /* ── DCA console ── */
+  #console{
+    flex:0 0 auto;display:flex;gap:8px;padding:12px 16px 16px;background:var(--panel);
+    border-top:1px solid var(--line);justify-content:center;
+  }
+  .dca{
+    flex:0 1 150px;max-width:170px;min-width:0;background:var(--panel2);border:1px solid var(--ui-dark3);
+    border-radius:11px;padding:9px 9px 11px;display:flex;flex-direction:column;align-items:center;gap:6px;
+    user-select:none;position:relative;transition:transform .05s,box-shadow .08s;overflow:hidden;
+  }
+  .dca::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--dca,#666)}
+  .dca .name{font-size:12px;font-weight:800;letter-spacing:.3px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;max-width:100%;color:#e7eaf0}
+  .dca .fader{width:100%;height:8px;border-radius:5px;background:#000;overflow:hidden}
+  .dca .fader i{display:block;height:100%;width:0;background:var(--dca,#666);transition:width .05s}
+  .dca .cap{font-family:var(--mono);font-weight:800;font-size:15px;background:#000;border:1px solid var(--ui-dark3);
+    border-bottom-width:3px;border-radius:6px;padding:1px 0;width:30px;text-align:center;color:#cfd3da}
+  .dca.live{box-shadow:0 0 0 2px var(--dca),0 0 22px var(--dca);transform:translateY(1px)}
+  .dca.live .name{color:#fff}
+  .dca.live .cap{background:var(--dca);color:#0a0a0a;border-color:var(--dca)}
+  .dca.cue{box-shadow:0 0 0 2px var(--dca)}
+
+  /* ── Modals ── */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .modal.show{display:flex}
+  .sheet{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:16px;
+    width:100%;max-width:560px;max-height:90vh;overflow:auto;position:relative}
+  .sheet::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--rainbow);border-radius:16px 16px 0 0}
+  .sheet-pad{padding:24px 26px 26px}
+  .sheet h2{font-size:20px;font-weight:800;margin-bottom:6px}
+  .sheet p.note{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:16px}
+  .sheet label{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#cfd3da;margin:14px 0 5px}
+  .sheet input,.sheet textarea{width:100%;background:var(--ui-dark);border:1px solid var(--ui-dark3);
+    color:var(--text-light);border-radius:9px;padding:10px 12px;font-size:13px}
+  .sheet input:focus,.sheet textarea:focus{outline:none;border-color:var(--accent)}
+  .sheet textarea{min-height:200px;resize:vertical;font-family:var(--mono);font-size:12px;line-height:1.5}
+  .sheet .row{display:flex;gap:18px;margin-top:24px;justify-content:flex-end}
+  .sheet .btn{border-radius:9px;padding:10px 18px;font-size:13px;font-weight:700;border:1px solid var(--ui-dark3);background:var(--panel2);color:var(--text-light)}
+  .sheet .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .sheet .btn.primary:hover{background:#2f6fe0}
+  .sheet .btn:hover{border-color:#555}
+  .fmt{background:#000;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--mono);
+    font-size:11px;color:#9aa0aa;white-space:pre-wrap;line-height:1.55;margin-top:6px}
+
+  /* results */
+  #resultModal .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:18px 0 4px}
+  .stat{background:var(--ui-dark);border:1px solid var(--ui-dark3);border-radius:11px;padding:14px}
+  .stat .k{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-dim)}
+  .stat .v{font-size:28px;font-weight:800;font-family:var(--mono);margin-top:2px}
+  .stat .v.blue{color:var(--accent)} .stat .v.amber{color:var(--amber)}
+  .stat .v.green{color:var(--go)} .stat .v.mag{color:var(--magenta)}
+  .grade-banner{text-align:center;font-size:40px;font-weight:900;letter-spacing:2px;margin:6px 0 2px}
+
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--ui-dark3);
+    border-radius:9px;padding:10px 16px;font-size:13px;font-weight:600;z-index:90;opacity:0;transition:opacity .2s;pointer-events:none}
+  #toast.show{opacity:1}
+  #toast.good{border-color:var(--ok);color:#bbf7d0}
+  #toast.warn{border-color:var(--amber);color:#fde68a}
+  #toast.bad{border-color:var(--bad);color:#fecaca}
+
+  @media (max-width:680px){
+    .brand-tag{display:none}
+    #hudScore .val,#hudTimer .val{font-size:22px}
+    .dca .name{font-size:10px}
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a class="back-hub" href="../" title="Back to all labs">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3L5 8l5 5"/></svg>
+    Labs
+  </a>
+  <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
+    <defs><linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7AC143"/><stop offset=".17" stop-color="#F7941E"/><stop offset=".34" stop-color="#ED1C45"/>
+      <stop offset=".50" stop-color="#EC008C"/><stop offset=".66" stop-color="#92278F"/><stop offset=".83" stop-color="#2E3192"/><stop offset="1" stop-color="#00AEEF"/>
+    </linearGradient></defs>
+    <text x="0" y="40" font-family="'Arial Black',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
+  </svg>
+  <span class="brand-tag">Line Mixing Lab</span>
+
+  <span class="spacer"></span>
+
+  <select id="scriptSel" title="Choose a script"></select>
+  <button class="tbtn" id="addScriptBtn" title="Add your own script">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+    Script
+  </button>
+  <span class="seg" id="modeSeg">
+    <button data-mode="practice" class="active">Practice</button>
+    <button data-mode="quiz">Quiz</button>
+  </span>
+  <button class="tbtn go" id="startBtn">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 3l9 5-9 5z"/></svg>
+    <span id="startLabel">Start</span>
+  </button>
+  <button class="tbtn" id="helpBtn" title="How to play">?</button>
+</div>
+
+<div id="stage">
+  <canvas id="hwy"></canvas>
+
+  <div class="hud" id="hudScore"><div class="lbl">Score</div><div class="val" id="scoreVal">0</div></div>
+  <div class="hud" id="hudCombo"></div>
+  <div class="hud" id="hudTimer"><div class="lbl" id="timerLbl">Time</div><div class="val" id="timerVal">5:00</div></div>
+  <div class="hud" id="hudAcc"></div>
+
+  <div id="lineNow"><div class="who" id="lineWho"></div><div class="txt" id="lineTxt"></div></div>
+
+  <!-- start / idle overlay -->
+  <div class="overlay" id="startOverlay">
+    <h1 id="ovTitle">🎚️ Line Mixing Lab</h1>
+    <div class="sub" id="ovSub">
+      Each character is on a DCA bound to a key on the bottom row of your keyboard
+      (<span class="keycap">Z</span>–<span class="keycap">M</span>). As each line falls toward the
+      <b>mix line</b>, press &amp; <b>hold</b> that character's key for the whole line, then release when it ends.
+      Open only the person who's speaking — that's line mixing.
+    </div>
+    <button class="big-btn" id="ovStart">
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M4 3l9 5-9 5z"/></svg>
+      <span id="ovStartLabel">Start Practice</span>
+    </button>
+    <div class="sub" style="font-size:12px;color:var(--text-dim)" id="ovHint"></div>
+  </div>
+
+  <!-- countdown -->
+  <div class="overlay hidden" id="cdOverlay"><div id="countdown">3</div></div>
+</div>
+
+<div id="console"></div>
+
+<!-- Add Script modal -->
+<div class="modal" id="scriptModal">
+  <div class="sheet"><div class="sheet-pad">
+    <h2>Add a script</h2>
+    <p class="note">Paste a script below. The first up-to-7 distinct speakers become DCAs (bound to Z, X, C, V, B, N, M in order they appear). Public-domain scripts only.</p>
+    <label>Title</label>
+    <input id="msTitle" placeholder="e.g. Our Town — Act I">
+    <label>Author <span style="color:var(--text-dim);text-transform:none;font-weight:400">(optional)</span></label>
+    <input id="msAuthor" placeholder="e.g. Thornton Wilder">
+    <label>Script</label>
+    <textarea id="msBody" placeholder="ROMEO: But soft, what light through yonder window breaks?&#10;JULIET: O Romeo, Romeo, wherefore art thou Romeo?"></textarea>
+    <div class="fmt">FORMAT — one line per spoken line:
+CHARACTER: the words they say
+Use "== Scene Name ==" to start a new scene (optional).</div>
+    <div class="row">
+      <button class="btn" id="msCancel">Cancel</button>
+      <button class="btn primary" id="msSave">Add script</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Results modal -->
+<div class="modal" id="resultModal">
+  <div class="sheet"><div class="sheet-pad">
+    <div class="grade-banner" id="resGrade">GREAT MIX!</div>
+    <p class="note" style="text-align:center" id="resSub"></p>
+    <div class="grid">
+      <div class="stat"><div class="k">Score</div><div class="v blue" id="resScore">0</div></div>
+      <div class="stat"><div class="k">Accuracy</div><div class="v green" id="resAcc">0%</div></div>
+      <div class="stat"><div class="k">Max Combo</div><div class="v amber" id="resCombo">0</div></div>
+      <div class="stat"><div class="k">Lines Mixed</div><div class="v mag" id="resLines">0</div></div>
+    </div>
+    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#cfd3da;margin:18px 0 5px">
+      Your name <span style="color:var(--text-dim);text-transform:none;font-weight:400">(for the certificate)</span>
+    </label>
+    <input id="resName" placeholder="Enter your name" style="width:100%;background:var(--ui-dark);border:1px solid var(--ui-dark3);color:var(--text-light);border-radius:9px;padding:10px 12px;font-size:13px">
+    <div class="row">
+      <button class="btn" id="resClose">Close</button>
+      <button class="btn" id="resRetry">Play again</button>
+      <button class="btn primary" id="resCert">
+        Download certificate
+      </button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Help modal -->
+<div class="modal" id="helpModal">
+  <div class="sheet"><div class="sheet-pad">
+    <h2>How to play</h2>
+    <p class="note">Line mixing is what a live A1 does on a musical: open each performer's channel (DCA) only while they speak or sing, so the mix stays clean and feedback-free.</p>
+    <ul style="font-size:13px;line-height:1.8;color:#cdd1d9;padding-left:18px">
+      <li>Every character sits on a DCA bound to a key: <span class="keycap">Z</span> <span class="keycap">X</span> <span class="keycap">C</span> <span class="keycap">V</span> <span class="keycap">B</span> <span class="keycap">N</span> <span class="keycap">M</span>.</li>
+      <li>Lines fall down their lane. <b>Press &amp; hold</b> the key as the bar crosses the <b>mix line</b>, and <b>release</b> when the bar passes.</li>
+      <li>Holding the right DCA for the full line = <b>Perfect</b>. Opening the wrong DCA hurts your score.</li>
+      <li>You can also click/tap the DCA buttons at the bottom.</li>
+      <li><b>Practice</b> runs one random scene with no pressure. <b>Quiz</b> runs 5 minutes from a random spot, scored like Guitar Hero — finish for a certificate.</li>
+    </ul>
+    <div class="row"><button class="btn primary" id="helpClose">Got it</button></div>
+  </div></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const DCA_KEYS = ['z','x','c','v','b','n','m'];
+const PALETTE = ['#3b82f6','#EC008C','#7AC143','#F7941E','#8b5cf6','#00AEEF','#ED1C45'];
+
+/* ───────────────────────── Built-in scripts ───────────────────────── */
+const BUILTIN = [
+{
+  id:'earnest', title:'The Importance of Being Earnest', author:'Oscar Wilde',
+  scenes:[
+    {name:'Town — Algernon\'s Flat', lines:[
+      ['Algernon',"Did you hear what I was playing, Lane?"],
+      ['Lane',"I didn't think it polite to listen, sir."],
+      ['Algernon',"I'm sorry for that, for your sake. I don't play accurately — anyone can play accurately — but I play with wonderful expression."],
+      ['Jack',"How are you, my dear Ernest? What brings you up to town?"],
+      ['Algernon',"Oh, pleasure, pleasure! What else should bring one anywhere?"],
+      ['Jack',"How perfectly delightful! Eating as usual, I see, Algy."],
+      ['Algernon',"I believe it is customary in good society to take some slight refreshment at five o'clock."],
+      ['Jack',"And very good bread and butter it is too."],
+      ['Algernon',"Well, you need not eat as if you were going to eat it all. You behave as if you were married to her already."],
+      ['Jack',"Why on earth do you say that?"],
+      ['Algernon',"I have always suspected you of being a confirmed and secret Bunburyist; and I am quite sure of it now."],
+      ['Jack',"Bunburyist? What on earth do you mean by a Bunburyist?"],
+      ['Algernon',"You have invented a very useful younger brother called Ernest, in order that you may come up to town as often as you like."],
+      ['Jack',"That wouldn't be at all a bad thing."],
+      ['Algernon',"My dear fellow, the truth is rarely pure and never simple."],
+    ]},
+    {name:'The Interview — Lady Bracknell', lines:[
+      ['Bracknell',"Do you smoke?"],
+      ['Jack',"Well, yes, I must admit I smoke."],
+      ['Bracknell',"I am glad to hear it. A man should always have an occupation of some kind. How old are you?"],
+      ['Jack',"Twenty-nine."],
+      ['Bracknell',"A very good age to be married at. What is your income?"],
+      ['Jack',"Between seven and eight thousand a year."],
+      ['Bracknell',"In land, or in investments?"],
+      ['Jack',"In investments, chiefly."],
+      ['Bracknell',"That is satisfactory. Now to minor matters. Are your parents living?"],
+      ['Jack',"I have lost both my parents."],
+      ['Bracknell',"To lose one parent may be regarded as a misfortune; to lose both looks like carelessness."],
+      ['Jack',"I was found. The late Mr Thomas Cardew found me, and gave me the name of Worthing."],
+      ['Bracknell',"Found you? Where did the charitable gentleman find you?"],
+      ['Jack',"In a hand-bag. A somewhat large, black leather hand-bag."],
+      ['Bracknell',"A hand-bag?"],
+      ['Jack',"Yes. The Brighton line."],
+      ['Bracknell',"The line is immaterial. I would strongly advise you to acquire some relations as soon as possible."],
+    ]},
+    {name:'The Garden — Gwendolen & Cecily', lines:[
+      ['Gwendolen',"Cecily Cardew? What a very sweet name. Something tells me that we are going to be great friends."],
+      ['Cecily',"How nice of you to like me so much after we have known each other such a comparatively short time."],
+      ['Gwendolen',"You are here on a short visit, I suppose?"],
+      ['Cecily',"Oh no! I live here."],
+      ['Gwendolen',"Your guardian, with the assistance of Miss Prism, has the arduous task of looking after you?"],
+      ['Cecily',"Oh no! Mr Worthing is my guardian."],
+      ['Gwendolen',"Ernest never mentioned to me that he had a ward."],
+      ['Cecily',"It is not Mr Ernest Worthing who is my guardian. It is his brother — his elder brother."],
+      ['Gwendolen',"Ernest never mentioned to me that he had a brother."],
+      ['Cecily',"I am sorry to say they have not been on good terms for a long time."],
+      ['Gwendolen',"Are you sure? I would like the privilege of asking; may I sit down?"],
+      ['Cecily',"Pray do! I am afraid there must be some slight error."],
+      ['Gwendolen',"It would distress me more than I can tell you, dear Cecily, if it caused any misunderstanding between us."],
+      ['Cecily',"Do you suggest, Miss Fairfax, that I entrapped Ernest? How dare you. This is no time for wearing the shallow mask of manners."],
+    ]},
+  ]
+},
+{
+  id:'romeo', title:'Romeo and Juliet', author:'William Shakespeare',
+  scenes:[
+    {name:'A Street in Verona', lines:[
+      ['Benvolio',"Part, fools! Put up your swords; you know not what you do."],
+      ['Tybalt',"What, art thou drawn among these heartless hinds? Turn thee, Benvolio, look upon thy death."],
+      ['Benvolio',"I do but keep the peace. Put up thy sword, or manage it to part these men with me."],
+      ['Tybalt',"What, drawn, and talk of peace? I hate the word, as I hate hell, all Montagues, and thee."],
+      ['Mercutio',"Tybalt, you rat-catcher, will you walk?"],
+      ['Tybalt',"What wouldst thou have with me?"],
+      ['Mercutio',"Good king of cats, nothing but one of your nine lives."],
+      ['Romeo',"Gentle Mercutio, put thy rapier up."],
+      ['Mercutio',"Come, sir, your passado!"],
+      ['Romeo',"Draw, Benvolio; beat down their weapons. Hold, Tybalt! Good Mercutio!"],
+      ['Mercutio',"I am hurt. A plague o' both your houses! I am sped."],
+      ['Benvolio',"What, art thou hurt?"],
+      ['Mercutio',"Ay, ay, a scratch, a scratch; marry, 'tis enough."],
+      ['Romeo',"Courage, man; the hurt cannot be much."],
+      ['Mercutio',"No, 'tis not so deep as a well, nor so wide as a church-door; but 'tis enough."],
+    ]},
+    {name:'Capulet\'s Orchard — The Balcony', lines:[
+      ['Romeo',"But soft! what light through yonder window breaks? It is the east, and Juliet is the sun."],
+      ['Romeo',"See how she leans her cheek upon her hand! O, that I were a glove upon that hand."],
+      ['Juliet',"Ay me!"],
+      ['Romeo',"She speaks. O, speak again, bright angel!"],
+      ['Juliet',"O Romeo, Romeo! wherefore art thou Romeo?"],
+      ['Juliet',"Deny thy father and refuse thy name; or, if thou wilt not, be but sworn my love."],
+      ['Romeo',"Shall I hear more, or shall I speak at this?"],
+      ['Juliet',"'Tis but thy name that is my enemy. What's Montague? It is nor hand, nor foot, nor any other part."],
+      ['Juliet',"What's in a name? That which we call a rose by any other name would smell as sweet."],
+      ['Romeo',"I take thee at thy word. Call me but love, and I'll be new baptized."],
+      ['Juliet',"What man art thou that, thus bescreen'd in night, so stumblest on my counsel?"],
+      ['Romeo',"By a name I know not how to tell thee who I am."],
+      ['Juliet',"My ears have not yet drunk a hundred words of that tongue's utterance, yet I know the sound."],
+      ['Juliet',"Dost thou love me? I know thou wilt say 'Ay'; and I will take thy word."],
+      ['Romeo',"Lady, by yonder blessed moon I swear—"],
+      ['Juliet',"O, swear not by the moon, the inconstant moon, that monthly changes in her circled orb."],
+      ['Romeo',"What shall I swear by?"],
+      ['Juliet',"Do not swear at all; or, if thou wilt, swear by thy gracious self."],
+      ['Nurse',"Madam!"],
+      ['Juliet',"Anon, good nurse! Sweet Montague, be true. Stay but a little, I will come again."],
+    ]},
+    {name:'Friar Lawrence\'s Cell', lines:[
+      ['Friar',"The grey-eyed morn smiles on the frowning night. Now, ere the sun advance his burning eye—"],
+      ['Romeo',"Good morrow, father."],
+      ['Friar',"Benedicite! What early tongue so sweet saluteth me?"],
+      ['Friar',"Young son, it argues a distemper'd head so soon to bid good morrow to thy bed."],
+      ['Romeo',"That last is true; the sweeter rest was mine."],
+      ['Friar',"God pardon sin! wast thou with Rosaline?"],
+      ['Romeo',"With Rosaline, my ghostly father? No; I have forgot that name, and that name's woe."],
+      ['Friar',"That's my good son: but where hast thou been, then?"],
+      ['Romeo',"I have been feasting with mine enemy. I bear no hatred, blessed man, for, lo, my intercession likewise steads my foe."],
+      ['Friar',"Be plain, good son, and homely in thy drift."],
+      ['Romeo',"Then plainly know my heart's dear love is set on the fair daughter of rich Capulet."],
+      ['Friar',"Holy Saint Francis, what a change is here!"],
+      ['Romeo',"I pray thee, chide not; she whom I love now doth grace for grace and love for love allow."],
+      ['Friar',"O, she knew well thy love did read by rote and could not spell. But come, young waverer, come, go with me."],
+    ]},
+  ]
+},
+{
+  id:'trifles', title:'Trifles', author:'Susan Glaspell',
+  scenes:[
+    {name:'The Wright Farmhouse Kitchen', lines:[
+      ['Attorney',"This feels good. Come up to the fire, ladies."],
+      ['Peters',"I'm not — cold."],
+      ['Attorney',"Now, Mr. Hale, before we move things about, you explain to Mr. Henderson just what you saw."],
+      ['Hale',"I started to town with a load of potatoes. I said to Harry that I wanted to see John Wright about putting in a telephone."],
+      ['Attorney',"Let's talk about that later, Mr. Hale. Tell what happened when you got to the house."],
+      ['Hale',"I knocked at the door, and still it was all quiet inside. So I opened the door, and there in the rocker sat Mrs. Wright."],
+      ['Attorney',"And how did she — look?"],
+      ['Hale',"Well, she looked queer. Kind of done up. She was pleatin' at her apron."],
+      ['Attorney',"How did she seem to feel about your coming?"],
+      ['Hale',"She didn't pay much attention. I said, 'How do, Mrs. Wright, it's cold, ain't it?' And she said, 'Is it?'"],
+      ['Attorney',"And what did Mrs. Wright say then?"],
+      ['Hale',"She moved the rocker a little. 'Cant I see John?' I asked. 'No,' she says, 'he's home.' 'Then why can't I see him?' 'Cause he's dead,' says she."],
+      ['Sheriff',"Nothing here but kitchen things."],
+      ['Attorney',"Here's a nice mess. Dirty towels! Not much of a housekeeper, would you say, ladies?"],
+      ['Hale',"Well, women are used to worrying over trifles."],
+      ['Peters',"Of course it's no more than their duty."],
+      ['Attorney',"And yet, for all their worries, what would we do without the ladies?"],
+      ['Sheriff',"They wonder if she was going to quilt it or just knot it!"],
+      ['Attorney',"We'll come back to these trifles. Let's go upstairs again and go over it piece by piece."],
+      ['Peters',"Mrs. Hale — do you think she — did it?"],
+      ['Hale',"Look at this. The bird-cage. Who do you suppose was so rough with it?"],
+      ['Peters',"Somebody — wrung — its — neck."],
+      ['Attorney',"Well, ladies, have you decided whether she was going to quilt it or knot it?"],
+      ['Peters',"We think she was going to — knot it."],
+    ]},
+  ]
+},
+];
+
+/* ───────────────────────── State ───────────────────────── */
+const QUIZ_SECONDS = 300;
+const TRAVEL_MS = 2400;            // time for a note to fall from top to mix line
+const LEAD_MS = TRAVEL_MS + 700;   // pre-roll before first note lands
+const GAP_MS = 360;                // gap between consecutive lines
+
+let scripts = [];
+let current = null;     // current script object
+let mode = 'practice';
+let chars = [];         // [{name,key,color,lane}]
+let charMap = {};       // name -> char obj
+
+let game = null;        // active game session
+let keyDown = {};       // key -> bool
+const cvs = $('hwy'), ctx = cvs.getContext('2d');
+let dpr = 1, W = 0, H = 0;
+
+/* ───────────────────────── Script loading ───────────────────────── */
+function loadScripts(){
+  scripts = BUILTIN.map(s=>({...s, builtin:true}));
+  try{
+    const custom = JSON.parse(localStorage.getItem('line-mixing-scripts')||'[]');
+    custom.forEach(c=>scripts.push(c));
+  }catch(e){}
+}
+function saveCustom(){
+  const custom = scripts.filter(s=>!s.builtin).map(({builtin,...rest})=>rest);
+  localStorage.setItem('line-mixing-scripts', JSON.stringify(custom));
+}
+function populateSelect(){
+  const sel = $('scriptSel');
+  sel.innerHTML = '';
+  scripts.forEach(s=>{
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.author ? `${s.title} — ${s.author}` : s.title;
+    sel.appendChild(o);
+  });
+  if(current) sel.value = current.id;
+}
+
+/* Build the character→DCA mapping for a script (first up-to-7 distinct speakers) */
+function setCurrent(script){
+  current = script;
+  const seen = [];
+  script.scenes.forEach(sc=>sc.lines.forEach(([who])=>{ if(!seen.includes(who)) seen.push(who); }));
+  const main = seen.slice(0, DCA_KEYS.length);
+  chars = main.map((name,i)=>({name, key:DCA_KEYS[i], color:PALETTE[i], lane:i}));
+  charMap = {};
+  chars.forEach(c=>charMap[c.name]=c);
+  buildConsole();
+}
+
+/* ───────────────────────── Console (DCA strip) ───────────────────────── */
+function buildConsole(){
+  const c = $('console');
+  c.innerHTML = '';
+  chars.forEach(ch=>{
+    const el = document.createElement('div');
+    el.className = 'dca'; el.dataset.key = ch.key;
+    el.style.setProperty('--dca', ch.color);
+    el.innerHTML = `<div class="cap">${ch.key.toUpperCase()}</div>
+      <div class="name">${ch.name}</div>
+      <div class="fader"><i></i></div>`;
+    const press = e=>{ e.preventDefault(); setKey(ch.key, true); };
+    const release = e=>{ e.preventDefault(); setKey(ch.key, false); };
+    el.addEventListener('pointerdown', press);
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointerleave', release);
+    el.addEventListener('pointercancel', release);
+    c.appendChild(el);
+  });
+}
+function refreshConsole(){
+  document.querySelectorAll('.dca').forEach(el=>{
+    const k = el.dataset.key;
+    el.classList.toggle('live', !!keyDown[k]);
+    const f = el.querySelector('.fader i');
+    if(f) f.style.width = keyDown[k] ? '100%' : '0';
+  });
+}
+
+/* ───────────────────────── Timeline ───────────────────────── */
+function lineDuration(text){
+  const words = text.trim().split(/\s+/).length;
+  return clamp(words*300 + 550, 950, 7000);
+}
+/* Build a note list from an ordered array of [who,text]; lays out start/end times. */
+function buildNotes(lineArr, startTime){
+  const notes = [];
+  let t = startTime;
+  lineArr.forEach(([who,text])=>{
+    const ch = charMap[who];
+    if(!ch) { return; } // speaker not on a DCA (e.g. minor character) — skip but keep flow
+    const dur = lineDuration(text);
+    notes.push({ who, text, lane:ch.lane, key:ch.key, color:ch.color,
+                 start:t, end:t+dur, dur, heldCorrect:0, heldWrong:0, scored:false });
+    t += dur + GAP_MS;
+  });
+  return {notes, end:t};
+}
+
+/* ───────────────────────── Game control ───────────────────────── */
+function buildPractice(){
+  const sc = current.scenes[Math.floor(Math.random()*current.scenes.length)];
+  const {notes} = buildNotes(sc.lines, LEAD_MS);
+  return { mode:'practice', sceneName:sc.name, notes, started:0, t:0,
+           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
+           lastFrame:0, running:false, finished:false, lastFlash:null };
+}
+function buildQuiz(){
+  // Flatten all scenes into one ordered list, start at a random line, loop to fill 5 min.
+  const flat = [];
+  current.scenes.forEach(sc=>sc.lines.forEach(l=>flat.push(l)));
+  const startIdx = Math.floor(Math.random()*flat.length);
+  const seq = [];
+  let i = startIdx, guard = 0;
+  // we lay notes until we exceed the quiz window; build seq long enough
+  let probe = LEAD_MS;
+  while(probe < LEAD_MS + QUIZ_SECONDS*1000 + 4000 && guard < 4000){
+    const [who,text] = flat[i % flat.length];
+    seq.push([who,text]);
+    if(charMap[who]) probe += lineDuration(text) + GAP_MS;
+    i++; guard++;
+  }
+  const {notes} = buildNotes(seq, LEAD_MS);
+  return { mode:'quiz', sceneName:'Quiz', notes, started:0, t:0,
+           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
+           lastFrame:0, running:false, finished:false, lastFlash:null,
+           quizEnd: LEAD_MS + QUIZ_SECONDS*1000 };
+}
+
+function startGame(){
+  if(!current) return;
+  game = (mode==='quiz') ? buildQuiz() : buildPractice();
+  keyDown = {}; refreshConsole();
+  $('startOverlay').classList.add('hidden');
+  $('scoreVal').textContent = '0';
+  // countdown 3-2-1
+  let n = 3;
+  $('cdOverlay').classList.remove('hidden');
+  $('countdown').textContent = n;
+  const tick = setInterval(()=>{
+    n--;
+    if(n<=0){
+      clearInterval(tick);
+      $('cdOverlay').classList.add('hidden');
+      game.running = true;
+      game.started = performance.now();
+      game.lastFrame = game.started;
+    } else {
+      $('countdown').textContent = n;
+    }
+  }, 800);
+}
+
+function endGame(){
+  game.running = false; game.finished = true;
+  keyDown = {}; refreshConsole();
+  if(game.mode==='quiz'){ showResults(); }
+  else { showPracticeSummary(); }
+}
+
+/* ───────────────────────── Scoring ───────────────────────── */
+function finalizeNote(n){
+  n.scored = true;
+  const acc = n.heldCorrect / n.dur;
+  const wrong = n.heldWrong / n.dur;
+  game.accSum += clamp(acc - wrong*0.5, 0, 1); game.accCount++;
+  let grade, base;
+  if(acc>=0.85 && wrong<0.15){ grade='PERFECT'; base=100; }
+  else if(acc>=0.55 && wrong<0.4){ grade='GOOD'; base=60; }
+  else if(acc>=0.25){ grade='OK'; base=30; }
+  else { grade='MISS'; base=0; }
+
+  if(grade==='MISS' || wrong>=0.5){
+    game.combo = 0;
+  } else {
+    game.combo++; game.maxCombo = Math.max(game.maxCombo, game.combo);
+    if(acc>=0.25) game.lines++;
+  }
+  const mult = comboMult(game.combo);
+  game.score += Math.round(base * mult);
+  game.lastFlash = { grade, mult, at:game.t,
+    color: grade==='PERFECT'?'#27c93f':grade==='GOOD'?'#3b82f6':grade==='OK'?'#fbbf24':'#ef4444' };
+  $('scoreVal').textContent = game.score.toLocaleString();
+}
+function comboMult(combo){
+  if(combo>=30) return 4;
+  if(combo>=20) return 3;
+  if(combo>=10) return 2;
+  return 1;
+}
+
+/* ───────────────────────── Input ───────────────────────── */
+function setKey(k, down){
+  if(!DCA_KEYS.includes(k)) return;
+  if(keyDown[k]===down) return;
+  keyDown[k]=down;
+  refreshConsole();
+}
+window.addEventListener('keydown', e=>{
+  if(e.repeat) return;
+  const tag = (e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select') return;
+  const k = e.key.toLowerCase();
+  if(DCA_KEYS.includes(k)){ e.preventDefault(); setKey(k,true); }
+});
+window.addEventListener('keyup', e=>{
+  const k = e.key.toLowerCase();
+  if(DCA_KEYS.includes(k)){ setKey(k,false); }
+});
+
+/* ───────────────────────── Render / loop ───────────────────────── */
+function resize(){
+  dpr = window.devicePixelRatio||1;
+  const r = cvs.getBoundingClientRect();
+  W = r.width; H = r.height;
+  cvs.width = Math.max(1,Math.floor(W*dpr));
+  cvs.height = Math.max(1,Math.floor(H*dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+
+function loop(now){
+  requestAnimationFrame(loop);
+  // advance game clock
+  if(game && game.running){
+    const dt = now - game.lastFrame;
+    game.lastFrame = now;
+    game.t += dt;
+
+    // per-frame hold accounting on active notes
+    game.notes.forEach(n=>{
+      if(n.scored) return;
+      if(game.t>=n.start && game.t<=n.end){
+        if(keyDown[n.key]) n.heldCorrect += dt;
+        for(const k of DCA_KEYS){ if(k!==n.key && keyDown[k]){ n.heldWrong += dt; break; } }
+      } else if(game.t>n.end){
+        finalizeNote(n);
+      }
+    });
+
+    // quiz timer / practice end
+    if(game.mode==='quiz'){
+      if(game.t >= game.quizEnd){ endGame(); }
+    } else {
+      const last = game.notes[game.notes.length-1];
+      if(last && game.t > last.end + 1200){ endGame(); }
+    }
+  }
+  draw();
+  updateHud();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(!chars.length) return;
+  const laneCount = chars.length;
+  const hwW = Math.min(W-40, laneCount*150 + 40);
+  const x0 = (W-hwW)/2;
+  const laneW = hwW/laneCount;
+  const hitY = H - 38;
+  const topPad = 64;
+  const pxPerMs = (hitY - topPad) / TRAVEL_MS;
+
+  // highway backdrop
+  ctx.fillStyle = 'rgba(255,255,255,.015)';
+  ctx.fillRect(x0,0,hwW,H);
+  // lane separators + headers
+  for(let i=0;i<laneCount;i++){
+    const ch = chars[i];
+    const lx = x0 + i*laneW;
+    // lane tint
+    const grd = ctx.createLinearGradient(0,0,0,hitY);
+    grd.addColorStop(0,'rgba(0,0,0,0)');
+    grd.addColorStop(1, hexA(ch.color,.06));
+    ctx.fillStyle = grd; ctx.fillRect(lx,0,laneW,hitY);
+    // separators
+    ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(lx+.5,0); ctx.lineTo(lx+.5,H); ctx.stroke();
+    // lane label (key + name) at top
+    ctx.textAlign='center';
+    ctx.fillStyle = hexA(ch.color,.9);
+    ctx.font='800 13px '+monoFont();
+    ctx.fillText(ch.key.toUpperCase(), lx+laneW/2, 24);
+    ctx.fillStyle='#9aa0aa';
+    ctx.font='700 11px Inter,sans-serif';
+    ctx.fillText(truncate(ch.name, laneW-14, ctx, '700 11px Inter,sans-serif'), lx+laneW/2, 42);
+    // target ring at hit line
+    const tgtOn = keyDown[ch.key];
+    ctx.beginPath();
+    ctx.fillStyle = tgtOn ? ch.color : 'rgba(255,255,255,.04)';
+    ctx.strokeStyle = ch.color; ctx.lineWidth = tgtOn?3:2;
+    roundRect(ctx, lx+8, hitY-4, laneW-16, 22, 6);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(255,255,255,.06)';
+  ctx.beginPath(); ctx.moveTo(x0+hwW+.5,0); ctx.lineTo(x0+hwW+.5,H); ctx.stroke();
+
+  // mix line
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x0,hitY+8.5); ctx.lineTo(x0+hwW,hitY+8.5); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.45)'; ctx.font='700 9px Inter,sans-serif';
+  ctx.textAlign='left'; ctx.fillText('MIX LINE', x0+4, hitY+4);
+
+  if(!game) return;
+
+  // notes
+  let nowLine = null;
+  game.notes.forEach(n=>{
+    const headY = hitY - (n.start - game.t)*pxPerMs;  // start edge
+    const tailY = headY - n.dur*pxPerMs;               // end edge
+    if(headY < -20 || tailY > H+20) return;            // off-screen
+    const lx = x0 + n.lane*laneW;
+    const pad = 8;
+    const top = tailY, bot = Math.min(headY, hitY+18);
+    const active = game.t>=n.start && game.t<=n.end;
+    // body
+    ctx.fillStyle = hexA(n.color, n.scored? (active?.85:.32) : (active?1:.8));
+    roundRect(ctx, lx+pad, top, laneW-pad*2, Math.max(6,bot-top), 7);
+    ctx.fill();
+    // head highlight
+    if(headY < hitY+18){
+      ctx.fillStyle = hexA('#ffffff',.85);
+      roundRect(ctx, lx+pad, Math.min(headY-4,hitY+14), laneW-pad*2, 4, 2);
+      ctx.fill();
+    }
+    if(active){
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+      roundRect(ctx, lx+pad, top, laneW-pad*2, Math.max(6,bot-top), 7); ctx.stroke();
+      nowLine = n;
+    }
+  });
+
+  // current line text
+  if(nowLine){
+    $('lineWho').textContent = nowLine.who;
+    $('lineWho').style.color = nowLine.color;
+    $('lineTxt').textContent = '“'+nowLine.text+'”';
+  } else {
+    $('lineWho').textContent=''; $('lineTxt').textContent='';
+  }
+
+  // hit flash
+  if(game.lastFlash && game.t - game.lastFlash.at < 650){
+    const age = (game.t-game.lastFlash.at)/650;
+    ctx.globalAlpha = 1-age;
+    ctx.textAlign='center';
+    ctx.fillStyle=game.lastFlash.color;
+    ctx.font='900 34px Inter,sans-serif';
+    const fy = hitY - 30 - age*18;
+    ctx.fillText(game.lastFlash.grade, W/2, fy);
+    if(game.lastFlash.mult>1){
+      ctx.font='800 16px '+monoFont();
+      ctx.fillText('×'+game.lastFlash.mult, W/2, fy+22);
+    }
+    ctx.globalAlpha=1;
+  }
+}
+
+function updateHud(){
+  const combo = $('hudCombo');
+  if(game && game.combo>1){
+    combo.innerHTML = `<div class="mult">×${comboMult(game.combo)}</div><div class="cnt">${game.combo} combo</div>`;
+  } else combo.innerHTML='';
+
+  if(game && game.mode==='quiz' && game.running){
+    const remain = clamp((game.quizEnd - game.t)/1000, 0, QUIZ_SECONDS);
+    $('timerLbl').textContent='Time';
+    $('timerVal').textContent = fmtClock(remain);
+    $('timerVal').style.color = remain<30 ? '#ef4444' : 'var(--amber)';
+  } else if(game && game.mode==='practice'){
+    $('timerLbl').textContent='Scene';
+    $('timerVal').textContent = '∞';
+    $('timerVal').style.color='var(--text-dim)';
+  }
+
+  if(game && game.accCount>0){
+    const acc = Math.round(game.accSum/game.accCount*100);
+    $('hudAcc').innerHTML = `Accuracy <b>${acc}%</b> · Lines <b>${game.lines}</b>`;
+  } else $('hudAcc').innerHTML='';
+}
+
+/* ───────────────────────── Results / summary ───────────────────────── */
+function gameStats(){
+  const acc = game.accCount ? Math.round(game.accSum/game.accCount*100) : 0;
+  return { score:game.score, acc, combo:game.maxCombo, lines:game.lines };
+}
+function showResults(){
+  const s = gameStats();
+  let grade='KEEP PRACTICING', col='#ef4444';
+  if(s.acc>=90){ grade='FLAWLESS MIX!'; col='#27c93f'; }
+  else if(s.acc>=75){ grade='GREAT MIX!'; col='#3b82f6'; }
+  else if(s.acc>=55){ grade='SOLID MIX'; col='#fbbf24'; }
+  else if(s.acc>=35){ grade='GETTING THERE'; col='#EC008C'; }
+  $('resGrade').textContent=grade; $('resGrade').style.color=col;
+  $('resSub').textContent = `${current.title} · 5-minute quiz`;
+  $('resScore').textContent = s.score.toLocaleString();
+  $('resAcc').textContent = s.acc+'%';
+  $('resCombo').textContent = s.combo;
+  $('resLines').textContent = s.lines;
+  $('resultModal').classList.add('show');
+}
+function showPracticeSummary(){
+  const s = gameStats();
+  toast(`Scene done — ${s.acc}% accuracy, ${s.lines} lines, best combo ×${s.combo}.`, 'good', 4200);
+  $('startOverlay').classList.remove('hidden');
+  setOverlayText();
+}
+
+/* ───────────────────────── Certificate ───────────────────────── */
+function downloadCertificate(){
+  if(!game || !game.finished){ toast('Finish a quiz first.', 'warn'); return; }
+  const name = ($('resName').value||'').trim() || 'Student';
+  const s = gameStats();
+  const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const CW=1200, CH=820;
+  const off=document.createElement('canvas'); off.width=CW; off.height=CH;
+  const g=off.getContext('2d');
+  g.fillStyle='#0d0d10'; g.fillRect(0,0,CW,CH);
+  g.fillStyle='#13131a'; rr(g,32,32,CW-64,CH-64,16); g.fill();
+  const stripe=['#7AC143','#F7941E','#ED1C45','#EC008C','#92278F','#2E3192','#00AEEF'];
+  const brd=g.createLinearGradient(0,0,CW,0);
+  stripe.forEach((c,i,a)=>brd.addColorStop(i/(a.length-1),c));
+  g.strokeStyle=brd; g.lineWidth=6; rr(g,32,32,CW-64,CH-64,16); g.stroke();
+  g.fillStyle=brd; g.fillRect(32,32,CW-64,6);
+  g.textAlign='center';
+  g.font='900 68px "Arial Black",Arial,sans-serif'; g.fillStyle='#EC008C'; g.fillText('SDSCPA',CW/2,150);
+  g.font='400 14px Arial'; g.fillStyle='#55556a'; g.fillText('C E R T I F I C A T E   O F   C O M P L E T I O N',CW/2,188);
+  g.font='700 36px Arial'; g.fillStyle='#dde0ec'; g.fillText('Line Mixing Lab',CW/2,252);
+  g.strokeStyle='#2a2a38'; g.lineWidth=1; g.beginPath(); g.moveTo(140,278); g.lineTo(CW-140,278); g.stroke();
+  g.font='300 17px Arial'; g.fillStyle='#55556a'; g.fillText('This certifies that',CW/2,328);
+  g.font='700 54px Georgia,serif'; g.fillStyle='#ffffff'; g.fillText(name,CW/2,406);
+  g.font='300 17px Arial'; g.fillStyle='#55556a';
+  g.fillText(`completed a 5-minute line-mixing quiz on “${current.title}”`,CW/2,454);
+  // stat boxes
+  const boxes=[['SCORE',s.score.toLocaleString(),'#3b82f6'],['ACCURACY',s.acc+'%','#27c93f'],
+               ['MAX COMBO','×'+s.combo,'#fbbf24'],['LINES MIXED',s.lines,'#EC008C']];
+  const bw=250, bh=92, gapx=18, totalW=bw*4+gapx*3, sx=CW/2-totalW/2, by=494;
+  boxes.forEach((b,i)=>{
+    const bx=sx+i*(bw+gapx);
+    g.fillStyle='#1a1a24'; rr(g,bx,by,bw,bh,10); g.fill();
+    g.strokeStyle='#2a2a3a'; g.lineWidth=1; rr(g,bx,by,bw,bh,10); g.stroke();
+    g.font='800 34px Arial'; g.fillStyle=b[2]; g.fillText(String(b[1]),bx+bw/2,by+50);
+    g.font='400 11px Arial'; g.fillStyle='#55556a'; g.fillText(b[0],bx+bw/2,by+76);
+  });
+  g.font='300 15px Arial'; g.fillStyle='#7a7a90';
+  g.fillText('Riding DCAs in time — opening each performer only while they speak.',CW/2,648);
+  g.strokeStyle='#1e1e2a'; g.lineWidth=1; g.beginPath(); g.moveTo(140,CH-72); g.lineTo(CW-140,CH-72); g.stroke();
+  g.font='400 13px Arial'; g.fillStyle='#33334a'; g.fillText(dateStr,CW/2,CH-46);
+  off.toBlob(blob=>{
+    if(!blob){ toast('Export failed.','bad'); return; }
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`SDSCPA-Line-Mixing-Certificate-${stamp()}.png`;
+    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('Certificate downloaded!','good');
+  },'image/png');
+}
+
+/* ───────────────────────── Add script ───────────────────────── */
+function parseScript(title, author, body){
+  const scenes = [];
+  let cur = {name:'Scene 1', lines:[]};
+  body.split(/\r?\n/).forEach(raw=>{
+    const ln = raw.trim();
+    if(!ln) return;
+    const sceneM = ln.match(/^==\s*(.+?)\s*==$/);
+    if(sceneM){
+      if(cur.lines.length) scenes.push(cur);
+      cur = {name:sceneM[1], lines:[]};
+      return;
+    }
+    const m = ln.match(/^([^:]{1,40}):\s*(.+)$/);
+    if(m){
+      cur.lines.push([m[1].trim(), m[2].trim()]);
+    }
+  });
+  if(cur.lines.length) scenes.push(cur);
+  if(!scenes.length) return null;
+  return { id:'custom-'+Date.now(), title:title||'Untitled', author:author||'', scenes };
+}
+
+/* ───────────────────────── Helpers ───────────────────────── */
+function hexA(hex,a){
+  const h=hex.replace('#','');
+  const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function roundRect(c,x,y,w,h,r){ r=Math.min(r,w/2,h/2); c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function rr(g,x,y,w,h,r){ roundRect(g,x,y,w,h,r); }
+function truncate(text,maxW,c,font){ c.font=font; if(c.measureText(text).width<=maxW) return text;
+  let t=text; while(t.length>1 && c.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
+function monoFont(){ return "'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace"; }
+function fmtClock(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+String(s).padStart(2,'0'); }
+function stamp(){ const d=new Date(); const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
+let toastT=null;
+function toast(msg,kind,ms){ const t=$('toast'); t.textContent=msg; t.className=''; t.classList.add('show'); if(kind)t.classList.add(kind);
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), ms||2600); }
+
+function setOverlayText(){
+  $('ovStartLabel').textContent = mode==='quiz' ? 'Start 5-Minute Quiz' : 'Start Practice';
+  $('startLabel').textContent = mode==='quiz' ? 'Start Quiz' : 'Start';
+  if(mode==='quiz'){
+    $('ovHint').innerHTML = `Quiz picks a random spot in <b>${current?current.title:'the script'}</b> and scores you for 5 minutes — Guitar-Hero style. Earn a certificate at the end.`;
+  } else {
+    $('ovHint').innerHTML = `Practice plays one random scene from <b>${current?current.title:'the script'}</b>. No timer, no pressure.`;
+  }
+}
+
+/* ───────────────────────── Wiring ───────────────────────── */
+function init(){
+  loadScripts();
+  setCurrent(scripts[0]);
+  populateSelect();
+  resize();
+  requestAnimationFrame(loop);
+  setOverlayText();
+
+  $('scriptSel').addEventListener('change', e=>{
+    const s = scripts.find(x=>x.id===e.target.value);
+    if(s){ setCurrent(s); setOverlayText(); }
+  });
+  $('modeSeg').querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      mode = b.dataset.mode;
+      $('modeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('active', x===b));
+      setOverlayText();
+      $('startOverlay').classList.remove('hidden');
+    });
+  });
+  $('startBtn').addEventListener('click', startGame);
+  $('ovStart').addEventListener('click', startGame);
+  $('helpBtn').addEventListener('click', ()=>$('helpModal').classList.add('show'));
+  $('helpClose').addEventListener('click', ()=>$('helpModal').classList.remove('show'));
+
+  // add-script modal
+  $('addScriptBtn').addEventListener('click', ()=>{
+    $('msTitle').value=''; $('msAuthor').value=''; $('msBody').value='';
+    $('scriptModal').classList.add('show'); $('msTitle').focus();
+  });
+  $('msCancel').addEventListener('click', ()=>$('scriptModal').classList.remove('show'));
+  $('msSave').addEventListener('click', ()=>{
+    const parsed = parseScript($('msTitle').value.trim(), $('msAuthor').value.trim(), $('msBody').value);
+    if(!parsed){ toast('Couldn\'t find any “NAME: line” entries.', 'bad'); return; }
+    scripts.push(parsed); saveCustom(); populateSelect();
+    $('scriptSel').value = parsed.id; setCurrent(parsed); setOverlayText();
+    $('scriptModal').classList.remove('show');
+    toast(`Added “${parsed.title}” — ${chars.length} DCAs.`, 'good');
+  });
+
+  // results modal
+  $('resClose').addEventListener('click', ()=>{ $('resultModal').classList.remove('show'); $('startOverlay').classList.remove('hidden'); });
+  $('resRetry').addEventListener('click', ()=>{ $('resultModal').classList.remove('show'); startGame(); });
+  $('resCert').addEventListener('click', downloadCertificate);
+
+  // close modals on backdrop
+  [['scriptModal'],['resultModal'],['helpModal']].forEach(([id])=>{
+    $(id).addEventListener('click', e=>{ if(e.target===$(id)) $(id).classList.remove('show'); });
+  });
+}
+init();
+</script>
+</body>
+</html>
