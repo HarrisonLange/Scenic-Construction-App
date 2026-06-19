@@ -662,6 +662,11 @@ const threeStageCanvas = $('threeStageCanvas');
 const STORAGE_KEY = 'sdscpa-lighting-trainer-v1';
 const STUDIO_MODEL_W = 192;
 const STUDIO_MODEL_H = 360;
+const LIGHT_INTENSITY_MULTIPLIER = 3.9;
+const CYC_INTENSITY_MULTIPLIER = 0.25;
+const BEAM_OPACITY_MULTIPLIER = 0.5;
+const BEAM_VISIBLE_LENGTH = 0.5;
+const VIEW_AMBIENT_MULTIPLIER = 0.25;
 const studioModel = {
   ready:false,
   loading:false,
@@ -1261,7 +1266,7 @@ function renderChannelList(){
 function cuePreviewHtml(cue){
   const snap = normalizeSnapshot(cue.snapshot);
   const cyc = [16,17,18].map(ch => snap.fixtures.find(f=>f.channel===ch) || {color:'#111111', intensity:0});
-  const bg = cyc.map(f => mixColor('#08080b', f.color || '#ffffff', clamp((Number(f.intensity)||0)/100,0,.85)));
+  const bg = cyc.map(f => mixColor('#08080b', f.color || '#ffffff', clamp((Number(f.intensity)||0)/100 * CYC_INTENSITY_MULTIPLIER,0,.85)));
   const performers = snap.performers.map(p => {
     const x = clamp(Number(p.x)||50, 8, 92);
     const y = clamp(Number(p.y)||35, 18, 55);
@@ -2483,8 +2488,8 @@ function initThreeStage(THREE){
   stage3d.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   // Low ambient so unlit areas stay theatre-dark but shadows still read.
-  stage3d.scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x05050a, .09));
-  stage3d.scene.add(new THREE.AmbientLight(0xffffff, .03));
+  stage3d.scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x05050a, .09 * VIEW_AMBIENT_MULTIPLIER));
+  stage3d.scene.add(new THREE.AmbientLight(0xffffff, .03 * VIEW_AMBIENT_MULTIPLIER));
 
   // Solid stage deck — matte black floor that catches light and shadow.
   stage3d.materials.floor = new THREE.MeshStandardMaterial({color:'#0f0f13', roughness:.92, metalness:.03});
@@ -2678,6 +2683,34 @@ function stageGoboTexture(gobo){
   stage3d.goboTextures[key] = texture;
   return texture;
 }
+function createThreeBeamMaterial(THREE, color){
+  return new THREE.ShaderMaterial({
+    uniforms:{
+      beamColor:{value:new THREE.Color(color || '#ffffff')},
+      opacity:{value:.08}
+    },
+    vertexShader:`
+      varying vec2 vUv;
+      void main(){
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader:`
+      uniform vec3 beamColor;
+      uniform float opacity;
+      varying vec2 vUv;
+      void main(){
+        float fade = pow(clamp(vUv.y, 0.0, 1.0), 0.9);
+        gl_FragColor = vec4(beamColor, opacity * fade);
+      }
+    `,
+    transparent:true,
+    depthWrite:false,
+    side:THREE.DoubleSide,
+    blending:THREE.AdditiveBlending
+  });
+}
 function ensureThreeFixture(f){
   const THREE = studioModel.THREE;
   if (!stage3d.fixtures[f.id]) {
@@ -2698,15 +2731,8 @@ function ensureThreeFixture(f){
     stage3d.fixtureMeshes[f.id] = mesh;
     // Volumetric haze beam: additive cone so the shaft reads through the air.
     const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(.08, 1, 1, 40, 1, true),
-      new THREE.MeshBasicMaterial({
-        color:f.color || '#ffffff',
-        transparent:true,
-        opacity:.08,
-        depthWrite:false,
-        side:THREE.DoubleSide,
-        blending:THREE.AdditiveBlending
-      })
+      new THREE.CylinderGeometry(1, .08, 1, 40, 1, true),
+      createThreeBeamMaterial(THREE, f.color || '#ffffff')
     );
     beam.renderOrder = 4;
     stage3d.scene.add(beam);
@@ -2736,7 +2762,7 @@ function updateThreeFixture(f){
       const panel = panels[idx];
       if (panel) {
         panel.material.emissive.set(f.color || '#ffffff');
-        panel.material.emissiveIntensity = clamp(intensity / 100 * .92, 0, 1);
+        panel.material.emissiveIntensity = clamp(intensity / 100 * .92 * LIGHT_INTENSITY_MULTIPLIER * CYC_INTENSITY_MULTIPLIER, 0, LIGHT_INTENSITY_MULTIPLIER * CYC_INTENSITY_MULTIPLIER);
       }
     }
     return;
@@ -2750,7 +2776,7 @@ function updateThreeFixture(f){
   bundle.spot.castShadow = true;
   bundle.spot.distance = f.direction === 'back' ? 30 : 34;
   bundle.spot.penumbra = f.direction === 'foot' ? .82 : .5;
-  bundle.spot.intensity = clamp(intensity / 100 * 6.5, 0, 7.5);
+  bundle.spot.intensity = clamp(intensity / 100 * 6.5 * LIGHT_INTENSITY_MULTIPLIER, 0, 7.5 * LIGHT_INTENSITY_MULTIPLIER);
   bundle.spot.angle = clamp((Number(f.spread)||28) * Math.PI / 360, Math.PI/18, Math.PI/3);
   bundle.spot.map = stageGoboTexture(f.gobo);
   if (mesh) {
@@ -2762,16 +2788,18 @@ function updateThreeFixture(f){
   if (beam) {
     const a = new THREE.Vector3(src.x, src.y, src.z);
     const b = new THREE.Vector3(target.x, target.y, target.z);
-    const mid = a.clone().lerp(b, .5);
-    const dir = b.clone().sub(a);
+    const end = a.clone().lerp(b, BEAM_VISIBLE_LENGTH);
+    const mid = a.clone().lerp(end, .5);
+    const dir = end.clone().sub(a);
     const len = Math.max(.1, dir.length());
-    const radius = Math.max(.35, Math.tan(bundle.spot.angle) * len * .72);
+    const fullLen = Math.max(.1, a.distanceTo(b));
+    const radius = Math.max(.35, Math.tan(bundle.spot.angle) * fullLen * .72 * BEAM_VISIBLE_LENGTH);
     beam.geometry.dispose();
-    beam.geometry = new THREE.CylinderGeometry(.08, radius, len, 40, 1, true);
+    beam.geometry = new THREE.CylinderGeometry(radius, .08, len, 40, 1, true);
     beam.position.copy(mid);
     beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
-    beam.material.color.set(f.color || '#ffffff');
-    beam.material.opacity = clamp(intensity / 100 * .2, .02, .22);
+    beam.material.uniforms.beamColor.value.set(f.color || '#ffffff');
+    beam.material.uniforms.opacity.value = clamp(intensity / 100 * .2 * BEAM_OPACITY_MULTIPLIER, .02 * BEAM_OPACITY_MULTIPLIER, .22 * BEAM_OPACITY_MULTIPLIER);
     beam.visible = intensity > 0;
   }
 }
@@ -3066,15 +3094,16 @@ function drawCyc(){
     const seg = segments[index] || [index*100/cyc.length, (index+1)*100/cyc.length];
     const zone = stageZone(seg[0], seg[1], 0, 60);
     const alpha = clamp(f.intensity/100, 0, 1);
+    const glowAlpha = value => clamp(value * LIGHT_INTENSITY_MULTIPLIER * CYC_INTENSITY_MULTIPLIER, 0, 1);
     if (alpha <= 0) return;
     const top = worldToScreen({x:(seg[0]+seg[1])/2,y:0});
     const bottom = worldToScreen({x:(seg[0]+seg[1])/2,y:60});
     ctx.beginPath();
     pathPoints(zone);
     const grad = ctx.createLinearGradient(0, top.y, 0, bottom.y);
-    grad.addColorStop(0, rgba(f.color, alpha*.5));
-    grad.addColorStop(.48, rgba(f.color, alpha*.35));
-    grad.addColorStop(1, rgba(f.color, alpha*.16));
+    grad.addColorStop(0, rgba(f.color, glowAlpha(alpha*.5)));
+    grad.addColorStop(.48, rgba(f.color, glowAlpha(alpha*.35)));
+    grad.addColorStop(1, rgba(f.color, glowAlpha(alpha*.16)));
     ctx.fillStyle = grad;
     ctx.fill();
 
@@ -3085,7 +3114,7 @@ function drawCyc(){
     ctx.globalCompositeOperation = 'lighter';
     const p = worldToScreen({x:(seg[0]+seg[1])/2,y:24});
     const glow = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,layout.w*.34);
-    glow.addColorStop(0, rgba(f.color, alpha*.18));
+    glow.addColorStop(0, rgba(f.color, glowAlpha(alpha*.18)));
     glow.addColorStop(1, rgba(f.color, 0));
     ctx.fillStyle = glow;
     ctx.fillRect(layout.x,layout.y,layout.w,layout.h);
@@ -3153,7 +3182,7 @@ function fixtureConeAt(f, x, y){
   if (edge <= 0) return 0;
   const distanceFalloff = clamp(1.22 - cone.len/52, .45, 1.1);
   const directionModifier = f.direction === 'top' ? 1.15 : f.direction === 'foot' ? .78 : .95;
-  return Math.pow(edge, .96) * (f.intensity/100) * directionModifier * distanceFalloff * goboMaskAt(f, x, y);
+  return Math.pow(edge, .96) * (f.intensity/100) * LIGHT_INTENSITY_MULTIPLIER * directionModifier * distanceFalloff * goboMaskAt(f, x, y);
 }
 function goboMaskAt(f, x, y){
   const gobo = normalizeGobo(f && f.gobo);
@@ -3203,10 +3232,19 @@ function drawBeam(f){
   const coneWorld = fixtureConeGeometry(f);
   const source = worldToScreen(sourceFor(f));
   const target = worldToScreen({x:f.targetX,y:f.targetY});
-  const edgeA = worldToScreen({x:coneWorld.target.x + coneWorld.px*coneWorld.farWidth, y:coneWorld.target.y + coneWorld.py*coneWorld.farWidth});
-  const edgeB = worldToScreen({x:coneWorld.target.x - coneWorld.px*coneWorld.farWidth, y:coneWorld.target.y - coneWorld.py*coneWorld.farWidth});
-  const radius = Math.max(6, Math.hypot(edgeA.x - target.x, edgeA.y - target.y));
+  const endT = BEAM_VISIBLE_LENGTH;
+  const fadeWorld = {
+    x:coneWorld.src.x + (coneWorld.target.x - coneWorld.src.x) * endT,
+    y:coneWorld.src.y + (coneWorld.target.y - coneWorld.src.y) * endT
+  };
+  const fade = worldToScreen(fadeWorld);
+  const endWidth = lerp(coneWorld.nearWidth, coneWorld.farWidth, Math.pow(endT, .82));
+  const edgeA = worldToScreen({x:fadeWorld.x + coneWorld.px*endWidth, y:fadeWorld.y + coneWorld.py*endWidth});
+  const edgeB = worldToScreen({x:fadeWorld.x - coneWorld.px*endWidth, y:fadeWorld.y - coneWorld.py*endWidth});
+  const stageEdgeA = worldToScreen({x:coneWorld.target.x + coneWorld.px*coneWorld.farWidth, y:coneWorld.target.y + coneWorld.py*coneWorld.farWidth});
+  const radius = Math.max(6, Math.hypot(stageEdgeA.x - target.x, stageEdgeA.y - target.y));
   const alpha = clamp(f.intensity/100,0,1);
+  const beamAlpha = value => clamp(value * BEAM_OPACITY_MULTIPLIER, 0, 1);
   const dx = target.x - source.x;
   const dy = target.y - source.y;
   ctx.save();
@@ -3215,13 +3253,13 @@ function drawBeam(f){
   ctx.lineTo(edgeA.x, edgeA.y);
   ctx.lineTo(edgeB.x, edgeB.y);
   ctx.closePath();
-  const cone = ctx.createLinearGradient(source.x,source.y,target.x,target.y);
-  cone.addColorStop(0, rgba(f.color, alpha*.26));
-  cone.addColorStop(.18, rgba(f.color, alpha*.18));
-  cone.addColorStop(1, rgba(f.color, alpha*.06));
+  const cone = ctx.createLinearGradient(source.x,source.y,fade.x,fade.y);
+  cone.addColorStop(0, rgba(f.color, beamAlpha(alpha*.26)));
+  cone.addColorStop(.45, rgba(f.color, beamAlpha(alpha*.16)));
+  cone.addColorStop(1, rgba(f.color, 0));
   ctx.fillStyle = cone;
   ctx.fill();
-  ctx.strokeStyle = rgba(f.color, alpha*.18);
+  ctx.strokeStyle = cone;
   ctx.lineWidth = Math.max(1, target.scale * 1.2);
   ctx.stroke();
   if (f.direction !== 'top' && normalizeGobo(f.gobo) !== 'open') {
@@ -3238,12 +3276,12 @@ function drawBeam(f){
     floorCirclePath(coneWorld.target.x, coneWorld.target.y, floorRadius);
     ctx.clip();
     const pool = ctx.createRadialGradient(target.x,target.y,0,target.x,target.y,radius);
-    pool.addColorStop(0, rgba(f.color, alpha*.42));
-    pool.addColorStop(.62, rgba(f.color, alpha*.22));
+    pool.addColorStop(0, rgba(f.color, beamAlpha(alpha*.42)));
+    pool.addColorStop(.62, rgba(f.color, beamAlpha(alpha*.22)));
     pool.addColorStop(1, rgba(f.color, 0));
     ctx.fillStyle = pool;
     ctx.fillRect(layout.x-80, layout.y-80, layout.w+160, layout.h+160);
-    ctx.strokeStyle = rgba(f.color, alpha*.18);
+    ctx.strokeStyle = rgba(f.color, beamAlpha(alpha*.18));
     ctx.lineWidth = Math.max(1, target.scale);
     ctx.beginPath();
     floorCirclePath(coneWorld.target.x, coneWorld.target.y, floorRadius);
@@ -3263,7 +3301,7 @@ function drawGoboPattern(f, radius){
   ctx.beginPath();
   ctx.ellipse(0,0,radius*.88,radius*.44,0,0,Math.PI*2);
   ctx.clip();
-  ctx.globalAlpha = alpha*.42;
+  ctx.globalAlpha = clamp(alpha*.42 * BEAM_OPACITY_MULTIPLIER, 0, 1);
   ctx.strokeStyle = f.color;
   ctx.fillStyle = f.color;
   ctx.lineWidth = Math.max(1.2, radius*.025);
@@ -3298,7 +3336,7 @@ function drawGoboPattern(f, radius){
   ctx.restore();
 }
 function lightAt(x,y){
-  const acc = {r:28,g:30,b:38,a:.22};
+  const acc = {r:28 * VIEW_AMBIENT_MULTIPLIER,g:30 * VIEW_AMBIENT_MULTIPLIER,b:38 * VIEW_AMBIENT_MULTIPLIER,a:.22 * VIEW_AMBIENT_MULTIPLIER};
   state.fixtures.forEach(f => {
     if (f.intensity <= 0 || f.group === 'Cyc') return;
     const amount = fixtureConeAt(f, x, y);
@@ -3306,7 +3344,7 @@ function lightAt(x,y){
   });
   return {
     color: rgbToHex(acc.r/acc.a, acc.g/acc.a, acc.b/acc.a),
-    level: clamp(acc.a, .12, 1.6)
+    level: clamp(acc.a, .12 * VIEW_AMBIENT_MULTIPLIER, 1.6)
   };
 }
 function performerVisibility(p){
