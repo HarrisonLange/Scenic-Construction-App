@@ -53,6 +53,9 @@
   .tbtn.go:hover{background:#1f9c33}
   .tbtn.stop{background:rgba(239,68,68,.16);border-color:var(--bad);color:#fecaca}
   .tbtn.stop:hover{background:rgba(239,68,68,.28)}
+  .tbtn.on{background:var(--violet);border-color:var(--violet);color:#fff}
+  .tbtn.on:hover{background:#7c4ee0}
+  #paceSel{min-width:118px}
   .tbtn.magenta{background:rgba(236,0,140,.16);border-color:var(--magenta);color:#ffb8e3}
   .seg{display:inline-flex;border:1px solid var(--ui-dark3);border-radius:8px;overflow:hidden}
   .seg button{background:var(--panel2);border:none;color:var(--text-dim);padding:6px 14px;font-size:12px;font-weight:700;letter-spacing:.4px}
@@ -60,7 +63,7 @@
   .seg button:not(.active):hover{background:#262626;color:var(--text-light)}
 
   /* ── Stage: teleprompter (top half) over highway (bottom half) ── */
-  #stage{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  #stage{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
   #playfield{flex:1;position:relative;min-width:0;min-height:0;background:
       radial-gradient(900px 420px at 50% 120%, rgba(59,130,246,.07), transparent 70%),
       var(--ui-dark);overflow:hidden}
@@ -97,7 +100,17 @@
   }
   .pr-line.cur .pr-who{font-size:12px}
   .pr-line.cur .pr-txt{color:#fff;font-size:21px;line-height:1.4}
+  /* karaoke word highlight on the line being spoken */
+  .pr-line.cur .pr-txt .w{color:#5f636d;transition:color .12s,text-shadow .12s}
+  .pr-line.cur .pr-txt .w.said{color:#fff}
+  .pr-line.cur .pr-txt .w.now{color:var(--c,#fff);text-shadow:0 0 14px var(--c,#fff)}
   .pr-empty{max-width:560px;margin:40px auto;text-align:center;color:var(--text-dim);font-size:13px;line-height:1.7;opacity:1}
+
+  /* advanced mode: drop the lanes, mix from the script alone */
+  body.advanced #playfield{display:none}
+  body.advanced #prompter{flex:1}
+  body.advanced .pr-line.cur .pr-txt{font-size:26px}
+  body.advanced .pr-line .pr-txt{font-size:18px}
 
   /* HUD */
   .hud{position:absolute;pointer-events:none;z-index:5}
@@ -236,10 +249,18 @@
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
     Script
   </button>
+  <select id="paceSel" title="Dialogue pacing">
+    <option value="0.8">Pace: Relaxed</option>
+    <option value="1">Pace: Normal</option>
+    <option value="1.1" selected>Pace: Brisk</option>
+    <option value="1.3">Pace: Fast</option>
+    <option value="1.6">Pace: Rapid</option>
+  </select>
   <span class="seg" id="modeSeg">
     <button data-mode="practice" class="active">Practice</button>
     <button data-mode="quiz">Quiz</button>
   </span>
+  <button class="tbtn" id="advBtn" title="Advanced: hide the falling lanes and mix from the script alone">Advanced</button>
   <button class="tbtn go" id="startBtn">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 3l9 5-9 5z"/></svg>
     <span id="startLabel">Start</span>
@@ -282,6 +303,12 @@
 
     <!-- countdown -->
     <div class="overlay hidden" id="cdOverlay"><div id="countdown">3</div></div>
+  </div>
+
+  <!-- pause (covers the whole stage so it shows in advanced mode too) -->
+  <div class="overlay hidden" id="pauseOverlay">
+    <h1>⏸ Paused</h1>
+    <div class="sub">Press <span class="keycap">Space</span> to resume.</div>
   </div>
 </div>
 
@@ -342,7 +369,9 @@ Use "== Scene Name ==" to start a new scene (optional).</div>
       <li>Every character sits on a DCA bound to a key: <span class="keycap">Z</span> <span class="keycap">X</span> <span class="keycap">C</span> <span class="keycap">V</span> <span class="keycap">B</span> <span class="keycap">N</span> <span class="keycap">M</span>.</li>
       <li>Each line falls as a bar with a faint <b>lead-in zone</b> below it and a <b>trail zone</b> above it. <b>Open</b> the channel as the lead-in zone reaches the <b>mix line</b>, <b>hold</b> through the line, and <b>close</b> as the trail zone passes.</li>
       <li>Opening early and closing late (covering the whole zone) = <b>Perfect</b>. Just catching the spoken part = <b>Good</b>. Opening the wrong DCA hurts your score.</li>
-      <li>You can also click/tap the DCA buttons at the bottom.</li>
+      <li>You can also click/tap the DCA buttons at the bottom. <span class="keycap">Space</span> pauses and resumes.</li>
+      <li>The current line's words light up as they're spoken — use that to time your opens and closes.</li>
+      <li><b>Advanced</b> hides the falling lanes so you mix from the script alone. <b>Pace</b> sets how fast the dialogue runs.</li>
       <li><b>Practice</b> runs one random scene with no pressure. <b>Quiz</b> runs 5 minutes from a random spot, scored like Guitar Hero — finish for a certificate.</li>
     </ul>
     <div class="row"><button class="btn primary" id="helpClose">Got it</button></div>
@@ -514,13 +543,15 @@ const BUILTIN = [
 const QUIZ_SECONDS = 300;
 const TRAVEL_MS = 4200;            // time for a note to fall from top to mix line (calm, readable)
 const LEAD_MS = TRAVEL_MS + 700;   // pre-roll before first note lands
-const PRE_MS = 350;                // "open early" lead-in zone before a line
-const POST_MS = 350;               // "close late" trail zone after a line
-const GAP_MS = 820;                // gap between lines (> PRE+POST, leaves a fully-closed beat)
+const PRE_MS = 420;                // "open early" lead-in zone before a line
+const POST_MS = 380;               // "close late" trail zone after a line
+const GAP_MS = 240;                // speech gap between lines (< PRE so the next line pre-opens before the previous ends)
 
 let scripts = [];
 let current = null;     // current script object
 let mode = 'practice';
+let pace = 1.1;         // dialogue pacing multiplier (higher = faster); default 10% faster
+let advanced = false;   // advanced mode: hide the lanes, mix from the script only
 let chars = [];         // [{name,key,color,lane}]
 let charMap = {};       // name -> char obj
 
@@ -621,6 +652,15 @@ function lineDuration(text){
   const words = text.trim().split(/\s+/).length;
   return clamp(words*240 + 450, 800, 3600);
 }
+function effDur(text){ return Math.round(lineDuration(text)/pace); }  // pacing-scaled
+function effGap(){ return Math.round(GAP_MS/pace); }
+function makeNote(who,text,ch,start){
+  const dur = effDur(text), end = start+dur;
+  return { who, text, lane:ch.lane, key:ch.key, color:ch.color, start, end, dur,
+           winStart:start-PRE_MS, winEnd:end+POST_MS, winDur:dur+PRE_MS+POST_MS,
+           openedEarly:false, heldCorrect:0, heldWrong:0, scored:false, prev:null, next:null };
+}
+function linkNote(prev, note){ if(prev){ note.prev = prev; prev.next = note; } }
 /* Build a note list from an ordered array of [who,text]; lays out start/end times. */
 function buildNotes(lineArr, startTime){
   const notes = [];
@@ -628,14 +668,10 @@ function buildNotes(lineArr, startTime){
   lineArr.forEach(([who,text])=>{
     const ch = charMap[who];
     if(!ch) { return; } // speaker not on a DCA (e.g. minor character) — skip but keep flow
-    const dur = lineDuration(text);
-    const start = t, end = t+dur;
-    notes.push({ who, text, lane:ch.lane, key:ch.key, color:ch.color,
-                 start, end, dur,
-                 winStart:start-PRE_MS, winEnd:end+POST_MS, winDur:dur+PRE_MS+POST_MS,
-                 openedEarly:false, closedClean:true,
-                 heldCorrect:0, heldWrong:0, scored:false });
-    t += dur + GAP_MS;
+    const note = makeNote(who, text, ch, t);
+    linkNote(notes[notes.length-1], note);
+    notes.push(note);
+    t = note.end + effGap();
   });
   return {notes, end:t};
 }
@@ -661,13 +697,10 @@ function appendLines(g, count){
     guard++;
     const [who,text] = g.src[g.srcIdx % g.src.length]; g.srcIdx++;
     const ch = charMap[who]; if(!ch) continue;   // minor speaker, no DCA — skip
-    const dur = lineDuration(text);
-    const start = g.appendT, end = start+dur;
-    const note = { who, text, lane:ch.lane, key:ch.key, color:ch.color, start, end, dur,
-                   winStart:start-PRE_MS, winEnd:end+POST_MS, winDur:dur+PRE_MS+POST_MS,
-                   openedEarly:false, heldCorrect:0, heldWrong:0, scored:false };
+    const note = makeNote(who, text, ch, g.appendT);
+    linkNote(g.notes[g.notes.length-1], note);
     g.notes.push(note);
-    g.appendT = end + GAP_MS;
+    g.appendT = note.end + effGap();
     if(g.prEls) appendPromptRow(g, note);
     added++;
   }
@@ -684,7 +717,7 @@ function buildQuiz(){
   while(probe < LEAD_MS + QUIZ_SECONDS*1000 + 4000 && guard < 4000){
     const [who,text] = flat[i % flat.length];
     seq.push([who,text]);
-    if(charMap[who]) probe += lineDuration(text) + GAP_MS;
+    if(charMap[who]) probe += effDur(text) + effGap();
     i++; guard++;
   }
   const {notes} = buildNotes(seq, LEAD_MS);
@@ -722,40 +755,64 @@ function startGame(){
 }
 
 /* ───────────────────────── Teleprompter ───────────────────────── */
+function makePromptRow(n){
+  const el = document.createElement('div');
+  el.className='pr-line';
+  el.style.setProperty('--c', n.color);
+  const words = escapeHtml(n.text).split(' ').map(w=>`<span class="w">${w}</span>`).join(' ');
+  el.innerHTML = `<div class="pr-who">${escapeHtml(n.who)}</div><div class="pr-txt">${words}</div>`;
+  n.prEl = el;
+  n.prWords = [...el.querySelectorAll('.w')];
+  n._wc = -1;
+  return el;
+}
 function buildPrompter(){
   const list = $('prList');
   list.innerHTML='';
-  game.prEls = game.notes.map(n=>{
-    const el = document.createElement('div');
-    el.className='pr-line';
-    el.style.setProperty('--c', n.color);
-    el.innerHTML = `<div class="pr-who">${escapeHtml(n.who)}</div><div class="pr-txt">${escapeHtml(n.text)}</div>`;
-    list.appendChild(el);
-    return el;
-  });
+  game.prEls = game.notes.map(n=>{ const el=makePromptRow(n); list.appendChild(el); return el; });
   game.prCur = -1;
 }
 function appendPromptRow(g, note){
-  const el = document.createElement('div');
-  el.className='pr-line';
-  el.style.setProperty('--c', note.color);
-  el.innerHTML = `<div class="pr-who">${escapeHtml(note.who)}</div><div class="pr-txt">${escapeHtml(note.text)}</div>`;
+  const el = makePromptRow(note);
   $('prList').appendChild(el);
   g.prEls.push(el);
 }
 function updatePrompter(){
   if(!game || !game.prEls) return;
-  // highlight the line currently in play; during the closed beat, the upcoming line
+  // highlight the line currently in play; the upcoming line once the previous closes
   let idx = game.notes.findIndex(n=> game.t <= n.winEnd);
   if(idx<0) idx = game.notes.length-1;
   if(idx===game.prCur) return;
+  // the line we just left is fully spoken — light all its words
+  if(game.prCur>=0 && game.notes[game.prCur]) markWordsSaid(game.notes[game.prCur]);
   game.prCur = idx;
   game.prEls.forEach((el,i)=>{
     el.classList.toggle('cur', i===idx);
     el.classList.toggle('done', i<idx);
   });
+  const n = game.notes[idx];
+  if(n){ n._wc = -1; n.prWords && n.prWords.forEach(w=>w.classList.remove('said','now')); }  // reset new line
   const cur = game.prEls[idx], list = $('prList');
   if(cur) list.scrollTo({top: cur.offsetTop - list.clientHeight/2 + cur.clientHeight/2, behavior:'smooth'});
+}
+function markWordsSaid(n){
+  if(!n.prWords) return;
+  n.prWords.forEach(w=>{ w.classList.add('said'); w.classList.remove('now'); });
+  n._wc = n.prWords.length;
+}
+/* Karaoke-style: light each word of the line being spoken as time passes through it. */
+function updateWords(){
+  if(!game || !game.running || game.paused) return;
+  const n = game.notes.find(x=> x.prWords && game.t>=x.start && game.t<=x.end);
+  if(!n || !n.prWords.length) return;
+  const prog = clamp((game.t - n.start)/n.dur, 0, 1);
+  const count = Math.round(prog * n.prWords.length);
+  if(n._wc === count) return;
+  n._wc = count;
+  n.prWords.forEach((w,i)=>{
+    w.classList.toggle('said', i < count);
+    w.classList.toggle('now', i === count-1);
+  });
 }
 
 function endGame(){
@@ -770,8 +827,16 @@ function stopGame(){
   keyDown = {}; refreshConsole();
   setStartBtn(false);
   $('cdOverlay').classList.add('hidden');
+  $('pauseOverlay').classList.add('hidden');
   $('startOverlay').classList.remove('hidden');
   setOverlayText();
+}
+function togglePause(){
+  if(!game){ startGame(); return; }               // idle: Space starts the game
+  if(cdTimer || game.finished) return;             // counting down / results up: ignore
+  game.paused = !game.paused;
+  $('pauseOverlay').classList.toggle('hidden', !game.paused);
+  if(!game.paused) game.lastFrame = performance.now();
 }
 function setStartBtn(running){
   const b = $('startBtn');
@@ -825,6 +890,7 @@ window.addEventListener('keydown', e=>{
   if(e.repeat) return;
   const tag = (e.target.tagName||'').toLowerCase();
   if(tag==='input'||tag==='textarea'||tag==='select') return;
+  if(e.key===' '){ e.preventDefault(); togglePause(); return; }   // space = play/pause
   const k = e.key.toLowerCase();
   if(DCA_KEYS.includes(k)){ e.preventDefault(); setKey(k,true); }
 });
@@ -847,8 +913,8 @@ window.addEventListener('resize', resize);
 
 function loop(now){
   requestAnimationFrame(loop);
-  // advance game clock
-  if(game && game.running){
+  // advance game clock (frozen while paused)
+  if(game && game.running && !game.paused){
     const dt = now - game.lastFrame;
     game.lastFrame = now;
     game.t += dt;
@@ -861,7 +927,13 @@ function loop(now){
           n.heldCorrect += dt;
           if(game.t < n.start) n.openedEarly = true;   // opened during the lead-in zone
         }
-        for(const k of DCA_KEYS){ if(k!==n.key && keyDown[k]){ n.heldWrong += dt; break; } }
+        // wrong = any other DCA open, except the neighbour being handed off in the overlap
+        for(const k of DCA_KEYS){
+          if(k===n.key || !keyDown[k]) continue;
+          if(n.next && k===n.next.key && game.t>=n.next.winStart) continue; // next pre-opening
+          if(n.prev && k===n.prev.key && game.t<=n.prev.winEnd) continue;   // prev closing late
+          n.heldWrong += dt; break;
+        }
       } else if(game.t>n.winEnd){
         finalizeNote(n);
       }
@@ -874,10 +946,13 @@ function loop(now){
       const last = game.notes[game.notes.length-1];
       if(last && last.start - game.t < 30000){ appendLines(game, 16); }
     }
+  } else if(game && game.running && game.paused){
+    game.lastFrame = now;   // keep the clock from jumping on resume
   }
   draw();
   updateHud();
   updatePrompter();
+  updateWords();
 }
 
 function draw(){
@@ -1152,6 +1227,18 @@ function init(){
   $('ovStart').addEventListener('click', startGame);
   window.addEventListener('keydown', e=>{
     if(e.key==='Escape' && (cdTimer || (game && game.running))) stopGame();
+  });
+
+  // pacing dropdown
+  $('paceSel').value = String(pace);
+  $('paceSel').addEventListener('change', e=>{ pace = parseFloat(e.target.value)||1; });
+
+  // advanced toggle (hide the lanes, mix from the script only)
+  $('advBtn').addEventListener('click', ()=>{
+    advanced = !advanced;
+    document.body.classList.toggle('advanced', advanced);
+    $('advBtn').classList.toggle('on', advanced);
+    requestAnimationFrame(resize);   // canvas size changed
   });
   $('helpBtn').addEventListener('click', ()=>$('helpModal').classList.add('show'));
   $('helpClose').addEventListener('click', ()=>$('helpModal').classList.remove('show'));
