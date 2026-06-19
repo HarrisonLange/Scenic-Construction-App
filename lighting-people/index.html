@@ -155,6 +155,19 @@
   #threeCanvas{display:none}
   .three-on #stageCanvas{display:none}
   .three-on #threeCanvas{display:block}
+  .three-loading #stageCanvas,
+  .three-loading #threeCanvas{display:none}
+  #threeLoader{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:#111116;z-index:12;
+  }
+  .three-loading #threeLoader{display:flex}
+  .loader-wheel{
+    width:44px;height:44px;border-radius:50%;
+    border:4px solid rgba(255,255,255,.16);border-top-color:var(--accent);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
   #lightOverlay{position:absolute;inset:0;display:none;pointer-events:none;z-index:18}
   #lightOverlay.show{display:block}
   .light-handle{
@@ -380,6 +393,7 @@
     <div id="viewport">
       <canvas id="stageCanvas"></canvas>
       <canvas id="threeCanvas"></canvas>
+      <div id="threeLoader" aria-label="Loading 3D head"><div class="loader-wheel"></div></div>
       <div id="lightOverlay" aria-label="Draggable portrait light handles"></div>
       <div class="hud">
         <div class="hud-item" id="selectedReadout"><b>Key</b> 80% / 5500K</div>
@@ -584,6 +598,7 @@ let lastRenderStamp = 0;
 
 let three = {
   ready:false,
+  loading:true,
   failed:false,
   api:null,
   scene:null,
@@ -1042,14 +1057,18 @@ function renderTopState(){
   $('cameraReadout').innerHTML = `<b>Camera</b> ${Math.round(state.camera.zoom*100)}%${state.camera.flip ? ' / flipped' : ''}`;
   const viewLabel = state.view === 'portrait' ? ['3D','Portrait'] : state.view === 'diagram' ? ['Diagram','Plan'] : state.view === 'magic' ? ['Magic','Sheet'] : ['Setup','Sheet'];
   $('viewReadout').innerHTML = `<b>${viewLabel[0]}</b> ${viewLabel[1]}`;
+  const loadingPortrait = state.view === 'portrait' && three.loading && !three.ready && !three.failed;
+  $('viewport').classList.toggle('three-loading', loadingPortrait);
   $('viewport').classList.toggle('three-on', state.view === 'portrait' && three.ready);
+  const loader = $('threeLoader');
+  if (loader) loader.style.background = state.backdrop;
   if (three.ready) {
     const subjectLabel = three.subjectMode === 'stl' ? ' / STL head' : ' / procedural head';
     $('threeStatus').className = 'hud-item';
     $('threeStatus').innerHTML = `<b>Renderer</b> Three.js${subjectLabel}`;
   } else {
     $('threeStatus').className = three.failed ? 'hud-item warn' : 'hud-item';
-    $('threeStatus').innerHTML = three.failed ? '<b>Renderer</b> Canvas fallback' : '<b>Renderer</b> Loading 3D';
+    $('threeStatus').innerHTML = three.failed ? '<b>Renderer</b> Canvas fallback' : '<b>Renderer</b> Loading STL';
   }
 }
 function titleCase(text){ return text.charAt(0).toUpperCase() + text.slice(1); }
@@ -1080,6 +1099,11 @@ function drawView(){
   }
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
+  if (state.view === 'portrait' && three.loading && !three.ready && !three.failed) {
+    ctx.fillStyle = state.backdrop;
+    ctx.fillRect(0,0,w,h);
+    return;
+  }
   if (state.view === 'portrait') drawPortraitFallback(ctx,w,h);
   if (state.view === 'diagram') drawDiagram(ctx,w,h);
   if (state.view === 'setup') drawSetup(ctx,w,h);
@@ -1096,7 +1120,7 @@ function renderView(){
 function renderLightOverlay(){
   const overlay = $('lightOverlay');
   if (!overlay) return;
-  const show = state.view === 'portrait';
+  const show = state.view === 'portrait' && !(three.loading && !three.ready && !three.failed);
   overlay.classList.toggle('show', show);
   if (!show) {
     overlay.innerHTML = '';
@@ -1700,6 +1724,9 @@ function roundRect(g,x,y,w,h,r){
 }
 
 async function initThree(){
+  three.loading = true;
+  three.failed = false;
+  renderTopState();
   try {
     const THREE = await import('three');
     const {OrbitControls} = await import('three/addons/controls/OrbitControls.js');
@@ -1721,12 +1748,14 @@ async function initThree(){
     await buildThreeSubject(THREE, STLLoader);
     buildThreeLights(THREE);
     three.ready = true;
+    three.loading = false;
     three.failed = false;
     resizeThree();
     updateThreeScene();
     animateThree();
     renderAll();
   } catch (err) {
+    three.loading = false;
     three.failed = true;
     renderAll();
   }
@@ -1824,12 +1853,18 @@ async function buildThreeSubject(THREE, STLLoader){
 async function buildStlSubjectHead(THREE, STLLoader){
   if (!STLLoader) return false;
   try {
-    const geometry = await new STLLoader().loadAsync('assets/human_head.stl');
+    let geometry = await new STLLoader().loadAsync('assets/human_head.stl');
     geometry.computeVertexNormals();
     geometry.computeBoundingBox();
     const center = new THREE.Vector3();
     geometry.boundingBox.getCenter(center);
     geometry.translate(-center.x, -center.y, -center.z);
+    geometry.computeBoundingBox();
+    const trimBox = geometry.boundingBox.clone();
+    const trimSize = new THREE.Vector3();
+    trimBox.getSize(trimSize);
+    geometry = trimGeometryBelowZ(THREE, geometry, trimBox.min.z + trimSize.z * .21);
+    geometry.computeVertexNormals();
     geometry.computeBoundingBox();
     const size = new THREE.Vector3();
     geometry.boundingBox.getSize(size);
@@ -1840,19 +1875,27 @@ async function buildStlSubjectHead(THREE, STLLoader){
     head.position.set(0, .78, .02);
     head.receiveShadow = true;
     three.subject.add(head);
-
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(.24,.31,.62,32), three.skinMaterial);
-    neck.position.set(0,-.36,0);
-    three.subject.add(neck);
-    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(1,48,20), three.skinMaterial);
-    shoulder.scale.set(1.42,.26,.56);
-    shoulder.position.set(0,-.64,0);
-    three.subject.add(shoulder);
     return true;
   } catch (err) {
     console.warn('Could not load STL head, using procedural fallback.', err);
     return false;
   }
+}
+function trimGeometryBelowZ(THREE, geometry, cutoff){
+  const position = geometry.attributes.position;
+  if (!position) return geometry;
+  const vertices = [];
+  for (let i=0; i<position.count; i+=3) {
+    const zAvg = (position.getZ(i) + position.getZ(i+1) + position.getZ(i+2)) / 3;
+    if (zAvg < cutoff) continue;
+    for (let j=0; j<3; j++) {
+      vertices.push(position.getX(i+j), position.getY(i+j), position.getZ(i+j));
+    }
+  }
+  if (vertices.length < 9) return geometry;
+  const trimmed = new THREE.BufferGeometry();
+  trimmed.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  return trimmed;
 }
 function buildThreeLights(THREE){
   LIGHTS.forEach(meta => {
