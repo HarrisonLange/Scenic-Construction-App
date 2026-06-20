@@ -108,9 +108,17 @@
   .pr-line.cur .pr-txt .w.now{color:var(--c,#fff);text-shadow:0 0 14px var(--c,#fff)}
   .pr-empty{max-width:560px;margin:40px auto;text-align:center;color:var(--text-dim);font-size:13px;line-height:1.7;opacity:1}
 
-  /* advanced mode: drop the lanes, mix from the script alone */
-  body.advanced #playfield{display:none}
+  /* advanced mode: hide the lanes, keep a compact HUD strip */
+  body.advanced #hwy{display:none}
+  body.advanced #startOverlay{display:none!important}
+  body.advanced #cdOverlay{display:none!important}
+  body.advanced #playfield{flex:0 0 64px;background:var(--panel);border-top:1px solid var(--line)}
   body.advanced #prompter{flex:1}
+  body.advanced #hudScore,body.advanced #hudTimer,body.advanced #hudCombo{top:10px}
+  body.advanced #hudScore .val,body.advanced #hudTimer .val{font-size:20px}
+  body.advanced #hudCombo .mult{font-size:16px}
+  body.advanced #hudCombo .cnt{font-size:10px}
+  body.advanced #hudAcc{top:38px;font-size:10px}
   body.advanced .pr-line.cur .pr-txt{font-size:26px}
   body.advanced .pr-line .pr-txt{font-size:18px}
 
@@ -673,7 +681,7 @@ function makeNote(who,text,ch,start){
   const dur = effDur(text), end = start+dur;
   return { who, text, lane:ch.lane, key:ch.key, color:ch.color, start, end, dur,
            winStart:start-PRE_MS, winEnd:end+POST_MS, winDur:dur+PRE_MS+POST_MS,
-           openedEarly:false, heldCorrect:0, heldWrong:0, scored:false, prev:null, next:null };
+           openedEarly:false, heldCorrect:0, heldCore:0, heldWrong:0, scored:false, prev:null, next:null };
 }
 function linkNote(prev, note){ if(prev){ note.prev = prev; prev.next = note; } }
 /* Build a note list from an ordered array of [who,text]; lays out start/end times. */
@@ -878,7 +886,11 @@ function finalizeNote(n){
   if(acc>=0.85 && wrong<0.15){ grade='PERFECT'; base=100; }
   else if(acc>=0.55 && wrong<0.4){ grade='GOOD'; base=60; }
   else if(acc>=0.25){ grade='OK'; base=30; }
-  else { grade='MISS'; base=0; }
+  else { grade='MISS'; base=-50; }
+
+  // quadratic penalty: missing more of the spoken line costs disproportionately more
+  const coreMiss = clamp(1 - n.heldCore / n.dur, 0, 1);
+  base -= Math.round(coreMiss ** 2 * 100);
 
   if(grade==='MISS' || wrong>=0.5){
     game.combo = 0;
@@ -945,6 +957,7 @@ function loop(now){
       if(game.t>=n.winStart && game.t<=n.winEnd){
         if(keyDown[n.key]){
           n.heldCorrect += dt;
+          if(game.t >= n.start && game.t <= n.end) n.heldCore += dt;
           if(game.t < n.start) n.openedEarly = true;   // opened during the lead-in zone
         }
         // wrong = any other DCA open, except the neighbour being handed off in the overlap
@@ -969,7 +982,7 @@ function loop(now){
   } else if(game && game.running && game.paused){
     game.lastFrame = now;   // keep the clock from jumping on resume
   }
-  draw();
+  try{ draw(); }catch(e){ /* never let a canvas error freeze the teleprompter */ }
   updateHud();
   updatePrompter();
   updateWords();
@@ -978,6 +991,7 @@ function loop(now){
 function draw(){
   ctx.clearRect(0,0,W,H);
   if(!chars.length) return;
+  if(H < 80 || W < 2) return;   // canvas hidden (advanced mode) — drawing here throws on negative geometry
   const laneCount = chars.length;
   if(LANES.length < laneCount) computeLanes();
   if(LANES.length < laneCount) return;
