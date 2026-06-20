@@ -343,6 +343,10 @@
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="9" r="5"/><path d="M8 4V2M6 2h4M8 9V6.5" stroke-linecap="round"/></svg>
     <span class="txt">Quiz</span>
   </button>
+  <button class="tbtn" id="warmupStartBtn" title="2-minute warm-up: get as many presets as you can">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2v4l3 2M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0z"/></svg>
+    <span class="txt">Warm-Up</span>
+  </button>
   <button class="tbtn warn" id="downloadViewBtn" title="Download current portrait view">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2v8"/><path d="M5 7l3 3 3-3"/><path d="M3 14h10"/></svg>
     <span class="txt">3D View</span>
@@ -524,6 +528,26 @@
       <button class="tbtn primary" id="downloadCertBtn">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
         Download Certificate
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="warmupResultModal">
+  <div class="modal" style="width:480px;max-width:100%">
+    <h3>Warm-Up Complete!</h3>
+    <div class="m-sub" id="warmupResultSub"></div>
+    <div id="warmupResultBody" style="margin-bottom:14px;max-height:280px;overflow:auto"></div>
+    <label class="field full" style="margin-bottom:6px">
+      Your Name <span style="color:var(--text-dim);font-size:10px">(for score image)</span>
+      <input id="warmupStudentName" type="text" placeholder="First Last" maxlength="60" style="margin-top:5px">
+    </label>
+    <div class="m-actions">
+      <button class="tbtn" id="retakeWarmupBtn">Try Again</button>
+      <button class="tbtn" id="closeWarmupResultBtn">Close</button>
+      <button class="tbtn primary" id="downloadWarmupBtn">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
+        Save Score Image
       </button>
     </div>
   </div>
@@ -2902,8 +2926,8 @@ function initQuiz(){
     $('quizResultModal').classList.remove('show');
     startQuiz();
   });
-  $('quizCheckBtn').addEventListener('click', checkQuizAnswer);
-  $('quizSkipBtn').addEventListener('click', skipQuizQuestion);
+  $('quizCheckBtn').addEventListener('click', () => { if(warmup && warmup.active) checkWarmupAnswer(); else checkQuizAnswer(); });
+  $('quizSkipBtn').addEventListener('click', () => { if(warmup && warmup.active) skipWarmupQuestion(); else skipQuizQuestion(); });
   $('retakeQuizBtn').addEventListener('click', () => {
     $('quizResultModal').classList.remove('show');
     startQuiz();
@@ -2916,7 +2940,215 @@ function initQuiz(){
   $('quizResultModal').addEventListener('click', e => {
     if (e.target === $('quizResultModal')) $('quizResultModal').classList.remove('show');
   });
+
+  // Warm-Up wiring
+  $('warmupStartBtn').addEventListener('click', startWarmup);
+  $('retakeWarmupBtn').addEventListener('click', () => {
+    $('warmupResultModal').classList.remove('show');
+    startWarmup();
+  });
+  $('closeWarmupResultBtn').addEventListener('click', () => {
+    $('warmupResultModal').classList.remove('show');
+    warmup = null;
+  });
+  $('downloadWarmupBtn').addEventListener('click', downloadWarmupScore);
+  $('warmupResultModal').addEventListener('click', e => {
+    if (e.target === $('warmupResultModal')) $('warmupResultModal').classList.remove('show');
+  });
 }
+
+// ─── WARM-UP MODE ────────────────────────────────────────────────────────────
+let warmup = null;
+let warmupTimerHandle = null;
+const WARMUP_MS = 120000;
+
+function startWarmup(){
+  if (quiz && quiz.active) { toast('Finish the quiz first.', 'warn'); return; }
+  const keys = Object.keys(PRESETS).sort(() => Math.random() - 0.5);
+  warmup = { active:true, questions:keys, currentIdx:0, results:[], startedAt:Date.now(), endAt:Date.now()+WARMUP_MS };
+  document.body.classList.add('quiz-active');
+  advanceWarmupQuestion();
+}
+
+function advanceWarmupQuestion(){
+  // wrap around if we run out of questions before time is up
+  if(warmup.currentIdx >= warmup.questions.length){
+    warmup.questions = Object.keys(PRESETS).sort(() => Math.random() - 0.5);
+    warmup.currentIdx = 0;
+  }
+  const key = warmup.questions[warmup.currentIdx];
+  Object.keys(state.lights).forEach(id => {
+    state.lights[id] = Object.assign(clone(DEFAULT_LIGHTS[id]), { intensity:0, enabled:false });
+  });
+  state.selectedLight = 'key';
+  markChanged();
+
+  $('quizBar').className = 'show';
+  $('quizTargetName').textContent = PRESETS[key].label;
+  $('quizProgress').textContent = `${warmup.results.length} done · ${fmtWarmupRemain()} left`;
+  $('quizFeedback').className = '';
+  $('quizFeedback').style.display = 'none';
+  $('quizCheckBtn').disabled = false;
+  $('quizSkipBtn').disabled = false;
+
+  clearInterval(warmupTimerHandle);
+  warmupTimerHandle = setInterval(tickWarmupTimer, 500);
+  tickWarmupTimer();
+}
+
+function tickWarmupTimer(){
+  if (!warmup || !warmup.active) return;
+  const remain = warmup.endAt - Date.now();
+  if (remain <= 0) { finishWarmup(); return; }
+  const t = $('quizTimer');
+  if (t) t.textContent = fmtWarmupRemain();
+  const prog = $('quizProgress');
+  if (prog) prog.textContent = `${warmup.results.length} done · ${fmtWarmupRemain()} left`;
+}
+
+function fmtWarmupRemain(){
+  const ms = Math.max(0, warmup.endAt - Date.now());
+  const s = Math.ceil(ms / 1000);
+  return `${Math.floor(s/60)}:${pad2(s%60)}`;
+}
+
+function checkWarmupAnswer(){
+  if (!warmup || !warmup.active) return;
+  const key = warmup.questions[warmup.currentIdx];
+  const target = PRESETS[key].lights;
+  let allPass = true;
+  const misses = [];
+
+  LIGHTS.forEach(meta => {
+    const id = meta.id;
+    const t = Object.assign({}, DEFAULT_LIGHTS[id], target[id] || {});
+    const s = state.lights[id];
+    if (!!s.enabled !== !!t.enabled) { allPass = false; misses.push(`${meta.name} on/off`); return; }
+    if (!t.enabled) return;
+    Object.keys(QUIZ_BUFFERS).forEach(prop => {
+      if (t[prop] === undefined) return;
+      let diff = Math.abs((Number(s[prop])||0) - (Number(t[prop])||0));
+      if (prop === 'angle') diff = Math.min(diff, 360-diff);
+      if (diff > QUIZ_BUFFERS[prop]) { allPass = false; misses.push(`${meta.name} ${prop}`); }
+    });
+  });
+
+  warmup.results.push({ key, label:PRESETS[key].label, passed:allPass });
+  const fb = $('quizFeedback');
+  if (allPass) {
+    fb.textContent = `✓ Correct! ${warmup.results.filter(r=>r.passed).length} done`;
+    fb.className = 'quiz-fb-good';
+  } else {
+    fb.textContent = `✗ ${misses.slice(0,2).join(' · ')}`;
+    fb.className = 'quiz-fb-bad';
+  }
+  fb.style.display = 'block';
+  $('quizCheckBtn').disabled = true;
+  $('quizSkipBtn').disabled = true;
+
+  if (warmup.endAt - Date.now() <= 0) { finishWarmup(); return; }
+  warmup.currentIdx++;
+  setTimeout(() => { if(warmup && warmup.active) advanceWarmupQuestion(); }, allPass ? 1000 : 2000);
+}
+
+function skipWarmupQuestion(){
+  if (!warmup || !warmup.active) return;
+  warmup.results.push({ key:warmup.questions[warmup.currentIdx], label:PRESETS[warmup.questions[warmup.currentIdx]].label, passed:false });
+  warmup.currentIdx++;
+  if(warmup.endAt - Date.now() <= 0){ finishWarmup(); return; }
+  advanceWarmupQuestion();
+}
+
+function finishWarmup(){
+  warmup.active = false;
+  clearInterval(warmupTimerHandle);
+  document.body.classList.remove('quiz-active');
+  $('quizBar').className = '';
+  renderAll();
+
+  const passed = warmup.results.filter(r => r.passed).length;
+  const total = warmup.results.length;
+  const rows = warmup.results.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e1e26">
+      <span style="font-size:12px;font-weight:600">${escapeHtml(r.label)}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:${r.passed?'#4ade80':'#f87171'}">${r.passed?'✓ Pass':'✗ Miss'}</span>
+    </div>`).join('');
+
+  $('warmupResultSub').innerHTML = `<b>${passed} correct</b> out of ${total} attempted`;
+  $('warmupResultBody').innerHTML = rows;
+  $('warmupStudentName').value = '';
+  $('warmupResultModal').classList.add('show');
+
+  // wire check/skip to warmup while it's showing
+  $('quizCheckBtn').onclick = null;
+  $('quizSkipBtn').onclick = null;
+}
+
+function downloadWarmupScore(){
+  if (!warmup) { toast('No warm-up data yet.', 'warn'); return; }
+  const name = ($('warmupStudentName').value || '').trim() || 'Student';
+  const passed = warmup.results.filter(r => r.passed).length;
+  const total = warmup.results.length;
+  const dateStr = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+
+  const CW=900, CH=500;
+  const off = document.createElement('canvas'); off.width=CW; off.height=CH;
+  const g = off.getContext('2d');
+  function rrect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); }
+
+  g.fillStyle = '#0d0d10'; g.fillRect(0,0,CW,CH);
+  g.fillStyle = '#13131a'; rrect(g,24,24,CW-48,CH-48,14); g.fill();
+
+  const stripe = ['#7AC143','#F7941E','#ED1C45','#EC008C','#92278F','#2E3192','#00AEEF'];
+  const brd = g.createLinearGradient(0,0,CW,0);
+  stripe.forEach((c,i,a) => brd.addColorStop(i/(a.length-1),c));
+  g.strokeStyle=brd; g.lineWidth=5; rrect(g,24,24,CW-48,CH-48,14); g.stroke();
+  g.fillStyle=brd; g.fillRect(24,24,CW-48,5);
+
+  g.textAlign='center';
+  g.font='900 52px "Arial Black",Arial,sans-serif'; g.fillStyle='#00AEEF'; g.fillText('SDSCPA',CW/2,108);
+  g.font='700 22px Arial'; g.fillStyle='#dde0ec'; g.fillText('Portrait Lighting Lab — 2-Minute Warm-Up',CW/2,146);
+  g.strokeStyle='#2a2a38'; g.lineWidth=1; g.beginPath(); g.moveTo(100,166); g.lineTo(CW-100,166); g.stroke();
+  g.font='300 15px Arial'; g.fillStyle='#44445a'; g.fillText('Score for',CW/2,204);
+  g.font='700 40px Georgia,serif'; g.fillStyle='#ffffff'; g.fillText(name,CW/2,256);
+
+  // score box
+  g.fillStyle='#1a1a24'; rrect(g,CW/2-240,278,480,76,10); g.fill();
+  g.strokeStyle='#2a2a3a'; g.lineWidth=1; rrect(g,CW/2-240,278,480,76,10); g.stroke();
+  g.beginPath(); g.moveTo(CW/2,288); g.lineTo(CW/2,344); g.stroke();
+  g.font='800 30px Arial'; g.fillStyle='#00AEEF'; g.fillText(`${passed} / ${total}`,CW/2-90,322);
+  g.font='400 11px Arial'; g.fillStyle='#44445a'; g.fillText('CORRECT',CW/2-90,344);
+  g.font='800 30px Arial'; g.fillStyle='#fbbf24';
+  const pct = total > 0 ? Math.round(passed/total*100) : 0;
+  g.fillText(`${pct}%`,CW/2+90,322);
+  g.font='400 11px Arial'; g.fillStyle='#44445a'; g.fillText('ACCURACY',CW/2+90,344);
+
+  // per-question grid (up to 16, 2 cols)
+  const show = warmup.results.slice(0,16);
+  const startY=380, rowH=24;
+  show.forEach((r,i)=>{
+    const col=i%2, row=Math.floor(i/2);
+    const x=col===0?CW/2-230:CW/2+10, y=startY+row*rowH;
+    g.textAlign='left'; g.font='600 12px Arial';
+    g.fillStyle=r.passed?'#4ade80':'#f87171';
+    g.fillText(`${r.passed?'✓':'✗'} ${r.label}`,x,y);
+  });
+
+  g.textAlign='center';
+  g.strokeStyle='#1e1e2a'; g.lineWidth=1; g.beginPath(); g.moveTo(100,CH-54); g.lineTo(CW-100,CH-54); g.stroke();
+  g.font='400 12px Arial'; g.fillStyle='#33334a'; g.fillText(dateStr,CW/2,CH-30);
+
+  off.toBlob(blob=>{
+    if(!blob){ toast('Export failed.','warn'); return; }
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`SDSCPA-Portrait-Warmup-${new Date().toISOString().slice(0,10)}.png`;
+    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('Score image downloaded!','good');
+  },'image/png');
+}
+
+
 </script>
 </body>
 </html>

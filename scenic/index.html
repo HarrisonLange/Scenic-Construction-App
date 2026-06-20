@@ -354,6 +354,21 @@
   #quizFeedback b{display:block;margin-bottom:4px;font-size:12.5px}
   #quizFeedback ul{margin:0;padding-left:18px}
 
+  #warmupResultsBack{
+    position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;
+    align-items:center;justify-content:center;z-index:600;backdrop-filter:blur(4px)}
+  #warmupResultsBack.show{display:flex}
+  #warmupResultsCard{
+    background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:14px;
+    padding:28px 32px;width:380px;max-width:90vw;font-family:inherit}
+  #warmupResultsCard h3{font-size:17px;margin-bottom:2px}
+  #warmupResultsCard .qr-sub{font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-bottom:16px}
+  #warmupScore{font-family:var(--mono);font-size:52px;font-weight:700;color:var(--tape);text-align:center;margin:6px 0}
+  #warmupScoreLbl{text-align:center;font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+  #warmupResultsCard .qr-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  #warmupResultsCard .qr-actions button{border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;font-family:inherit;border:1px solid var(--ui-dark3)}
+  #warmupShot{background:var(--amber);border-color:var(--amber);color:#1c1c1e;font-weight:600}
+  #warmupResultsClose{background:transparent;color:var(--text-dim)}
   #quizResultsBack{
     position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:115;
     display:none;align-items:center;justify-content:center;
@@ -801,12 +816,33 @@
   </div>
 </div>
 
+<!-- Warm-Up results -->
+<div class="modal-back" id="warmupResultsBack">
+  <div id="warmupResultsCard">
+    <h3>Warm-Up Complete!</h3>
+    <div class="qr-sub">2-minute build challenge</div>
+    <div id="warmupScore">0</div>
+    <div id="warmupScoreLbl">BUILDS COMPLETED</div>
+    <label class="result-name" for="warmupStudentName">Student name
+      <input id="warmupStudentName" type="text" placeholder="Name for score image" autocomplete="name">
+    </label>
+    <div class="qr-actions">
+      <button id="warmupResultsClose">Close</button>
+      <button id="warmupShot">Save score PNG</button>
+    </div>
+  </div>
+</div>
+
 <!-- Quiz picker menu -->
 <div class="modal-back" id="quizMenuBack">
   <div class="modal">
     <h3>Choose a quiz</h3>
     <div class="m-sub">Pick a practice mode to start.</div>
     <div class="qm-grid">
+      <button class="qm-opt" data-q="warmup">
+        <span class="qm-t"><span class="qm-ic"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v4l3 2M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0z"/></svg></span>2-Minute Warm-Up</span>
+        <span class="qm-d">Get as many correct builds as you can in 2 minutes — save a score image to turn in.</span>
+      </button>
       <button class="qm-opt" data-q="normal">
         <span class="qm-t"><span class="qm-ic"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 4v4l2.5 1.5"/></svg></span>Normal Quiz</span>
         <span class="qm-d">Timed build challenge — draw each flat to spec, verified against the shop rules.</span>
@@ -3457,7 +3493,7 @@ function quizPickQuestion(){
 function quizRenderPrompt(){
   document.getElementById('quizStyle').textContent = QUIZ_STYLES[quiz.style].name;
   document.getElementById('quizDims').textContent  = fmtIn(quiz.wFt*12) + ' W × ' + fmtIn(quiz.hFt*12) + ' H';
-  document.getElementById('quizCount').textContent = quiz.n + ' / ' + QUIZ_TOTAL;
+  document.getElementById('quizCount').textContent = quiz.warmup ? quiz.n + ' done' : quiz.n + ' / ' + QUIZ_TOTAL;
 }
 function quizNewQuestion(){
   pieces=[]; annots=[]; selected=null; undoStack.length=0; refreshUndoBtn();
@@ -3470,7 +3506,13 @@ function quizNewQuestion(){
   quiz.qStart = performance.now();
 }
 function quizTick(){
-  document.getElementById('quizTimer').textContent = fmtClock(performance.now() - quiz.qStart);
+  if (quiz.warmup) {
+    const remain = quiz.warmupEnd - performance.now();
+    if (remain <= 0) { quizWarmupFinish(); return; }
+    document.getElementById('quizTimer').textContent = fmtClock(remain);
+  } else {
+    document.getElementById('quizTimer').textContent = fmtClock(performance.now() - quiz.qStart);
+  }
 }
 function quizStart(opts){
   if (quiz.active) return;
@@ -3485,6 +3527,8 @@ function quizStart(opts){
   quiz.active = true; quiz.n = 0; quiz.times = [];
   quiz.easy = wantEasy;
   quiz.easyUsed = quiz.easy;
+  quiz.warmup = !!(opts && opts.warmup);
+  if (quiz.warmup) quiz.warmupEnd = performance.now() + 120000;
   dimA=null; dimCursor=null;
   if (toolMode==='dimension') setTool('select');
   if (viewMode==='iso') document.getElementById('isoBtn').click();
@@ -3499,9 +3543,12 @@ function quizCheck(){
   if (res.ok){
     quiz.times.push(performance.now() - quiz.qStart);
     quiz.n++;
-    if (quiz.n >= QUIZ_TOTAL){ quizFinish(); return; }
+    if (!quiz.warmup && quiz.n >= QUIZ_TOTAL){ quizFinish(); return; }
     quizFeedback.className = 'show ok';
-    quizFeedback.innerHTML = '<b>✓ Correct! Build ' + quiz.n + ' of ' + QUIZ_TOTAL + ' done.</b> Next one coming up…';
+    const msg = quiz.warmup
+      ? '<b>✓ Correct! ' + quiz.n + ' build' + (quiz.n===1?'':'s') + ' done — keep going!</b> Next one coming up…'
+      : '<b>✓ Correct! Build ' + quiz.n + ' of ' + QUIZ_TOTAL + ' done.</b> Next one coming up…';
+    quizFeedback.innerHTML = msg;
     setTimeout(()=>{ if(quiz.active) quizNewQuestion(); }, 1100);
   } else {
     quizFeedback.className = 'show';
@@ -3523,6 +3570,16 @@ function quizFinish(){
     quiz.times.map((t,i)=>`<tr><td>Build ${i+1}</td><td>${fmtClock(t)}</td></tr>`).join('');
   seedResultStudent('quizStudentName');
   document.getElementById('quizResultsBack').classList.add('show');
+}
+function quizWarmupFinish(){
+  clearInterval(quiz.timer); quiz.timer=null;
+  quiz.active = false;
+  quizBar.classList.remove('show');
+  quizFeedback.classList.remove('show');
+  document.getElementById('quizBtn').classList.remove('active');
+  document.getElementById('warmupScore').textContent = quiz.n;
+  seedResultStudent('warmupStudentName');
+  document.getElementById('warmupResultsBack').classList.add('show');
 }
 function quizExit(restore){
   if (quiz.timer){ clearInterval(quiz.timer); quiz.timer=null; }
@@ -3561,6 +3618,35 @@ document.getElementById('quizExit').addEventListener('click', ()=>{
 document.getElementById('quizResultsClose').addEventListener('click', ()=>{
   document.getElementById('quizResultsBack').classList.remove('show');
   quizExit(true);
+});
+document.getElementById('warmupResultsClose').addEventListener('click', ()=>{
+  document.getElementById('warmupResultsBack').classList.remove('show');
+  quizExit(true);
+});
+document.getElementById('warmupShot').addEventListener('click', ()=>{
+  const name = getResultStudent('warmupStudentName');
+  const when = new Date();
+  const W=500, H=260;
+  const c=document.createElement('canvas'); c.width=W*2; c.height=H*2;
+  const g=c.getContext('2d'); g.scale(2,2);
+  g.fillStyle='#1C1C1E'; g.fillRect(0,0,W,H);
+  // rainbow top stripe
+  const stripe=['#7AC143','#F7941E','#ED1C45','#EC008C','#92278F','#2E3192','#00AEEF'];
+  const grad=g.createLinearGradient(0,0,W,0);
+  stripe.forEach((col,i,a)=>grad.addColorStop(i/(a.length-1),col));
+  g.fillStyle=grad; g.fillRect(0,0,W,6);
+  g.fillStyle='#E8E6E1'; g.font='bold 16px '+MONO; g.textAlign='left';
+  g.fillText('Scenic Construction — 2-Minute Warm-Up', 22, 36);
+  g.fillStyle='#9B9893'; g.font='11px '+MONO;
+  g.fillText('Student: '+name, 22, 56);
+  g.fillText('Date: '+when.toLocaleDateString(), 22, 72);
+  g.fillStyle='#facc15'; g.font='bold 60px '+MONO; g.textAlign='center';
+  g.fillText(String(quiz.n), W/2, 158);
+  g.fillStyle='#9B9893'; g.font='11px '+MONO; g.textAlign='center';
+  g.fillText('BUILDS COMPLETED IN 2 MINUTES', W/2, 178);
+  g.fillStyle='#9B9893'; g.font='10px '+MONO; g.textAlign='center';
+  g.fillText('sdscpa.com', W/2, 240);
+  downloadCanvasPng(c, 'warmup-results-'+safeFilePart(name)+'-'+localDateStamp(when)+'-'+localTimeStamp(when)+'.png');
 });
 /* Screenshot of the results card (drawn to an offscreen canvas) */
 document.getElementById('quizShot').addEventListener('click', ()=>{
@@ -3608,7 +3694,8 @@ quizMenuBack.querySelectorAll('.qm-opt').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     const q = btn.dataset.q;
     closeQuizMenu();
-    if (q==='normal')    quizStart({easy:false});
+    if (q==='warmup')    quizStart({easy:false, warmup:true});
+    else if (q==='normal')    quizStart({easy:false});
     else if (q==='easy') quizStart({easy:true});
     else if (q==='frac') openPracticeTraining('frac');
     else if (q==='tape') openPracticeTraining('tape');

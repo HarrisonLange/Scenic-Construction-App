@@ -282,6 +282,7 @@
   <span class="seg" id="modeSeg">
     <button data-mode="practice" class="active">Practice</button>
     <button data-mode="quiz">Quiz</button>
+    <button data-mode="warmup">Warm-Up</button>
   </span>
   <button class="tbtn" id="advBtn" title="Advanced: hide the falling lanes and mix from the script alone">Advanced</button>
   <button class="tbtn go" id="startBtn">
@@ -564,6 +565,7 @@ const BUILTIN = [
 
 /* ───────────────────────── State ───────────────────────── */
 const QUIZ_SECONDS = 300;
+const WARMUP_SECONDS = 120;
 const TRAVEL_MS = 4200;            // time for a note to fall from top to mix line (calm, readable)
 const LEAD_MS = TRAVEL_MS + 700;   // pre-roll before first note lands
 const PRE_MS = 420;                // "open early" lead-in zone before a line
@@ -750,9 +752,29 @@ function buildQuiz(){
            quizEnd: LEAD_MS + QUIZ_SECONDS*1000 };
 }
 
+function buildWarmup(){
+  const flat = [];
+  current.scenes.forEach(sc=>sc.lines.forEach(l=>flat.push(l)));
+  const startIdx = Math.floor(Math.random()*flat.length);
+  const seq = [];
+  let i = startIdx, guard = 0;
+  let probe = LEAD_MS;
+  while(probe < LEAD_MS + WARMUP_SECONDS*1000 + 4000 && guard < 4000){
+    const [who,text] = flat[i % flat.length];
+    seq.push([who,text]);
+    if(charMap[who]) probe += effDur(text) + effGap();
+    i++; guard++;
+  }
+  const {notes} = buildNotes(seq, LEAD_MS);
+  return { mode:'warmup', sceneName:'Warm-Up', notes, started:0, t:0,
+           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
+           lastFrame:0, running:false, finished:false, lastFlash:null,
+           quizEnd: LEAD_MS + WARMUP_SECONDS*1000 };
+}
+
 function startGame(){
   if(!current) return;
-  game = (mode==='quiz') ? buildQuiz() : buildPractice();
+  game = (mode==='quiz') ? buildQuiz() : (mode==='warmup') ? buildWarmup() : buildPractice();
   keyDown = {}; refreshConsole();
   buildPrompter();
   $('startOverlay').classList.add('hidden');
@@ -972,8 +994,8 @@ function loop(now){
       }
     });
 
-    // quiz ends on the timer; practice runs forever (top up the buffer)
-    if(game.mode==='quiz'){
+    // quiz/warmup ends on the timer; practice runs forever (top up the buffer)
+    if(game.mode==='quiz'||game.mode==='warmup'){
       if(game.t >= game.quizEnd){ endGame(); }
     } else {
       const last = game.notes[game.notes.length-1];
@@ -1090,8 +1112,9 @@ function updateHud(){
     combo.innerHTML = `<div class="mult">×${comboMult(game.combo)}</div><div class="cnt">${game.combo} combo</div>`;
   } else combo.innerHTML='';
 
-  if(game && game.mode==='quiz' && game.running){
-    const remain = clamp((game.quizEnd - game.t)/1000, 0, QUIZ_SECONDS);
+  if(game && (game.mode==='quiz'||game.mode==='warmup') && game.running){
+    const cap = game.mode==='warmup' ? WARMUP_SECONDS : QUIZ_SECONDS;
+    const remain = clamp((game.quizEnd - game.t)/1000, 0, cap);
     $('timerLbl').textContent='Time';
     $('timerVal').textContent = fmtClock(remain);
     $('timerVal').style.color = remain<30 ? '#ef4444' : 'var(--amber)';
@@ -1120,7 +1143,9 @@ function showResults(){
   else if(s.acc>=55){ grade='SOLID MIX'; col='#fbbf24'; }
   else if(s.acc>=35){ grade='GETTING THERE'; col='#EC008C'; }
   $('resGrade').textContent=grade; $('resGrade').style.color=col;
-  $('resSub').textContent = `${current.title} · 5-minute quiz`;
+  const modeLabel = game.mode==='warmup' ? '2-minute warm-up' : '5-minute quiz';
+  $('resSub').textContent = `${current.title} · ${modeLabel}`;
+  $('resCert').textContent = game.mode==='warmup' ? 'Save score image' : 'Download certificate';
   $('resScore').textContent = s.score.toLocaleString();
   $('resAcc').textContent = s.acc+'%';
   $('resCombo').textContent = s.combo;
@@ -1128,9 +1153,54 @@ function showResults(){
   $('resultModal').classList.add('show');
 }
 
+/* ───────────────────────── Warm-Up Score Image ───────────────── */
+function downloadWarmupScore(){
+  const name = ($('resName').value||'').trim() || 'Student';
+  const s = gameStats();
+  const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const CW=900, CH=480;
+  const off=document.createElement('canvas'); off.width=CW; off.height=CH;
+  const g=off.getContext('2d');
+  g.fillStyle='#0d0d10'; g.fillRect(0,0,CW,CH);
+  g.fillStyle='#13131a'; rr(g,24,24,CW-48,CH-48,14); g.fill();
+  const stripe=['#7AC143','#F7941E','#ED1C45','#EC008C','#92278F','#2E3192','#00AEEF'];
+  const brd=g.createLinearGradient(0,0,CW,0);
+  stripe.forEach((c,i,a)=>brd.addColorStop(i/(a.length-1),c));
+  g.strokeStyle=brd; g.lineWidth=5; rr(g,24,24,CW-48,CH-48,14); g.stroke();
+  g.fillStyle=brd; g.fillRect(24,24,CW-48,5);
+  g.textAlign='center';
+  g.font='900 52px "Arial Black",Arial,sans-serif'; g.fillStyle='#EC008C'; g.fillText('SDSCPA',CW/2,110);
+  g.font='700 22px Arial'; g.fillStyle='#dde0ec'; g.fillText('Line Mixing Lab — 2-Minute Warm-Up',CW/2,148);
+  g.strokeStyle='#2a2a38'; g.lineWidth=1; g.beginPath(); g.moveTo(100,168); g.lineTo(CW-100,168); g.stroke();
+  g.font='300 15px Arial'; g.fillStyle='#55556a'; g.fillText('Score for',CW/2,204);
+  g.font='700 40px Georgia,serif'; g.fillStyle='#ffffff'; g.fillText(name,CW/2,256);
+  const boxes=[['SCORE',s.score.toLocaleString(),'#3b82f6'],['ACCURACY',s.acc+'%','#27c93f'],
+               ['MAX COMBO','×'+s.combo,'#fbbf24'],['LINES MIXED',s.lines,'#EC008C']];
+  const bw=185, bh=72, gapx=12, totalW=bw*4+gapx*3, sx=CW/2-totalW/2, by=278;
+  boxes.forEach((b,i)=>{
+    const bx=sx+i*(bw+gapx);
+    g.fillStyle='#1a1a24'; rr(g,bx,by,bw,bh,8); g.fill();
+    g.strokeStyle='#2a2a3a'; g.lineWidth=1; rr(g,bx,by,bw,bh,8); g.stroke();
+    g.font='800 26px Arial'; g.fillStyle=b[2]; g.fillText(String(b[1]),bx+bw/2,by+38);
+    g.font='400 10px Arial'; g.fillStyle='#55556a'; g.fillText(b[0],bx+bw/2,by+58);
+  });
+  g.font='300 13px Arial'; g.fillStyle='#55556a'; g.fillText(current.title,CW/2,390);
+  g.strokeStyle='#1e1e2a'; g.lineWidth=1; g.beginPath(); g.moveTo(100,CH-54); g.lineTo(CW-100,CH-54); g.stroke();
+  g.font='400 12px Arial'; g.fillStyle='#33334a'; g.fillText(dateStr,CW/2,CH-30);
+  off.toBlob(blob=>{
+    if(!blob){ toast('Export failed.','bad'); return; }
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`SDSCPA-Line-Mixing-Warmup-${stamp()}.png`;
+    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('Score image downloaded!','good');
+  },'image/png');
+}
+
 /* ───────────────────────── Certificate ───────────────────────── */
 function downloadCertificate(){
   if(!game || !game.finished){ toast('Finish a quiz first.', 'warn'); return; }
+  if(game.mode==='warmup'){ downloadWarmupScore(); return; }
   const name = ($('resName').value||'').trim() || 'Student';
   const s = gameStats();
   const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
@@ -1223,10 +1293,12 @@ function toast(msg,kind,ms){ const t=$('toast'); t.textContent=msg; t.className=
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), ms||2600); }
 
 function setOverlayText(){
-  $('ovStartLabel').textContent = mode==='quiz' ? 'Start 5-Minute Quiz' : 'Start Practice';
-  $('startLabel').textContent = mode==='quiz' ? 'Start Quiz' : 'Start';
+  $('ovStartLabel').textContent = mode==='quiz' ? 'Start 5-Minute Quiz' : mode==='warmup' ? 'Start 2-Minute Warm-Up' : 'Start Practice';
+  $('startLabel').textContent = mode==='quiz' ? 'Start Quiz' : mode==='warmup' ? 'Start Warm-Up' : 'Start';
   if(mode==='quiz'){
     $('ovHint').innerHTML = `Quiz picks a random spot in <b>${current?current.title:'the script'}</b> and scores you for 5 minutes — Guitar-Hero style. Earn a certificate at the end.`;
+  } else if(mode==='warmup'){
+    $('ovHint').innerHTML = `Warm-Up picks a random spot in <b>${current?current.title:'the script'}</b> and gives you <b>2 minutes</b> to mix. Save a score image to turn in.`;
   } else {
     $('ovHint').innerHTML = `Practice starts at a random scene in <b>${current?current.title:'the script'}</b> and keeps going as long as you like. Press <span class="keycap">Esc</span> or <b>Stop</b> when you're done.`;
   }
