@@ -236,9 +236,7 @@
     #prompter{flex:0 0 42%}
   }
   @media (max-width:480px){
-    #advBtn{display:none}
-    #paceSel{display:none}
-    select{min-width:120px}
+    select{min-width:110px}
     .seg button{padding:5px 10px}
   }
 </style>
@@ -811,8 +809,11 @@ function updatePrompter(){
   const n = game.notes[idx];
   if(n){ n._wc = -1; n.prWords && n.prWords.forEach(w=>w.classList.remove('said','now')); }  // reset new line
   const cur = game.prEls[idx], list = $('prList');
-  // position current line at ~28% from top so the next line is always visible below
-  if(cur) list.scrollTo({top: cur.offsetTop - list.clientHeight * 0.28, behavior:'smooth'});
+  if(cur){
+    const listRect = list.getBoundingClientRect();
+    const curRect  = cur.getBoundingClientRect();
+    list.scrollTo({top: list.scrollTop + (curRect.top - listRect.top) - list.clientHeight * 0.28, behavior:'smooth'});
+  }
 }
 function markWordsSaid(n){
   if(!n.prWords) return;
@@ -1257,6 +1258,7 @@ function init(){
     advanced = !advanced;
     document.body.classList.toggle('advanced', advanced);
     $('advBtn').classList.toggle('on', advanced);
+    if(game) game.prCur = -1;  // layout changed — force teleprompter re-scroll next frame
     requestAnimationFrame(resize);   // canvas size changed
   });
   $('helpBtn').addEventListener('click', ()=>$('helpModal').classList.add('show'));
