@@ -305,6 +305,7 @@
     #viewbar{height:auto;flex-wrap:wrap}
   }
 </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
 
@@ -412,6 +413,10 @@
       <div id="quizTimer">0:00</div>
       <div id="quizFeedback"></div>
       <div class="spacer"></div>
+      <select id="quizLevelSel" class="tbtn" title="Beginner allows more wiggle room on every slider">
+        <option value="beginner">Beginner</option>
+        <option value="advanced">Advanced</option>
+      </select>
       <button class="tbtn" id="quizSkipBtn">Skip</button>
       <button class="tbtn primary" id="quizCheckBtn">Check Answer</button>
     </div>
@@ -2660,6 +2665,13 @@ let quiz = null;
 let quizTimerHandle = null;
 
 const QUIZ_BUFFERS = { intensity:3, kelvin:300, height:5, angle:11, distance:3, softness:3 };
+/* Beginner widens every tolerance so 6th graders can land answers;
+   Advanced keeps the tight pro buffers. */
+let quizLevel = 'beginner';
+try{ quizLevel = localStorage.getItem('sdscpa-portrait-quiz-level') || 'beginner'; }catch(e){}
+function quizBuffer(prop){ return QUIZ_BUFFERS[prop] * (quizLevel === 'beginner' ? 1.75 : 1); }
+const QUIZ_UNITS = { intensity:'%', kelvin:'K', height:' ft', angle:'°', distance:' ft', softness:'' };
+function fmtQuizVal(prop, v){ return Math.round(Number(v) || 0) + (QUIZ_UNITS[prop] || ''); }
 
 function startQuiz(){
   const keys = Object.keys(PRESETS).sort(() => Math.random() - 0.5);
@@ -2723,9 +2735,9 @@ function checkQuizAnswer(){
       if (t[prop] === undefined) return;
       let diff = Math.abs((Number(s[prop]) || 0) - (Number(t[prop]) || 0));
       if (prop === 'angle') diff = Math.min(diff, 360 - diff);
-      if (diff > QUIZ_BUFFERS[prop]) {
+      if (diff > quizBuffer(prop)) {
         allPass = false;
-        misses.push(`${meta.name} ${prop}`);
+        misses.push(`${meta.name} ${prop}: yours ${fmtQuizVal(prop, s[prop])} → target ${fmtQuizVal(prop, t[prop])}`);
       }
     });
   });
@@ -2746,7 +2758,7 @@ function checkQuizAnswer(){
   }
   $('quizCheckBtn').disabled = true;
   $('quizSkipBtn').disabled = true;
-  setTimeout(() => nextQuizQ(), allPass ? 1400 : 2600);
+  setTimeout(() => nextQuizQ(), allPass ? 1400 : 3400);
 }
 
 function skipQuizQuestion(){
@@ -2784,6 +2796,9 @@ function finishQuiz(){
   $('quizResultBody').innerHTML = rows;
   $('quizStudentName').value = '';
   $('quizResultModal').classList.add('show');
+  if (window.SDSCPA && passed > 0) {
+    window.SDSCPA.markDone('lighting-people', { score: Math.round(passed / quiz.questions.length * 100), level: quizLevel });
+  }
 }
 
 function downloadCertificate(){
@@ -3148,7 +3163,35 @@ function downloadWarmupScore(){
   },'image/png');
 }
 
-
+/* Quiz difficulty + glossary */
+(function(){
+  const sel = $('quizLevelSel');
+  if (sel){
+    sel.value = quizLevel;
+    sel.addEventListener('change', () => {
+      quizLevel = sel.value;
+      try{ localStorage.setItem('sdscpa-portrait-quiz-level', quizLevel); }catch(e){}
+    });
+  }
+  if (window.SDSCPA) SDSCPA.attachGlossary({
+    labName: 'Portrait Lighting Lab',
+    goal: 'I can name the four portrait lights — key, fill, back, hair — and place each one.',
+    terms: [
+      ['Key light', 'The main light on the face. Everything else supports it.'],
+      ['Fill light', 'Softens the shadows the key makes. Less fill = more drama.'],
+      ['Back light', 'Comes from behind to outline the shoulders and separate the person from the background.'],
+      ['Hair light', 'A small light just for the hair, adding shine and shape from above.'],
+      ['Rembrandt lighting', 'Key at ~45°: makes a little triangle of light on the shadow cheek. Named after the painter.'],
+      ['Butterfly lighting', 'Key straight ahead and high: a butterfly-shaped nose shadow. Classic Hollywood glamour.'],
+      ['Split lighting', 'Key exactly from the side: half the face lit, half dark.'],
+      ['Loop lighting', 'Key slightly to the side: the nose shadow makes a small loop. The everyday portrait standard.'],
+      ['Broad vs short', 'Broad lights the cheek toward camera (wider face); short lights the far cheek (slimmer, moodier).'],
+      ['Kelvin (K)', 'The color temperature of light: ~3200K is warm orange, ~5600K is daylight blue-white.'],
+      ['Softness', 'How gradual the shadow edges are. Bigger/closer light sources are softer.'],
+      ['Three-point lighting', 'Key + fill + back: the recipe almost every portrait starts from.']
+    ]
+  });
+})();
 </script>
 </body>
 </html>
