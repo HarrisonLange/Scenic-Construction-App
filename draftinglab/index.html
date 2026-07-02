@@ -129,6 +129,8 @@
   .ch-body{display:none;padding:9px;border-top:1px solid var(--ui-dark3)}
   .ch-item.open .ch-body{display:block}
   .ch-desc{font-size:11.5px;color:#c8ccd4;line-height:1.5;margin-bottom:8px}
+  .ch-prev{background:#f7f4ed;border:1px solid var(--ui-dark3);border-radius:6px;margin-bottom:8px;padding:4px;display:flex;justify-content:center}
+  .ch-prev svg{display:block;width:100%;max-width:190px;height:auto}
   .ch-req{display:flex;gap:6px;font-size:11px;line-height:1.45;color:var(--text-dim);padding:3px 0}
   .ch-req.pass{color:var(--ok)}
   .ch-req.fail{color:var(--bad)}
@@ -1177,6 +1179,7 @@ function sizeMsg(kind, o, wFt, hFt){
 const CHALLENGES = [
   {
     id:'platform', title:'Stage platform',
+    svg:'<svg viewBox="0 0 120 70"><rect x="24" y="22" width="80" height="40" fill="none" stroke="#17324d" stroke-width="1.6"/><line x1="24" y1="14" x2="104" y2="14" stroke="#b3402a"/><line x1="24" y1="11" x2="24" y2="17" stroke="#b3402a"/><line x1="104" y1="11" x2="104" y2="17" stroke="#b3402a"/><text x="64" y="10" font-size="7" fill="#b3402a" text-anchor="middle" font-family="monospace">8\'-0\"</text><line x1="14" y1="22" x2="14" y2="62" stroke="#b3402a"/><line x1="11" y1="22" x2="17" y2="22" stroke="#b3402a"/><line x1="11" y1="62" x2="17" y2="62" stroke="#b3402a"/><text x="8" y="45" font-size="7" fill="#b3402a" text-anchor="middle" font-family="monospace" transform="rotate(-90 8 45)">4\'-0\"</text></svg>',
     desc:'Stock platforms are built 4\'-0\" × 8\'-0\". Draw one as a rectangle, then dimension both sides so the shop knows what to build.',
     reqs:[
       {label:'A rectangle 8\'-0\" × 4\'-0\"', test:()=>{
@@ -1189,6 +1192,7 @@ const CHALLENGES = [
   },
   {
     id:'tread', title:'Stair tread',
+    svg:'<svg viewBox="0 0 120 70"><rect x="30" y="30" width="60" height="20" fill="none" stroke="#17324d" stroke-width="1.6"/><line x1="30" y1="20" x2="90" y2="20" stroke="#b3402a"/><line x1="30" y1="17" x2="30" y2="23" stroke="#b3402a"/><line x1="90" y1="17" x2="90" y2="23" stroke="#b3402a"/><text x="60" y="15" font-size="7" fill="#b3402a" text-anchor="middle" font-family="monospace">3\'-0\"</text><text x="98" y="43" font-size="6" fill="#17324d" font-family="monospace">1\'-0\"</text></svg>',
     desc:'A safe escape-stair tread is 3\'-0\" wide and 1\'-0\" deep. Draw the tread seen from above and dimension its width.',
     reqs:[
       {label:'A rectangle 3\'-0\" × 1\'-0\"', test:()=>{
@@ -1201,6 +1205,7 @@ const CHALLENGES = [
   },
   {
     id:'table', title:'Round café table',
+    svg:'<svg viewBox="0 0 120 70"><circle cx="60" cy="36" r="26" fill="none" stroke="#17324d" stroke-width="1.6"/><line x1="60" y1="36" x2="86" y2="36" stroke="#b3402a"/><circle cx="60" cy="36" r="1.6" fill="#b3402a"/><text x="73" y="31" font-size="7" fill="#b3402a" text-anchor="middle" font-family="monospace">2\'-6\"</text></svg>',
     desc:'The prop list calls for a round table 5\'-0\" across (2\'-6\" radius). Draw it with the circle tool and dimension it.',
     reqs:[
       {label:'A circle with a 2\'-6\" radius', test:()=>{
@@ -1214,6 +1219,7 @@ const CHALLENGES = [
   },
   {
     id:'deck', title:'Two-platform deck',
+    svg:'<svg viewBox="0 0 120 70"><rect x="10" y="25" width="50" height="25" fill="none" stroke="#17324d" stroke-width="1.6"/><rect x="60" y="25" width="50" height="25" fill="none" stroke="#17324d" stroke-width="1.6"/><text x="35" y="40" font-size="7" fill="#17324d" text-anchor="middle" font-family="monospace">4×8</text><text x="85" y="40" font-size="7" fill="#17324d" text-anchor="middle" font-family="monospace">4×8</text><text x="60" y="62" font-size="6" fill="#b3402a" text-anchor="middle" font-family="monospace">edges touch — no gap</text></svg>',
     desc:'Decks are built from stock platforms pushed together. Draw two 4\'-0\" × 8\'-0\" platforms touching along one edge — no gap, no overlap.',
     reqs:[
       {label:'Two rectangles, each 8\'-0\" × 4\'-0\"', test:()=>{
@@ -1234,6 +1240,7 @@ const CHALLENGES = [
   },
   {
     id:'windowflat', title:'Window flat',
+    svg:'<svg viewBox="0 0 120 70"><rect x="44" y="4" width="32" height="62" fill="none" stroke="#17324d" stroke-width="1.6"/><rect x="52" y="20" width="16" height="24" fill="none" stroke="#17324d" stroke-width="1.3"/><text x="86" y="12" font-size="6" fill="#17324d" font-family="monospace">4\'×8\' flat</text><text x="86" y="34" font-size="6" fill="#b3402a" font-family="monospace">2\'×3\'</text><text x="86" y="42" font-size="6" fill="#b3402a" font-family="monospace">window</text></svg>',
     desc:'Draw a 4\'-0\" × 8\'-0\" flat (tall rectangle), then the 2\'-0\" × 3\'-0\" window opening fully inside it.',
     reqs:[
       {label:'A flat: rectangle 4\'-0\" × 8\'-0\"', test:()=> findRect(4,8) ? true : 'Draw the outer flat first — 4\'-0\" wide, 8\'-0\" tall.'},
@@ -1249,6 +1256,7 @@ const CHALLENGES = [
   },
   {
     id:'labeled', title:'Label everything',
+    svg:'<svg viewBox="0 0 120 70"><rect x="25" y="24" width="56" height="30" fill="none" stroke="#17324d" stroke-width="1.6"/><text x="53" y="42" font-size="7" fill="#17324d" text-anchor="middle" font-family="monospace">PLATFORM</text><line x1="25" y1="16" x2="81" y2="16" stroke="#b3402a"/><line x1="25" y1="13" x2="25" y2="19" stroke="#b3402a"/><line x1="81" y1="13" x2="81" y2="19" stroke="#b3402a"/><text x="53" y="11" font-size="6" fill="#b3402a" text-anchor="middle" font-family="monospace">dimension</text><text x="95" y="45" font-size="6" fill="#17324d" font-family="monospace">label</text></svg>',
     desc:'A drawing nobody can read is useless in the shop. Take any shape you’ve drawn and give it a text label and a dimension.',
     reqs:[
       {label:'At least one shape on the sheet', test:()=> objects.some(o=>o.type !== 'text' && o.type !== 'dimension') ? true : 'Draw any shape first.'},
@@ -1270,7 +1278,8 @@ function renderChallenges(){
     item.dataset.ch = ch.id;
     item.innerHTML =
       '<div class="ch-head"><span class="ch-mark">' + (chState.done[ch.id] ? '✓' : '') + '</span>' + ch.title + '</div>' +
-      '<div class="ch-body"><div class="ch-desc">' + ch.desc + '</div>' +
+      '<div class="ch-body">' + (ch.svg ? '<div class="ch-prev">' + ch.svg + '</div>' : '') +
+      '<div class="ch-desc">' + ch.desc + '</div>' +
       ch.reqs.map((r,i)=>'<div class="ch-req" data-req="' + i + '"><span class="rq-mark">•</span><span>' + r.label + '</span></div>').join('') +
       '<button class="ch-check" type="button">Check my drawing</button>' +
       '<div class="ch-feedback"></div></div>';
