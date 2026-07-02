@@ -118,6 +118,26 @@
   }
   .tool-name{font-size:12px;font-weight:650;line-height:1.2}
   .muted{font-size:11px;color:var(--text-dim);line-height:1.45}
+
+  /* Draft This challenges */
+  .ch-item{border:1px solid var(--ui-dark3);border-radius:7px;margin-bottom:7px;overflow:hidden;background:#111}
+  .ch-head{display:flex;align-items:center;gap:7px;padding:8px 9px;cursor:pointer;font-size:12px;font-weight:650;color:var(--text-light)}
+  .ch-head:hover{background:#1c1c22}
+  .ch-item.open .ch-head{background:rgba(59,130,246,.16)}
+  .ch-mark{flex:0 0 16px;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--ui-dark3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#0a0a0a}
+  .ch-item.done .ch-mark{background:var(--ok);border-color:var(--ok)}
+  .ch-body{display:none;padding:9px;border-top:1px solid var(--ui-dark3)}
+  .ch-item.open .ch-body{display:block}
+  .ch-desc{font-size:11.5px;color:#c8ccd4;line-height:1.5;margin-bottom:8px}
+  .ch-req{display:flex;gap:6px;font-size:11px;line-height:1.45;color:var(--text-dim);padding:3px 0}
+  .ch-req.pass{color:var(--ok)}
+  .ch-req.fail{color:var(--bad)}
+  .ch-req .rq-mark{flex:0 0 14px}
+  .ch-check{width:100%;margin-top:8px;background:var(--accent);border:none;border-radius:7px;color:#fff;font-weight:700;font-size:12px;padding:8px;cursor:pointer}
+  .ch-check:hover{background:#2f6fdb}
+  .ch-feedback{margin-top:7px;font-size:11px;line-height:1.5;border-radius:6px;padding:7px 9px;display:none}
+  .ch-feedback.ok{display:block;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#b9f0ce}
+  .ch-feedback.bad{display:block;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#f3c1c1}
   .field{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:11px;color:var(--text-dim)}
   .field input,.field select{
     width:100%;background:#101014;color:var(--text-light);border:1px solid var(--ui-dark3);
@@ -161,6 +181,7 @@
     .tool-grid{grid-template-columns:1fr}
   }
 </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
 <div id="topbar">
@@ -209,6 +230,17 @@
     <div class="panel">
       <div class="panel-title">Drafting Tools</div>
       <div class="tool-grid" id="toolGrid"></div>
+    </div>
+    <div class="panel" id="challengePanel">
+      <div class="panel-title">Draft This — Challenges</div>
+      <div class="field">
+        <label for="chLevel">Level</label>
+        <select id="chLevel">
+          <option value="beginner" selected>Beginner (within 3&quot;)</option>
+          <option value="advanced">Advanced (within 1&quot;)</option>
+        </select>
+      </div>
+      <div id="chList"></div>
     </div>
     <div class="panel" id="inspector">
       <div class="panel-title">Object Info</div>
@@ -1116,6 +1148,204 @@ setTool('select');
 syncInspector();
 refreshUndo();
 draw();
+
+/* ── Draft This — challenges ─────────────────────────────────────
+   Each challenge lists requirements checked against the objects on
+   the sheet, in real-world feet (object px ÷ PPF), so any drawing
+   scale works. */
+const CH_KEY = 'sdscpa-drafting-challenges-v1';
+let chState = {done:{}, level:'beginner'};
+try{ const s = JSON.parse(localStorage.getItem(CH_KEY)); if (s && s.done) chState = s; }catch(_){}
+
+function chTolFt(){ return (chState.level === 'advanced' ? 1 : 3) / 12; }
+function ftOf(px){ return px / PPF; }
+function near(a, b){ return Math.abs(a - b) <= chTolFt(); }
+function rectsOnSheet(){ return objects.filter(o=>o.type === 'rect'); }
+function findRect(wFt, hFt, exclude){
+  return rectsOnSheet().find(o=>
+    !(exclude||[]).includes(o) &&
+    ((near(ftOf(o.w), wFt) && near(ftOf(o.h), hFt)) ||
+     (near(ftOf(o.w), hFt) && near(ftOf(o.h), wFt))));
+}
+function dimCount(){ return objects.filter(o=>o.type === 'dimension').length; }
+function textCount(){ return objects.filter(o=>o.type === 'text').length; }
+function sizeMsg(kind, o, wFt, hFt){
+  if (!o) return 'No ' + kind + ' close to that size yet. Check your measurements against the grid.';
+  return null;
+}
+
+const CHALLENGES = [
+  {
+    id:'platform', title:'Stage platform',
+    desc:'Stock platforms are built 4\'-0\" × 8\'-0\". Draw one as a rectangle, then dimension both sides so the shop knows what to build.',
+    reqs:[
+      {label:'A rectangle 8\'-0\" × 4\'-0\"', test:()=>{
+        const r = findRect(8,4); if (r) return true;
+        const any = rectsOnSheet()[0];
+        return any ? 'Your rectangle is ' + fmtIn(ftOf(any.w)*12) + ' × ' + fmtIn(ftOf(any.h)*12) + ' — aim for 8\'-0\" × 4\'-0\".' : 'Draw a rectangle with the REC tool first.';
+      }},
+      {label:'Two dimension lines (width and height)', test:()=> dimCount() >= 2 ? true : 'Use the DIM tool to measure both sides — you have ' + dimCount() + ' of 2.'}
+    ]
+  },
+  {
+    id:'tread', title:'Stair tread',
+    desc:'A safe escape-stair tread is 3\'-0\" wide and 1\'-0\" deep. Draw the tread seen from above and dimension its width.',
+    reqs:[
+      {label:'A rectangle 3\'-0\" × 1\'-0\"', test:()=>{
+        if (findRect(3,1)) return true;
+        const any = rectsOnSheet()[0];
+        return any ? 'Closest rectangle is ' + fmtIn(ftOf(any.w)*12) + ' × ' + fmtIn(ftOf(any.h)*12) + ' — the tread is 3\'-0\" × 1\'-0\".' : 'Draw a rectangle with the REC tool first.';
+      }},
+      {label:'At least one dimension line', test:()=> dimCount() >= 1 ? true : 'Add a dimension with the DIM tool.'}
+    ]
+  },
+  {
+    id:'table', title:'Round café table',
+    desc:'The prop list calls for a round table 5\'-0\" across (2\'-6\" radius). Draw it with the circle tool and dimension it.',
+    reqs:[
+      {label:'A circle with a 2\'-6\" radius', test:()=>{
+        const c = objects.find(o=>o.type === 'circle' && near(ftOf(o.r), 2.5));
+        if (c) return true;
+        const any = objects.find(o=>o.type === 'circle');
+        return any ? 'Your circle’s radius is ' + fmtIn(ftOf(any.r)*12) + ' — aim for 2\'-6\".' : 'Draw a circle with the CIR tool (click the center, drag to the edge).';
+      }},
+      {label:'At least one dimension line', test:()=> dimCount() >= 1 ? true : 'Add a dimension with the DIM tool.'}
+    ]
+  },
+  {
+    id:'deck', title:'Two-platform deck',
+    desc:'Decks are built from stock platforms pushed together. Draw two 4\'-0\" × 8\'-0\" platforms touching along one edge — no gap, no overlap.',
+    reqs:[
+      {label:'Two rectangles, each 8\'-0\" × 4\'-0\"', test:()=>{
+        const a = findRect(8,4); const b = findRect(8,4,[a]);
+        return (a && b) ? true : 'Found ' + (a?1:0) + ' of 2 platforms at 8\'-0\" × 4\'-0\".';
+      }},
+      {label:'Touching along an edge (no gap, no overlap)', test:()=>{
+        const a = findRect(8,4); const b = findRect(8,4,[a]);
+        if (!a || !b) return 'Draw both platforms first.';
+        const tolPx = chTolFt() * PPF;
+        const hGap = Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w);
+        const vGap = Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h);
+        if (hGap > tolPx || vGap > tolPx) return 'There’s a gap between the platforms — slide one until the edges meet.';
+        if (hGap < -tolPx && vGap < -tolPx) return 'The platforms overlap — real platforms can’t share the same space.';
+        return true;
+      }}
+    ]
+  },
+  {
+    id:'windowflat', title:'Window flat',
+    desc:'Draw a 4\'-0\" × 8\'-0\" flat (tall rectangle), then the 2\'-0\" × 3\'-0\" window opening fully inside it.',
+    reqs:[
+      {label:'A flat: rectangle 4\'-0\" × 8\'-0\"', test:()=> findRect(4,8) ? true : 'Draw the outer flat first — 4\'-0\" wide, 8\'-0\" tall.'},
+      {label:'A window: rectangle 2\'-0\" × 3\'-0\" inside the flat', test:()=>{
+        const flat = findRect(4,8); const win = findRect(2,3,[flat]);
+        if (!win) return 'Draw the window opening — 2\'-0\" × 3\'-0\".';
+        if (!flat) return 'Draw the outer flat first.';
+        const inside = win.x >= flat.x && win.y >= flat.y &&
+                       win.x + win.w <= flat.x + flat.w && win.y + win.h <= flat.y + flat.h;
+        return inside ? true : 'The window has to sit completely inside the flat.';
+      }}
+    ]
+  },
+  {
+    id:'labeled', title:'Label everything',
+    desc:'A drawing nobody can read is useless in the shop. Take any shape you’ve drawn and give it a text label and a dimension.',
+    reqs:[
+      {label:'At least one shape on the sheet', test:()=> objects.some(o=>o.type !== 'text' && o.type !== 'dimension') ? true : 'Draw any shape first.'},
+      {label:'A text label (TXT tool)', test:()=> textCount() >= 1 ? true : 'Use the TXT tool to name your shape (e.g. “PLATFORM”).'},
+      {label:'A dimension line (DIM tool)', test:()=> dimCount() >= 1 ? true : 'Use the DIM tool to measure something.'}
+    ]
+  }
+];
+
+function chSave(){ try{ localStorage.setItem(CH_KEY, JSON.stringify(chState)); }catch(_){}}
+function chDoneCount(){ return CHALLENGES.filter(c=>chState.done[c.id]).length; }
+
+function renderChallenges(){
+  const list = $('chList');
+  list.innerHTML = '';
+  CHALLENGES.forEach(ch=>{
+    const item = document.createElement('div');
+    item.className = 'ch-item' + (chState.done[ch.id] ? ' done' : '');
+    item.dataset.ch = ch.id;
+    item.innerHTML =
+      '<div class="ch-head"><span class="ch-mark">' + (chState.done[ch.id] ? '✓' : '') + '</span>' + ch.title + '</div>' +
+      '<div class="ch-body"><div class="ch-desc">' + ch.desc + '</div>' +
+      ch.reqs.map((r,i)=>'<div class="ch-req" data-req="' + i + '"><span class="rq-mark">•</span><span>' + r.label + '</span></div>').join('') +
+      '<button class="ch-check" type="button">Check my drawing</button>' +
+      '<div class="ch-feedback"></div></div>';
+    item.querySelector('.ch-head').addEventListener('click', ()=>{
+      const was = item.classList.contains('open');
+      list.querySelectorAll('.ch-item').forEach(el=>el.classList.remove('open'));
+      if (!was) item.classList.add('open');
+    });
+    item.querySelector('.ch-check').addEventListener('click', ()=>checkChallenge(ch, item));
+    list.appendChild(item);
+  });
+}
+
+function checkChallenge(ch, item){
+  let allPass = true;
+  const messages = [];
+  ch.reqs.forEach((r,i)=>{
+    const res = r.test();
+    const row = item.querySelector('.ch-req[data-req="' + i + '"]');
+    const pass = res === true;
+    row.classList.toggle('pass', pass);
+    row.classList.toggle('fail', !pass);
+    row.querySelector('.rq-mark').textContent = pass ? '✓' : '✗';
+    if (!pass){ allPass = false; if (typeof res === 'string') messages.push(res); }
+  });
+  const fb = item.querySelector('.ch-feedback');
+  if (allPass){
+    fb.className = 'ch-feedback ok';
+    const first = !chState.done[ch.id];
+    chState.done[ch.id] = true; chSave();
+    item.classList.add('done');
+    item.querySelector('.ch-mark').textContent = '✓';
+    const n = chDoneCount();
+    fb.textContent = '✓ Nailed it! ' + n + ' of ' + CHALLENGES.length + ' challenges complete.';
+    if (window.SDSCPA && n >= 3){
+      SDSCPA.markDone('draftinglab', {score: Math.round(n / CHALLENGES.length * 100), level: chState.level});
+      if (first && (n === 3 || n === CHALLENGES.length)){
+        SDSCPA.certificateDialog({
+          heading: n === CHALLENGES.length ? 'All challenges complete!' : 'Drafting challenges: level cleared!',
+          lab: 'Drafting Lab',
+          line: 'completed ' + n + ' of ' + CHALLENGES.length + ' scaled drafting challenges (' + chState.level + ' tolerance)',
+          stats: [['CHALLENGES', n + '/' + CHALLENGES.length, '#00AEEF'], ['LEVEL', chState.level === 'advanced' ? 'Advanced' : 'Beginner', '#fbbf24']],
+          file: 'SDSCPA-Drafting-Lab-Certificate'
+        });
+      }
+    }
+  } else {
+    fb.className = 'ch-feedback bad';
+    fb.textContent = messages[0] || 'Not quite yet — check the ✗ items above.';
+  }
+}
+
+$('chLevel').value = chState.level;
+$('chLevel').addEventListener('change', ()=>{ chState.level = $('chLevel').value; chSave(); });
+renderChallenges();
+
+/* Glossary */
+if (window.SDSCPA) SDSCPA.attachGlossary({
+  labName: 'Drafting Lab',
+  goal: 'I can draft a scaled drawing whose dimensions match the plan.',
+  terms: [
+    ['Scale', 'How much the drawing is shrunk. At 1/2\" = 1\'-0\", every half inch on paper equals one real foot.'],
+    ['Ground plan', 'A drawing of the stage seen from straight above, like a map of the set.'],
+    ['Dimension line', 'The thin line with numbers that tells the real size of something in the drawing.'],
+    ['Plan view', 'Looking straight down at an object from above.'],
+    ['Elevation', 'Looking at an object straight from the front or side, showing its height.'],
+    ['Line weight', 'How thick a line is. Important edges get heavy lines; construction marks get thin ones.'],
+    ['Hidden line', 'A dashed line that shows an edge you can’t actually see from this view.'],
+    ['Grid snap', 'The cursor jumps to the nearest grid square so measurements come out even.'],
+    ['Object snap', 'The cursor jumps to corners and midpoints of shapes you already drew.'],
+    ['Platform', 'A stock stage deck, usually built 4\'-0\" × 8\'-0\".'],
+    ['Flat', 'A lightweight wall piece for scenery, often 4\'-0\" wide and 8\' or taller.'],
+    ['Tolerance', 'How far off a measurement is allowed to be and still count as correct.']
+  ]
+});
 </script>
 </body>
 </html>
