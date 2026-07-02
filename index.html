@@ -96,6 +96,16 @@
   .card .ic svg{width:26px;height:26px}
   .card h2{font-size:17px;font-weight:700;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .card p{font-size:12.5px;line-height:1.55;color:#a9adb4}
+  .card .goal{
+    font-size:11.5px;line-height:1.5;color:#8f97a4;font-style:italic;
+    padding-left:10px;border-left:2px solid var(--card-accent,var(--accent));
+  }
+  .card .done-chip{
+    display:none;font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;color:#0a0a0a;background:var(--ok);
+    align-items:center;gap:4px;
+  }
+  .card.is-done .done-chip{display:inline-flex}
   .card .go{
     margin-top:auto;font-size:12px;font-weight:600;letter-spacing:.3px;
     color:var(--card-accent,var(--accent));display:flex;align-items:center;gap:6px;
@@ -157,21 +167,22 @@
     <div class="category-head" style="order:30">Scenic</div>
     <div class="category-head" style="order:40">Sound</div>
 
-    <a class="card" href="scenic/" style="order:31;--card-accent:#92278F;--card-tint:rgba(146,39,143,.16)">
+    <a class="card" data-lab="scenic" href="scenic/" style="order:31;--card-accent:#92278F;--card-tint:rgba(146,39,143,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="1.5"/>
           <path d="M3 9h18M9 3v18"/><path d="M3 3l6 6M21 3l-6 6"/>
         </svg>
       </div>
-      <h2>Scenic Construction Lab</h2>
+      <h2>Scenic Construction Lab <span class="done-chip">✓ Done</span></h2>
       <p>Learn to build flats, platforms, and set pieces the right way. Work through guided lessons, test your knowledge with a build quiz, and sharpen your tape-measure skills with fractional-inch drills.</p>
+      <div class="goal">I can measure with a tape, lay out lumber to scale, and build a cut list for a flat or platform.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="draftinglab/" style="order:33;--card-accent:#00AEEF;--card-tint:rgba(0,174,239,.16)">
+    <a class="card" data-lab="draftinglab" href="draftinglab/" style="order:33;--card-accent:#00AEEF;--card-tint:rgba(0,174,239,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 20h16"/>
@@ -181,28 +192,30 @@
           <rect x="4" y="4" width="16" height="16" rx="1.5"/>
         </svg>
       </div>
-      <h2>Drafting Lab</h2>
+      <h2>Drafting Lab <span class="done-chip">✓ Done</span></h2>
       <p>Practice drawing technical theatre drafting to scale on virtual 11&quot; × 17&quot; grid paper. Use professional drafting tools, snap-to-grid, and editable dimensions, the same workflow you'd use in industry software.</p>
+      <div class="goal">I can draft a scaled drawing whose dimensions match the plan.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="sound/" style="order:41;--card-accent:#00AEEF;--card-tint:rgba(0,174,239,.16)">
+    <a class="card" data-lab="sound" href="sound/" style="order:41;--card-accent:#00AEEF;--card-tint:rgba(0,174,239,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M11 5L6 9H3v6h3l5 4V5z"/>
           <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>
         </svg>
       </div>
-      <h2>Live Sound Lab</h2>
+      <h2>Live Sound Lab <span class="done-chip">✓ Done</span></h2>
       <p>Trace a sound system from microphone to speaker and learn why every connection matters. Practice signal flow, setting levels, and building a live stage mix from the ground up.</p>
+      <div class="goal">I can trace the signal path from microphone to speaker and set safe levels.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="soundcues/" style="order:42;--card-accent:#EC008C;--card-tint:rgba(236,0,140,.16)">
+    <a class="card" data-lab="soundcues" href="soundcues/" style="order:42;--card-accent:#EC008C;--card-tint:rgba(236,0,140,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="16" rx="1.5"/>
@@ -210,14 +223,15 @@
           <path d="M7 13.5v3M11 12v6M15 13v4M19 13.5v3"/>
         </svg>
       </div>
-      <h2>Sound Cue Lab</h2>
+      <h2>Sound Cue Lab <span class="done-chip">✓ Done</span></h2>
       <p>Build a whole show's soundscape on a QLab-style cue stack. Pull effects from the library or drop in your own audio, set fades, loops, and follow cues, then hit GO to run the show live. Export a standalone file that plays back offline on any computer.</p>
+      <div class="goal">I can build a cue stack with fades and follows, then run it live with GO.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="linemixing/" style="order:43;--card-accent:#92278F;--card-tint:rgba(146,39,143,.16)">
+    <a class="card" data-lab="linemixing" href="linemixing/" style="order:43;--card-accent:#92278F;--card-tint:rgba(146,39,143,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 3v18M12 3v18M18 3v18"/>
@@ -226,14 +240,15 @@
           <rect x="16" y="6" width="4" height="4" rx="1"/>
         </svg>
       </div>
-      <h2>Line Mixing Lab</h2>
+      <h2>Line Mixing Lab <span class="done-chip">✓ Done</span></h2>
       <p>Ride the DCAs like a live A1. Each character sits on a key from Z to M; as lines fall down the highway, open the right performer in time and hold for the whole line. Practice a scene, or take the 5-minute scored quiz and earn a certificate.</p>
+      <div class="goal">I can open the right performer's channel exactly while they speak — and only then.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="costume/" style="order:11;--card-accent:#7AC143;--card-tint:rgba(122,193,67,.16)">
+    <a class="card" data-lab="costume" href="costume/" style="order:11;--card-accent:#7AC143;--card-tint:rgba(122,193,67,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3a2 2 0 0 1 2 2c0 1.5-2 2.2-2 3.5"/>
@@ -241,14 +256,15 @@
           <path d="M9 19l3-9 3 9"/>
         </svg>
       </div>
-      <h2>Costume Design Lab</h2>
+      <h2>Costume Design Lab <span class="done-chip">✓ Done</span></h2>
       <p>Build costume plots for an entire cast. Choose garments, accessories, and hairstyles from a stylized wardrobe, then label each look by character name and scene, just like a real costume breakdown.</p>
+      <div class="goal">I can design a costume that fits the character, the time period, and the scene.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="designlab/" style="order:32;--card-accent:#2E3192;--card-tint:rgba(46,49,146,.16)">
+    <a class="card" data-lab="designlab" href="designlab/" style="order:32;--card-accent:#2E3192;--card-tint:rgba(46,49,146,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 20h18"/>
@@ -257,14 +273,15 @@
           <path d="M12 7V4"/>
         </svg>
       </div>
-      <h2>Scenic Design Lab</h2>
+      <h2>Scenic Design Lab <span class="done-chip">✓ Done</span></h2>
       <p>Place set pieces, furniture, and actors on a ground plan, then watch your design appear live in a perspective view from the audience. Stage areas are labeled so you always know where everything sits on stage.</p>
+      <div class="goal">I can stage a scene with clear focus and keep every actor visible to the audience.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="lighting/" style="order:21;--card-accent:#F7941E;--card-tint:rgba(247,148,30,.16)">
+    <a class="card" data-lab="lighting" href="lighting/" style="order:21;--card-accent:#F7941E;--card-tint:rgba(247,148,30,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 3h12l-2 6H8L6 3z"/>
@@ -274,14 +291,15 @@
           <path d="M9 15h6"/>
         </svg>
       </div>
-      <h2>Lighting Design Lab</h2>
+      <h2>Lighting Design Lab <span class="done-chip">✓ Done</span></h2>
       <p>Paint the stage with light: choose colors, textures (gobos), and angles to craft a look. Record cues and run a full light show, using a cue stack that works like a real ETC EOS console.</p>
+      <div class="goal">I can build a lighting look with color and angle, record it as a cue, and run the show.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="studiolab/" style="order:23;--card-accent:#EC008C;--card-tint:rgba(236,0,140,.16)">
+    <a class="card" data-lab="studiolab" href="studiolab/" style="order:23;--card-accent:#EC008C;--card-tint:rgba(236,0,140,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19h16"/>
@@ -291,14 +309,15 @@
           <path d="M15 5h4v4h-4z"/>
         </svg>
       </div>
-      <h2>Studio Lighting Lab</h2>
+      <h2>Studio Lighting Lab <span class="done-chip">✓ Done</span></h2>
       <p>Set up studio lighting rigs for film and photography. Position lights, choose modifiers and colored gels, and see how your choices affect the image, then print a shareable shot plan.</p>
+      <div class="goal">I can light a subject for camera and explain what job each light is doing.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
     </a>
 
-    <a class="card" href="lighting-people/" style="order:22;--card-accent:#ED1C45;--card-tint:rgba(237,28,69,.16)">
+    <a class="card" data-lab="lighting-people" href="lighting-people/" style="order:22;--card-accent:#ED1C45;--card-tint:rgba(237,28,69,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/>
@@ -306,8 +325,9 @@
           <path d="M5 7L2 5M19 7l3-2M7 3L5 1M17 3l2-2"/>
         </svg>
       </div>
-      <h2>Portrait Lighting Lab</h2>
+      <h2>Portrait Lighting Lab <span class="done-chip">✓ Done</span></h2>
       <p>Experiment with professional portrait lighting: position key, fill, back, and hair lights around a subject and see the result update in real time. Try built-in presets, save your own setups, and export side-by-side comparisons.</p>
+      <div class="goal">I can name the four portrait lights — key, fill, back, hair — and place each one.</div>
       <span class="go">Open lab
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
       </span>
@@ -321,5 +341,23 @@
   SDSCPA · Design &amp; Production Virtual Labs
 </footer>
 
+<script>
+/* Show a "Done" chip on each lab card the student has completed.
+   Labs write to localStorage 'sdscpa_progress' via shared/learn.js. */
+(function(){
+  var progress;
+  try{ progress = JSON.parse(localStorage.getItem('sdscpa_progress') || '{}'); }
+  catch(e){ progress = {}; }
+  document.querySelectorAll('.card[data-lab]').forEach(function(card){
+    var p = progress[card.getAttribute('data-lab')];
+    if(p && p.done){
+      card.classList.add('is-done');
+      var chip = card.querySelector('.done-chip');
+      if(chip && typeof p.score === 'number') chip.textContent = '✓ ' + p.score + '%';
+      if(chip && p.date) chip.title = 'Completed ' + p.date;
+    }
+  });
+})();
+</script>
 </body>
 </html>
