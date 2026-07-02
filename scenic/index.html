@@ -570,6 +570,7 @@
     #captureBtn{margin-left:auto}
   }
 </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
 
@@ -3570,6 +3571,9 @@ function quizFinish(){
     quiz.times.map((t,i)=>`<tr><td>Build ${i+1}</td><td>${fmtClock(t)}</td></tr>`).join('');
   seedResultStudent('quizStudentName');
   document.getElementById('quizResultsBack').classList.add('show');
+  if (window.SDSCPA){
+    window.SDSCPA.markDone('scenic', {score:100, level: quiz.easyUsed ? 'easy' : 'standard'});
+  }
 }
 function quizWarmupFinish(){
   clearInterval(quiz.timer); quiz.timer=null;
@@ -4354,6 +4358,27 @@ sizeCanvas();
 fitView();
 draw();
 if (!seen('tour')) openTour();
+
+if (window.SDSCPA) SDSCPA.attachGlossary({
+  labName: 'Scenic Construction Lab',
+  goal: 'I can measure with a tape, lay out lumber to scale, and build a cut list for a flat or platform.',
+  terms: [
+    ['Flat', 'A lightweight scenery wall: a lumber frame skinned with luan.'],
+    ['Platform', 'A stage deck you can stand on: a 2×4 frame with a plywood lid.'],
+    ['Rail', 'The horizontal top and bottom pieces of a flat frame.'],
+    ['Stile', 'The vertical side pieces of a flat frame, running between the rails.'],
+    ['Toggle', 'A middle support piece across a flat or platform frame.'],
+    ['Corner block', 'A triangular plywood plate that reinforces a flat’s corner joint.'],
+    ['Keystone', 'A small plywood plate that ties a toggle to a stile.'],
+    ['Luan', 'Thin (1/4″) plywood used as the skin of a Hollywood flat.'],
+    ['On edge vs. flat', 'How a board is turned: “on edge” shows its narrow face (stronger); “flat” lies face-down.'],
+    ['Cut list', 'The shop’s shopping list: every piece, its stock, and its exact length.'],
+    ['Scale', 'The drawing-to-real-world ratio, like 1″ = 1′-0″.'],
+    ['Jamb, header & sill', 'The framing around an opening: sides (jambs), top (header), bottom of a window (sill).'],
+    ['Cripple', 'A short stud above or below an opening that carries the skin.'],
+    ['1×3 / 2×4', 'Stock lumber names. A 1×3 actually measures 3/4″ × 2-1/2″ — wood shrinks at the mill!']
+  ]
+});
 </script>
 </body>
 </html>
