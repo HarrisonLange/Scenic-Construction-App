@@ -189,7 +189,35 @@
     #right{display:block}
     .brand{min-width:150px}
   }
+/* Lighting challenges */
+.ch-item{border:1px solid var(--ui-dark3);border-radius:8px;margin-bottom:7px;overflow:hidden;background:#101014}
+.ch-head{display:flex;align-items:center;gap:7px;padding:8px 9px;cursor:pointer;font-size:12px;font-weight:650;color:var(--text-light)}
+.ch-head:hover{background:#1c1c22}
+.ch-item.open .ch-head{background:rgba(236,0,140,.14)}
+.ch-mark{flex:0 0 16px;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--ui-dark3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#0a0a0a}
+.ch-item.done .ch-mark{background:var(--ok);border-color:var(--ok)}
+.ch-body{display:none;padding:9px;border-top:1px solid var(--ui-dark3)}
+.ch-item.open .ch-body{display:block}
+.ch-desc{font-size:11.5px;color:#c8ccd4;line-height:1.5;margin-bottom:8px}
+.ch-req{display:flex;gap:6px;font-size:11px;line-height:1.45;color:var(--text-dim);padding:3px 0}
+.ch-req.pass{color:var(--ok)}
+.ch-req.fail{color:var(--bad)}
+.ch-req .rq-mark{flex:0 0 14px}
+.ch-check{width:100%;margin-top:8px;background:var(--accent);border:none;border-radius:7px;color:#fff;font-weight:700;font-size:12px;padding:8px;cursor:pointer}
+.ch-check:hover{filter:brightness(1.15)}
+.ch-feedback{margin-top:7px;font-size:11px;line-height:1.5;border-radius:6px;padding:7px 9px;display:none}
+.ch-feedback.ok{display:block;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#b9f0ce}
+.ch-feedback.bad{display:block;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#f3c1c1}
+/* First-run tour */
+#tourWrap{position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:950;display:none;align-items:center;justify-content:center;padding:16px}
+#tourWrap.open{display:flex}
+#tourCard{background:#16161c;border:1px solid #333;border-radius:14px;max-width:460px;width:100%;padding:22px 24px;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+#tourCard .tour-step{font-size:10.5px;font-weight:800;letter-spacing:1.4px;color:var(--cyan);text-transform:uppercase;margin-bottom:6px}
+#tourCard h3{margin:0 0 8px;font-size:18px}
+#tourCard p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:#c8ccd4}
+#tourCard .tour-btns{display:flex;justify-content:space-between;gap:10px}
 </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
 <div id="topbar">
@@ -233,6 +261,15 @@
         <button class="tbtn preset" data-preset="product">Product</button>
         <button class="tbtn preset" data-preset="noir">Noir edge</button>
       </div>
+      <div class="quick-grid" style="margin-top:8px">
+        <button class="tbtn" id="tourBtn" title="What does each light do?">🎓 Tour</button>
+        <button class="tbtn" id="glossBtn" title="Glossary — what do these words mean?">📖 Words</button>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Lighting Challenges</h2>
+      <div id="chList"></div>
     </section>
 
     <section class="panel-section">
@@ -1883,6 +1920,165 @@
   renderAll();
   resizeCanvas();
   initThree();
+
+  /* ── First-run tour: what does each light do? ── */
+  const TOUR = [
+    ['Welcome to the studio', 'The person in the middle is your <b>subject</b>. Every light around them has a specific job — once you know the jobs, you can build any look you want.'],
+    ['The KEY light', 'The key is the <b>main light</b> — it creates the shape of the face. Where you put it decides where the shadows fall. Click a light in <i>Studio Lights</i> and drag it around the 3D studio to see this happen.'],
+    ['The FILL light', 'The fill <b>softens the shadows</b> the key makes. Lots of fill looks friendly and open; barely any fill looks dramatic and tense.'],
+    ['The BACK (rim) light', 'The back light draws a thin <b>outline around the head and shoulders</b> so the subject doesn’t melt into the background. Movie villains love it.'],
+    ['The Learning Meter', 'Under the studio, the meter reads your image like a camera: <b>Exposure</b> is overall brightness, <b>Ratio</b> is contrast between the lit and shadow sides of the face. The feedback line tells you what a photographer would notice.'],
+    ['Your turn', 'Open <b>Lighting Challenges</b> on the left and recreate real looks — the lab checks your lighting against each brief.']
+  ];
+  const tourWrap = document.createElement('div');
+  tourWrap.id = 'tourWrap';
+  tourWrap.innerHTML = '<div id="tourCard"><div class="tour-step"></div><h3></h3><p></p>' +
+    '<div class="tour-btns"><button class="tbtn" id="tourSkip">Skip tour</button><button class="tbtn" id="tourNext" style="background:var(--accent);border-color:var(--accent);color:#fff">Next</button></div></div>';
+  document.body.appendChild(tourWrap);
+  let tourAt = 0;
+  function tourShow(i){
+    tourAt = i;
+    if (i >= TOUR.length){ tourWrap.classList.remove('open'); return; }
+    tourWrap.classList.add('open');
+    tourWrap.querySelector('.tour-step').textContent = 'Step ' + (i+1) + ' / ' + TOUR.length;
+    tourWrap.querySelector('h3').textContent = TOUR[i][0];
+    tourWrap.querySelector('p').innerHTML = TOUR[i][1];
+    $('tourNext').textContent = i === TOUR.length - 1 ? 'Start building' : 'Next';
+  }
+  $('tourBtn').addEventListener('click', () => tourShow(0));
+  $('tourSkip').addEventListener('click', () => tourWrap.classList.remove('open'));
+  $('tourNext').addEventListener('click', () => tourShow(tourAt + 1));
+  tourWrap.addEventListener('click', e => { if (e.target === tourWrap) tourWrap.classList.remove('open'); });
+  try{
+    if (!localStorage.getItem('sdscpa-studiolab-tour-v1')){
+      localStorage.setItem('sdscpa-studiolab-tour-v1', '1');
+      tourShow(0);
+    }
+  }catch(_){}
+
+  /* ── Lighting challenges: recreate the look, checked by the meter ── */
+  const CH_KEY = 'sdscpa-studiolab-challenges-v1';
+  let chDone = {};
+  try{ chDone = JSON.parse(localStorage.getItem(CH_KEY)) || {}; }catch(_){}
+
+  function litCount(){ return state.lights.filter(l => l.intensity >= 25).length; }
+  function warmestBright(){
+    const bright = state.lights.filter(l => l.intensity >= 40);
+    return bright.some(l => {
+      const c = l.color || '#ffffff';
+      const r = parseInt(c.slice(1,3),16), b = parseInt(c.slice(5,7),16);
+      return r > b + 40;
+    });
+  }
+  const CHALLENGES = [
+    {id:'beauty', title:'Magazine cover', desc:'Soft, even, flattering — the classic beauty look. Keep contrast low and brightness comfortable.', reqs:[
+      {label:'Ratio at or below 2.2:1 (low contrast)', test:a => a.ratio <= 2.2 ? true : 'Your ratio is ' + a.ratio.toFixed(1) + ':1 — raise the fill or move the key closer to the camera.'},
+      {label:'Exposure between −0.3 and +0.8 EV', test:a => (a.exposure >= -0.3 && a.exposure <= 0.8) ? true : 'Exposure is ' + a.exposure.toFixed(1) + ' EV — adjust the key intensity.'},
+      {label:'At least two lights doing real work (≥25%)', test:() => litCount() >= 2 ? true : 'Only ' + litCount() + ' light(s) are bright enough to matter — bring up another one.'}
+    ]},
+    {id:'noir', title:'Detective movie', desc:'Hard shadows, high contrast, mystery. One strong source, almost no help.', reqs:[
+      {label:'Ratio at or above 4.5:1 (high contrast)', test:a => a.ratio >= 4.5 ? true : 'Your ratio is ' + a.ratio.toFixed(1) + ':1 — dim the fill so the shadow side goes dark.'},
+      {label:'Face still readable (exposure above −0.7 EV)', test:a => a.exposure >= -0.7 ? true : 'Exposure is ' + a.exposure.toFixed(1) + ' EV — noir is contrasty, not invisible. Raise the key.'},
+      {label:'Fill at or below 35%', test:a => a.fill <= 35 ? true : 'Fill is reading ' + a.fill + '% — kill most of it.'}
+    ]},
+    {id:'silhouette', title:'Mystery guest', desc:'A TV interview protecting someone’s identity: the person is a dark shape, but the shot still has light in it.', reqs:[
+      {label:'Subject nearly dark (exposure at or below −0.9 EV)', test:a => a.exposure <= -0.9 ? true : 'Exposure is ' + a.exposure.toFixed(1) + ' EV — pull the front lights off the subject.'},
+      {label:'At least one light still on at 40%+ (edge or background)', test:() => state.lights.some(l => l.intensity >= 40) ? true : 'Everything is off — a silhouette needs a bright light somewhere behind or beside the subject.'}
+    ]},
+    {id:'sunset', title:'Golden hour', desc:'Warm evening sun: gel a strong light warm (orange/amber) and keep some shape in the face.', reqs:[
+      {label:'A strong light (≥40%) wearing a warm gel', test:() => warmestBright() ? true : 'No warm source found — pick an orange/amber swatch for your brightest light.'},
+      {label:'Some shape: ratio at or above 2:1', test:a => a.ratio >= 2 ? true : 'Your ratio is ' + a.ratio.toFixed(1) + ':1 — sun comes from one side, so ease off the fill.'},
+      {label:'Exposure between −0.5 and +0.9 EV', test:a => (a.exposure >= -0.5 && a.exposure <= 0.9) ? true : 'Exposure is ' + a.exposure.toFixed(1) + ' EV — balance the levels.'}
+    ]},
+    {id:'catalog', title:'Clean catalog shot', desc:'A store website needs the product (person) evenly lit with soft, open shadows — no drama allowed.', reqs:[
+      {label:'Ratio at or below 1.8:1', test:a => a.ratio <= 1.8 ? true : 'Your ratio is ' + a.ratio.toFixed(1) + ':1 — even it out with more fill.'},
+      {label:'Fill at 60% or higher', test:a => a.fill >= 60 ? true : 'Fill is reading ' + a.fill + '% — catalog shots hide nothing in shadow.'},
+      {label:'Exposure between −0.2 and +0.7 EV', test:a => (a.exposure >= -0.2 && a.exposure <= 0.7) ? true : 'Exposure is ' + a.exposure.toFixed(1) + ' EV — adjust your levels.'}
+    ]}
+  ];
+  function chSave(){ try{ localStorage.setItem(CH_KEY, JSON.stringify(chDone)); }catch(_){}}
+  function chCount(){ return CHALLENGES.filter(c => chDone[c.id]).length; }
+  function renderChallenges(){
+    const list = $('chList');
+    list.innerHTML = '';
+    CHALLENGES.forEach(ch => {
+      const item = document.createElement('div');
+      item.className = 'ch-item' + (chDone[ch.id] ? ' done' : '');
+      item.innerHTML =
+        '<div class="ch-head"><span class="ch-mark">' + (chDone[ch.id] ? '✓' : '') + '</span>' + ch.title + '</div>' +
+        '<div class="ch-body"><div class="ch-desc">' + ch.desc + '</div>' +
+        ch.reqs.map((r,i) => '<div class="ch-req" data-req="' + i + '"><span class="rq-mark">•</span><span>' + r.label + '</span></div>').join('') +
+        '<button class="ch-check" type="button">Check my look</button>' +
+        '<div class="ch-feedback"></div></div>';
+      item.querySelector('.ch-head').addEventListener('click', () => {
+        const was = item.classList.contains('open');
+        list.querySelectorAll('.ch-item').forEach(el => el.classList.remove('open'));
+        if (!was) item.classList.add('open');
+      });
+      item.querySelector('.ch-check').addEventListener('click', () => checkChallenge(ch, item));
+      list.appendChild(item);
+    });
+  }
+  function checkChallenge(ch, item){
+    const a = subjectLighting();
+    let allPass = true;
+    const messages = [];
+    ch.reqs.forEach((r,i) => {
+      const res = r.test(a);
+      const row = item.querySelector('.ch-req[data-req="' + i + '"]');
+      const pass = res === true;
+      row.classList.toggle('pass', pass);
+      row.classList.toggle('fail', !pass);
+      row.querySelector('.rq-mark').textContent = pass ? '✓' : '✗';
+      if (!pass){ allPass = false; if (typeof res === 'string') messages.push(res); }
+    });
+    const fb = item.querySelector('.ch-feedback');
+    if (allPass){
+      fb.className = 'ch-feedback ok';
+      const first = !chDone[ch.id];
+      chDone[ch.id] = true; chSave();
+      item.classList.add('done');
+      item.querySelector('.ch-mark').textContent = '✓';
+      const n = chCount();
+      fb.textContent = '✓ That’s the look! ' + n + ' of ' + CHALLENGES.length + ' challenges complete.';
+      if (window.SDSCPA && n >= 3){
+        SDSCPA.markDone('studiolab', {score: Math.round(n / CHALLENGES.length * 100)});
+        if (first && (n === 3 || n === CHALLENGES.length)){
+          SDSCPA.certificateDialog({
+            heading: n === CHALLENGES.length ? 'Every look nailed!' : 'Lighting challenges cleared!',
+            lab: 'Studio Lighting Lab',
+            line: 'recreated ' + n + ' of ' + CHALLENGES.length + ' professional studio lighting looks',
+            stats: [['LOOKS', n + '/' + CHALLENGES.length, '#EC008C'], ['RATIO READ', a.ratio.toFixed(1) + ':1', '#00AEEF']],
+            file: 'SDSCPA-Studio-Lighting-Certificate'
+          });
+        }
+      }
+    } else {
+      fb.className = 'ch-feedback bad';
+      fb.textContent = messages[0] || 'Not this look yet — check the ✗ items above.';
+    }
+  }
+  renderChallenges();
+
+  if (window.SDSCPA) SDSCPA.attachGlossary({
+    button: $('glossBtn'),
+    labName: 'Studio Lighting Lab',
+    goal: 'I can light a subject for camera and explain what job each light is doing.',
+    terms: [
+      ['Key light', 'The main light. It shapes the face and decides where shadows fall.'],
+      ['Fill light', 'A softer light that opens up the shadows the key creates.'],
+      ['Back / rim light', 'A light from behind that outlines the subject so they stand out from the background.'],
+      ['Practical', 'A light that appears in the shot itself, like a lamp on a table.'],
+      ['Softbox', 'A fabric box over a light that makes it big and soft — soft light means soft shadow edges.'],
+      ['Fresnel', 'A focusable hard light — small source, crisp shadows.'],
+      ['Gel', 'A colored filter placed on a light to change its color.'],
+      ['Gobo', 'A pattern (window, blinds, branches) a light shines through to project texture.'],
+      ['Exposure', 'Overall brightness of the image, measured in EV. 0 is “just right.”'],
+      ['Lighting ratio', 'Contrast between the bright side and shadow side of the face. 2:1 is gentle; 8:1 is dramatic.'],
+      ['Three-point lighting', 'The classic recipe: key + fill + back light.'],
+      ['Low key', 'A dark, moody image with lots of shadow. (Not the same as the key light!)']
+    ]
+  });
 })();
 </script>
 </body>
