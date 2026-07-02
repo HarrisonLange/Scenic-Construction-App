@@ -192,7 +192,31 @@
     #stagePanel{height:84vh;min-height:560px}
     #left,#right{border:0;border-top:1px solid #000}
   }
+/* Composition challenges */
+.ch-item{border:1px solid var(--ui-dark3);border-radius:8px;margin-bottom:7px;overflow:hidden;background:#101014}
+.ch-head{display:flex;align-items:center;gap:7px;padding:8px 9px;cursor:pointer;font-size:12px;font-weight:650;color:var(--text-light)}
+.ch-head:hover{background:#1c1c22}
+.ch-item.open .ch-head{background:rgba(46,49,146,.28)}
+.ch-mark{flex:0 0 16px;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--ui-dark3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#0a0a0a}
+.ch-item.done .ch-mark{background:var(--ok);border-color:var(--ok)}
+.ch-body{display:none;padding:9px;border-top:1px solid var(--ui-dark3)}
+.ch-item.open .ch-body{display:block}
+.ch-desc{font-size:11.5px;color:#c8ccd4;line-height:1.5;margin-bottom:8px}
+.ch-req{display:flex;gap:6px;font-size:11px;line-height:1.45;color:var(--text-dim);padding:3px 0}
+.ch-req.pass{color:var(--ok)}
+.ch-req.fail{color:var(--bad)}
+.ch-req .rq-mark{flex:0 0 14px}
+.ch-check{width:100%;margin-top:8px;background:var(--accent);border:none;border-radius:7px;color:#fff;font-weight:700;font-size:12px;padding:8px;cursor:pointer}
+.ch-check:hover{filter:brightness(1.15)}
+.ch-feedback{margin-top:7px;font-size:11px;line-height:1.5;border-radius:6px;padding:7px 9px;display:none}
+.ch-feedback.ok{display:block;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#b9f0ce}
+.ch-feedback.bad{display:block;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#f3c1c1}
+/* Live sightline callout */
+#sightWarn{display:none;margin-top:8px;font-size:12px;line-height:1.5;border-radius:8px;padding:8px 11px;
+  background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.45);color:#fde9b5}
+#sightWarn.show{display:block}
 </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
 
@@ -242,12 +266,18 @@
       <canvas id="planCanvas" tabindex="0" aria-label="Ground plan, drag to arrange"></canvas>
       <div class="plan-hud" id="planHud">Center stage</div>
     </div>
+    <div id="sightWarn"></div>
   </section>
 
   <aside class="side" id="right">
     <section class="panel-section">
       <h2>Selected Piece</h2>
       <div id="objEditor"><div class="small-note">Nothing selected. Click a piece on either view to edit it.</div></div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Composition Challenges</h2>
+      <div id="chList"></div>
     </section>
 
     <section class="panel-section">
@@ -1472,6 +1502,164 @@ function init(){
   resize();
 }
 init();
+
+/* ── Composition challenges + live sightline callouts ───────────── */
+(function(){
+  const FURN = ['chair','armchair','sofa','table','rtable','desk','bed','bench','stool'];
+  const WALLS = ['flat','door','window','archway'];
+  const LEVELS = ['platform','riser','stairs','ramp'];
+
+  const actors = ()=>state.objects.filter(o=>o.type==='actor');
+  const of = types=>state.objects.filter(o=>types.includes(o.type));
+  const sc = o=>o.scale||1;
+
+  /* An actor is "blocked" when a tall piece sits downstage of them and
+     covers their position horizontally — the house can't see them.
+     Walls turned near 90° are treated as edge-on (narrow). */
+  function blockedActors(){
+    const tall = state.objects.filter(o=>o.type!=='actor' && o.h*sc(o) >= 5.5);
+    const out = [];
+    actors().forEach(a=>{
+      const hit = tall.find(t=>{
+        if (t.y >= a.y - 0.5) return false;
+        const rot = ((t.rot||0)%180+180)%180;
+        const edgeOn = rot > 60 && rot < 120;
+        const half = (edgeOn ? t.d : t.w) * sc(t) / 2;
+        return Math.abs(t.x - a.x) < half * 0.9;
+      });
+      if (hit) out.push({a, hit});
+    });
+    return out;
+  }
+  function labelOf(o){ return o.name || o.type; }
+  setInterval(()=>{
+    const warn = $('sightWarn');
+    if (!warn) return;
+    const blocked = blockedActors();
+    if (blocked.length){
+      warn.classList.add('show');
+      warn.innerHTML = blocked.slice(0,3).map(b=>
+        '⚠️ <b>' + labelOf(b.a) + '</b> is hidden behind <b>' + labelOf(b.hit) + '</b> for much of the house — move one of them, or turn the wall edge-on.'
+      ).join('<br>');
+    } else {
+      warn.classList.remove('show');
+    }
+  }, 900);
+
+  const CH_KEY = 'sdscpa-designlab-challenges-v1';
+  let chDone = {};
+  try{ chDone = JSON.parse(localStorage.getItem(CH_KEY)) || {}; }catch(_){}
+
+  const CHALLENGES = [
+    {id:'diagonal', title:'Strong diagonal', desc:'Directors love diagonals: they feel active and give everyone an angle. Stage a 3-person scene along a real diagonal.', reqs:[
+      {label:'At least 3 actors on stage', test:()=> actors().length>=3 ? true : 'Only '+actors().length+' actor(s) — add more from “Add to Stage.”'},
+      {label:'Spread across the width (10 ft or more)', test:()=>{ const xs=actors().map(a=>a.x); const s=Math.max(...xs)-Math.min(...xs); return s>=10?true:'Your actors span '+s.toFixed(0)+' ft across — stretch the line wider.'; }},
+      {label:'Spread up-and-downstage too (8 ft or more)', test:()=>{ const ys=actors().map(a=>a.y); const s=Math.max(...ys)-Math.min(...ys); return s>=8?true:'Your actors span '+s.toFixed(0)+' ft deep — a diagonal needs depth, not just width.'; }}
+    ]},
+    {id:'interior', title:'Furnished interior', desc:'Build a believable room: walls behind, furniture where people actually live, and a backdrop closing the world.', reqs:[
+      {label:'At least 3 wall pieces (flats, doors, windows, arches)', test:()=>{ const n=of(WALLS).length; return n>=3?true:n+' of 3 wall pieces placed.'; }},
+      {label:'At least 3 pieces of furniture', test:()=>{ const n=of(FURN).length; return n>=3?true:n+' of 3 furniture pieces placed.'; }},
+      {label:'A backdrop upstage', test:()=> of(['backdrop']).length?true:'Add a Backdrop from “Walls & Openings.”'}
+    ]},
+    {id:'levels', title:'Levels create focus', desc:'Height = importance. Put someone on a platform and the audience looks at them first.', reqs:[
+      {label:'A platform, riser, or stairs on stage', test:()=> of(LEVELS).length?true:'Add something from “Levels.”'},
+      {label:'An actor standing on a level', test:()=>{ const lv=of(LEVELS); const on=actors().some(a=>lv.some(p=> Math.abs(a.x-p.x)<=p.w*sc(p)/2 && Math.abs(a.y-p.y)<=p.d*sc(p)/2)); return on?true:'Drag an actor until they stand on the platform (check the ground plan).'; }},
+      {label:'At least one more actor at stage level', test:()=>{ const lv=of(LEVELS); const off=actors().some(a=>!lv.some(p=> Math.abs(a.x-p.x)<=p.w*sc(p)/2 && Math.abs(a.y-p.y)<=p.d*sc(p)/2)); return actors().length>=2&&off?true:'Add a second actor on the deck so the height difference reads.'; }}
+    ]},
+    {id:'focus', title:'Center of attention', desc:'Stage one clear star: a single actor holds downstage center while the others give them room.', reqs:[
+      {label:'One actor near downstage center (within 4 ft of center line, downstage half)', test:()=>{ const c=actors().filter(a=>Math.abs(a.x)<=4&&a.y<=12); return c.length===1?true:(c.length===0?'Nobody is holding downstage center yet.':'Too crowded — only ONE actor should hold center.'); }},
+      {label:'At least 2 supporting actors, each 8+ ft away', test:()=>{ const c=actors().find(a=>Math.abs(a.x)<=4&&a.y<=12); if(!c) return 'Place the star first.'; const far=actors().filter(a=>a!==c&&Math.hypot(a.x-c.x,a.y-c.y)>=8); return far.length>=2?true:far.length+' of 2 supporting actors are giving the star room.'; }}
+    ]},
+    {id:'sightlines', title:'Everybody visible', desc:'A real set with real walls — and every actor still visible from the house. Fix any ⚠️ warnings under the ground plan.', reqs:[
+      {label:'At least 2 actors on stage', test:()=> actors().length>=2?true:'Add at least 2 actors.'},
+      {label:'At least 2 tall pieces (walls, columns, trees…)', test:()=>{ const n=state.objects.filter(o=>o.type!=='actor'&&o.h*sc(o)>=5.5).length; return n>=2?true:n+' of 2 tall pieces placed.'; }},
+      {label:'No actor hidden behind scenery', test:()=>{ const b=blockedActors(); return b.length===0?true:labelOf(b[0].a)+' is still hidden behind '+labelOf(b[0].hit)+'.'; }},
+      {label:'Everything within the stage', test:()=>{ const out=state.objects.find(o=>Math.abs(o.x)>STAGE.halfW||o.y<0||o.y>STAGE.depthBack); return out?labelOf(out)+' is off the stage — pull it back in.':true; }}
+    ]}
+  ];
+
+  function chSave(){ try{ localStorage.setItem(CH_KEY, JSON.stringify(chDone)); }catch(_){}}
+  function chCount(){ return CHALLENGES.filter(c=>chDone[c.id]).length; }
+  function renderChallenges(){
+    const list = $('chList');
+    list.innerHTML = '';
+    CHALLENGES.forEach(ch=>{
+      const item = document.createElement('div');
+      item.className = 'ch-item' + (chDone[ch.id] ? ' done' : '');
+      item.innerHTML =
+        '<div class="ch-head"><span class="ch-mark">' + (chDone[ch.id] ? '✓' : '') + '</span>' + ch.title + '</div>' +
+        '<div class="ch-body"><div class="ch-desc">' + ch.desc + '</div>' +
+        ch.reqs.map((r,i)=>'<div class="ch-req" data-req="'+i+'"><span class="rq-mark">•</span><span>'+r.label+'</span></div>').join('') +
+        '<button class="ch-check" type="button">Check my staging</button>' +
+        '<div class="ch-feedback"></div></div>';
+      item.querySelector('.ch-head').addEventListener('click', ()=>{
+        const was = item.classList.contains('open');
+        list.querySelectorAll('.ch-item').forEach(el=>el.classList.remove('open'));
+        if (!was) item.classList.add('open');
+      });
+      item.querySelector('.ch-check').addEventListener('click', ()=>checkChallenge(ch, item));
+      list.appendChild(item);
+    });
+  }
+  function checkChallenge(ch, item){
+    let allPass = true;
+    const messages = [];
+    ch.reqs.forEach((r,i)=>{
+      const res = r.test();
+      const row = item.querySelector('.ch-req[data-req="'+i+'"]');
+      const pass = res === true;
+      row.classList.toggle('pass', pass);
+      row.classList.toggle('fail', !pass);
+      row.querySelector('.rq-mark').textContent = pass ? '✓' : '✗';
+      if (!pass){ allPass = false; if (typeof res === 'string') messages.push(res); }
+    });
+    const fb = item.querySelector('.ch-feedback');
+    if (allPass){
+      fb.className = 'ch-feedback ok';
+      const first = !chDone[ch.id];
+      chDone[ch.id] = true; chSave();
+      item.classList.add('done');
+      item.querySelector('.ch-mark').textContent = '✓';
+      const n = chCount();
+      fb.textContent = '✓ Well staged! ' + n + ' of ' + CHALLENGES.length + ' challenges complete.';
+      if (window.SDSCPA && n >= 3){
+        SDSCPA.markDone('designlab', {score: Math.round(n / CHALLENGES.length * 100)});
+        if (first && (n === 3 || n === CHALLENGES.length)){
+          SDSCPA.certificateDialog({
+            heading: n === CHALLENGES.length ? 'Every scene staged!' : 'Composition challenges cleared!',
+            lab: 'Scenic Design Lab',
+            line: 'staged ' + n + ' of ' + CHALLENGES.length + ' composition challenges with clean sightlines',
+            stats: [['CHALLENGES', n + '/' + CHALLENGES.length, '#2E3192'], ['PIECES USED', state.objects.length, '#00AEEF']],
+            file: 'SDSCPA-Scenic-Design-Certificate'
+          });
+        }
+      }
+    } else {
+      fb.className = 'ch-feedback bad';
+      fb.textContent = messages[0] || 'Not staged yet — check the ✗ items above.';
+    }
+  }
+  renderChallenges();
+
+  if (window.SDSCPA) SDSCPA.attachGlossary({
+    labName: 'Scenic Design Lab',
+    goal: 'I can stage a scene with clear focus and keep every actor visible to the audience.',
+    terms: [
+      ['Ground plan', 'The top-down map of the set, drawn to scale — the second view in this lab.'],
+      ['Sightline', 'An imaginary line from an audience seat to an actor. If scenery crosses it, that seat sees nothing.'],
+      ['Upstage / downstage', 'Upstage is away from the audience; downstage is toward them. Stages used to be tilted!'],
+      ['Stage left / right', 'From the ACTOR’s point of view facing the audience — so it’s flipped for you.'],
+      ['Stage areas', 'The 9 zones (DR, DC, DL, R, C, L, UR, UC, UL) directors use to call positions.'],
+      ['Composition', 'How everything on stage is arranged into a picture the audience reads.'],
+      ['Focus', 'What the audience looks at first. Height, light, and space all create focus.'],
+      ['Diagonal', 'An arrangement running corner-to-corner. It feels dynamic and shows everyone.'],
+      ['Level', 'Any raised surface — platforms, risers, stairs. Height signals importance.'],
+      ['Wings', 'The offstage spaces to the sides, hidden by curtains (legs).'],
+      ['Backdrop', 'The big painted or plain cloth closing off the back of the set.'],
+      ['Proscenium', 'The picture-frame opening the audience watches the show through.']
+    ]
+  });
+})();
 </script>
 </body>
 </html>
