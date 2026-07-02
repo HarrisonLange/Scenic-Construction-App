@@ -54,9 +54,9 @@
   .saved-tag{font-size:11px;color:var(--text-dim);min-width:74px;text-align:right}
 
   /* ── Layout ── */
-  #main{flex:1;display:flex;min-height:0}
+  #main{flex:1;display:flex;min-height:0;overflow-x:auto}
   #library{
-    width:248px;flex:0 0 auto;background:var(--panel);border-right:1px solid var(--line);
+    width:248px;flex:0 1 248px;min-width:148px;background:var(--panel);border-right:1px solid var(--line);
     display:flex;flex-direction:column;min-height:0;
   }
   .lib-head{padding:11px 13px 8px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
@@ -81,7 +81,7 @@
   .lib-empty{padding:18px 12px;color:var(--text-dim);font-size:12px;line-height:1.6;text-align:center}
 
   /* ── Cue list ── */
-  #center{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+  #center{flex:1 1 auto;display:flex;flex-direction:column;min-width:300px;min-height:0}
   #cueToolbar{
     display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap;
   }
@@ -135,7 +135,7 @@
 
   /* ── Inspector ── */
   #inspector{
-    width:312px;flex:0 0 auto;background:var(--panel);border-left:1px solid var(--line);
+    width:312px;flex:0 1 312px;min-width:200px;background:var(--panel);border-left:1px solid var(--line);
     display:flex;flex-direction:column;min-height:0;
   }
   .insp-tabs{display:flex;border-bottom:1px solid var(--line);flex:0 0 auto}
