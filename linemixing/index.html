@@ -248,6 +248,7 @@
     .seg button{padding:5px 10px}
   }
 </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
 
@@ -370,6 +371,7 @@ Use "== Scene Name ==" to start a new scene (optional).</div>
       <div class="stat"><div class="k">Max Combo</div><div class="v amber" id="resCombo">0</div></div>
       <div class="stat"><div class="k">Lines Mixed</div><div class="v mag" id="resLines">0</div></div>
     </div>
+    <p class="note" id="resCoach" style="margin-top:12px;padding:9px 12px;border:1px solid var(--ui-dark3);border-radius:9px;background:#111;line-height:1.55"></p>
     <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#cfd3da;margin:18px 0 5px">
       Your name <span style="color:var(--text-dim);text-transform:none;font-weight:400">(for the certificate)</span>
     </label>
@@ -708,7 +710,7 @@ function buildPractice(){
   const sceneIdx = Math.floor(Math.random()*current.scenes.length);
   let startIdx = 0; for(let s=0;s<sceneIdx;s++) startIdx += current.scenes[s].lines.length;
   const g = { mode:'practice', sceneName:current.scenes[sceneIdx].name, notes:[], started:0, t:0,
-              score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
+              score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0, tally:{perfect:0,good:0,ok:0,miss:0,wrongHeavy:0,shortHold:0},
               lastFrame:0, running:false, finished:false, lastFlash:null,
               src:flat, srcIdx:startIdx, appendT:LEAD_MS };
   appendLines(g, 24);   // initial buffer; loop() tops it up so practice never ends
@@ -747,7 +749,7 @@ function buildQuiz(){
   }
   const {notes} = buildNotes(seq, LEAD_MS);
   return { mode:'quiz', sceneName:'Quiz', notes, started:0, t:0,
-           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
+           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0, tally:{perfect:0,good:0,ok:0,miss:0,wrongHeavy:0,shortHold:0},
            lastFrame:0, running:false, finished:false, lastFlash:null,
            quizEnd: LEAD_MS + QUIZ_SECONDS*1000 };
 }
@@ -767,7 +769,7 @@ function buildWarmup(){
   }
   const {notes} = buildNotes(seq, LEAD_MS);
   return { mode:'warmup', sceneName:'Warm-Up', notes, started:0, t:0,
-           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0,
+           score:0, combo:0, maxCombo:0, lines:0, accSum:0, accCount:0, tally:{perfect:0,good:0,ok:0,miss:0,wrongHeavy:0,shortHold:0},
            lastFrame:0, running:false, finished:false, lastFlash:null,
            quizEnd: LEAD_MS + WARMUP_SECONDS*1000 };
 }
@@ -913,6 +915,13 @@ function finalizeNote(n){
   // quadratic penalty: missing more of the spoken line costs disproportionately more
   const coreMiss = clamp(1 - n.heldCore / n.dur, 0, 1);
   base -= Math.round(coreMiss ** 2 * 100);
+
+  // tally error patterns so the results screen can coach, not just grade
+  if(game.tally){
+    game.tally[grade.toLowerCase()] = (game.tally[grade.toLowerCase()]||0) + 1;
+    if(wrong >= 0.3) game.tally.wrongHeavy++;
+    if(coreMiss >= 0.4 && grade !== 'MISS') game.tally.shortHold++;
+  }
 
   if(grade==='MISS' || wrong>=0.5){
     game.combo = 0;
@@ -1150,7 +1159,24 @@ function showResults(){
   $('resAcc').textContent = s.acc+'%';
   $('resCombo').textContent = s.combo;
   $('resLines').textContent = s.lines;
+  $('resCoach').textContent = coachTip(s);
   $('resultModal').classList.add('show');
+  if(window.SDSCPA && game.mode !== 'warmup' && s.acc >= 55){
+    SDSCPA.markDone('linemixing', { score: s.acc });
+  }
+}
+/* One targeted tip based on the dominant error pattern — a grade alone doesn't teach. */
+function coachTip(s){
+  const t = game.tally || {};
+  if(s.acc >= 90) return '🎧 You’re mixing like a real A1. Try a faster pace, or a different script.';
+  const miss = t.miss||0, wrongH = t.wrongHeavy||0, short = t.shortHold||0;
+  if(wrongH >= miss && wrongH >= short && wrongH > 0)
+    return '🎯 Coach’s note: your biggest cost was opening the WRONG channels. Watch each line’s color and open only the person speaking.';
+  if(short >= miss && short > 0)
+    return '⏱️ Coach’s note: you’re opening late or closing early. Open in the lead-in zone, hold through the whole line, close in the trail zone.';
+  if(miss > 0)
+    return '🐢 Coach’s note: lots of missed lines. Drop the pace (Pace menu, top left) and keep your eyes on the mix line — the faders will follow.';
+  return '💡 Coach’s note: keep the speaker’s channel open for the entire line — partial holds cost more than they seem.';
 }
 
 /* ───────────────────────── Warm-Up Score Image ───────────────── */
@@ -1376,6 +1402,25 @@ function init(){
   });
 }
 init();
+
+if(window.SDSCPA) SDSCPA.attachGlossary({
+  labName:'Line Mixing Lab',
+  goal:'I can open the right performer’s channel exactly while they speak — and only then.',
+  terms:[
+    ['A1','The head audio person mixing the show live at the console.'],
+    ['DCA','A master fader controlling a group of channels — here, one per character.'],
+    ['Line mixing','Riding the DCAs so each performer’s mic is open only while they speak.'],
+    ['Open / close a channel','Push the fader up so the mic is live; pull it down so it’s not.'],
+    ['Lead-in zone','The moment just before the line — open the channel here so the first word isn’t clipped.'],
+    ['Trail zone','The moment just after the line — close here so the room noise doesn’t linger.'],
+    ['Clipping a line','Opening late and cutting off the first word. The most common rookie mistake.'],
+    ['Feedback','The squeal when too many open mics hear the speakers. Fewer open mics = safer mix.'],
+    ['Combo','Consecutive well-mixed lines. Real A1s chase consistency, not luck.'],
+    ['Pace','How fast the scene plays. Slower pace = more time to read ahead.'],
+    ['Teleprompter','The scrolling script above the highway — read ahead to know who speaks next.'],
+    ['Board (console)','The mixing desk with all the faders. This lab is your practice board.']
+  ]
+});
 </script>
 </body>
 </html>
