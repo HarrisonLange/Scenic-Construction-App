@@ -745,6 +745,7 @@
       }
     }
   </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -2729,12 +2730,46 @@
       if (result.ready) {
         setStatus("System passes. Signal and power flow through the design.", "good");
       } else if (state.operation === "quiz") {
-        setStatus("System not ready. Continue troubleshooting.", "warn");
+        setStatus(describeWhyNotReady(result), "warn");
       } else {
-        setStatus("System has faults. Signal animation stops at blocked points.", "warn");
+        setStatus(describeWhyNotReady(result) + " Signal animation stops at blocked points.", "warn");
       }
       updateAll();
       requestAnimationFrame(render);
+    }
+
+    // Explain WHY the system failed, so a wrong attempt still teaches.
+    function describeWhyNotReady(result) {
+      if (!hasMinimumSystem()) {
+        return "Not ready: every system needs at least a microphone, a mixer, and a speaker.";
+      }
+      const bad = result.issues.find(function firstBad(issue) {
+        return issue.severity === "bad";
+      }) || result.issues[0];
+      return bad ? "Not ready: " + bad.message : "System not ready. Continue troubleshooting.";
+    }
+
+    function firstMisplacedHiddenLabel() {
+      const scenario = state.quiz.activeScenario;
+      if (!scenario || !scenario.hiddenZones) {
+        return null;
+      }
+      const missing = scenario.hiddenZones.find(function unmet(hidden) {
+        return !state.devices.some(function deviceInZone(device) {
+          const definition = getDefinition(device);
+          const typeMatches = device.type === hidden.type || definition.base === hidden.type;
+          if (!typeMatches) {
+            return false;
+          }
+          const center = getDeviceCenter(device);
+          return center.x >= hidden.x && center.x <= hidden.x + hidden.w && center.y >= hidden.y && center.y <= hidden.y + hidden.h;
+        });
+      });
+      if (!missing) {
+        return null;
+      }
+      const definition = DEVICE_DEFINITIONS[missing.type];
+      return definition ? definition.label : missing.type;
     }
 
     function completeScenario() {
@@ -2742,7 +2777,14 @@
       if (state.operation === "quiz") {
         const placementPass = evaluateHiddenPlacement();
         if (!result.ready || !placementPass) {
-          setStatus("System not ready. Continue troubleshooting.", "warn");
+          if (!result.ready) {
+            setStatus(describeWhyNotReady(result), "warn");
+          } else {
+            const misplaced = firstMisplacedHiddenLabel();
+            setStatus(misplaced
+              ? "Almost: the " + misplaced + " isn't inside its highlighted target zone yet."
+              : "Almost: some equipment isn't inside its highlighted target zone yet.", "warn");
+          }
           updateAll();
           return;
         }
@@ -2806,6 +2848,16 @@
       dom.modalBody.innerHTML = "<ul class=\"metric-list\">" + body + "</ul><p><strong>Average time:</strong> " + formatTime(average) + "</p><button type=\"button\" id=\"summaryScreenshotButton\">Screenshot Export</button>";
       dom.modalBackdrop.classList.add("open");
       document.getElementById("summaryScreenshotButton").addEventListener("click", exportScreenshot);
+      if (window.SDSCPA) {
+        window.SDSCPA.markDone("sound", { score: 100 });
+        window.SDSCPA.certificateDialog({
+          heading: "Quiz complete — five systems built!",
+          lab: "Live Sound Lab",
+          line: "designed and passed five complete live sound systems in quiz mode",
+          stats: [["SCENARIOS", "5/5", "#00AEEF"], ["AVG TIME", formatTime(average), "#22c55e"], ["SKILL", state.skill === "advanced" ? "Advanced" : "Basic", "#fbbf24"]],
+          file: "SDSCPA-Live-Sound-Certificate"
+        });
+      }
     }
 
     function formatTime(milliseconds) {
@@ -4284,6 +4336,27 @@
     }
 
     init();
+
+    if (window.SDSCPA) {
+      window.SDSCPA.attachGlossary({
+        labName: "Live Sound Lab",
+        goal: "I can trace the signal path from microphone to speaker and set safe levels.",
+        terms: [
+          ["Signal flow", "The path sound takes: microphone → mixer → speaker. If any link breaks, silence."],
+          ["Mixer", "The brain of the system — it combines microphones and sends the mix to speakers."],
+          ["Powered speaker", "A speaker with its own amplifier built in. It still needs a power cable!"],
+          ["XLR cable", "The three-pin cable that carries microphone and line audio."],
+          ["IEC cable", "The power cable that plugs a device into the wall (same as a computer's)."],
+          ["FOH (front of house)", "Where the mixer and its operator sit — out in the audience, so they hear what the audience hears."],
+          ["Gain", "How much the mixer boosts a microphone's tiny signal. Too much = feedback."],
+          ["Feedback", "That awful squeal when a mic hears its own speaker and the loop runs away."],
+          ["Coverage", "Making sure every audience seat actually gets sound from a speaker."],
+          ["Circuit rating", "How many amps a power circuit can safely supply. Overload it and breakers trip."],
+          ["Cable safety", "Cables run neatly, never across walkways where people trip."],
+          ["A1", "The head audio person who mixes the show."]
+        ]
+      });
+    }
   </script>
 </body>
 </html>
