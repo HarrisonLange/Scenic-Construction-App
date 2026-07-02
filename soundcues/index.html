@@ -268,6 +268,7 @@
       <input id="libSearch" type="text" placeholder="Search effects…" spellcheck="false">
       <div class="lib-actions">
         <button class="tbtn" id="addFileBtn" title="Add an audio file from this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add file</button>
+        <button class="tbtn" id="practiceSndBtn" title="Generate four practice sounds so you can hear fades and loops without any files">✨ Practice sounds</button>
       </div>
       <input type="file" id="audioFile" accept="audio/*" multiple style="display:none">
     </div>
@@ -494,6 +495,63 @@ async function addLocalFiles(fileList){
   }
   toast(`Added ${files.length} cue${files.length>1?'s':''}`);
 }
+/* ── Built-in practice sounds: synthesized WAVs so the lab is usable
+      (and fades/loops audible) with zero audio files on the machine. ── */
+function synthWav(seconds, build){
+  const rate=22050, n=Math.floor(rate*seconds), data=new Float32Array(n);
+  build(data, rate);
+  const buf=new ArrayBuffer(44+n*2), v=new DataView(buf);
+  const ws=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){ const s=Math.max(-1,Math.min(1,data[i])); v.setInt16(44+i*2, s*32767, true); }
+  return new Blob([buf],{type:'audio/wav'});
+}
+const PRACTICE_SOUNDS=[
+  ['Practice: Doorbell', 2, (d,r)=>{
+    for(let i=0;i<d.length;i++){
+      const t=i/r;
+      if(t<0.5) d[i]=Math.sin(2*Math.PI*660*t)*Math.exp(-t*5)*.5;
+      else { const u=t-0.5; d[i]=Math.sin(2*Math.PI*550*u)*Math.exp(-u*3.2)*.5; }
+    }
+  }],
+  ['Practice: Phone ring', 3, (d,r)=>{
+    for(let i=0;i<d.length;i++){
+      const t=i/r;
+      const on=(t%1.5)<0.9;
+      if(on) d[i]=(Math.sin(2*Math.PI*440*t)+Math.sin(2*Math.PI*480*t))*.22*(0.6+0.4*Math.sin(2*Math.PI*20*t));
+    }
+  }],
+  ['Practice: Thunder', 4, (d,r)=>{
+    let lp=0, rumble=0;
+    for(let i=0;i<d.length;i++){
+      const t=i/r;
+      if(i%1200===0) rumble=0.4+Math.random()*0.6;
+      lp=lp*0.94+(Math.random()*2-1)*0.06;   // cheap low-pass on white noise
+      d[i]=lp*rumble*Math.exp(-t*0.9)*4.5;
+    }
+  }],
+  ['Practice: Wind (loops well)', 5, (d,r)=>{
+    let lp=0;
+    for(let i=0;i<d.length;i++){
+      const t=i/r;
+      lp=lp*0.965+(Math.random()*2-1)*0.035;
+      const swell=0.55+0.45*Math.sin(2*Math.PI*t/5);  // one full cycle over the clip → seamless loop
+      d[i]=lp*swell*3.2;
+    }
+  }]
+];
+document.getElementById('practiceSndBtn').addEventListener('click', async ()=>{
+  for(const [name, secs, build] of PRACTICE_SOUNDS){
+    const blob=synthWav(secs, build);
+    const {fileId,dur}=await importAudioBlob(blob, name+'.wav');
+    addCue('audio', { name, fileId, fileName:name+'.wav', dur });
+  }
+  toast('Added 4 practice sound cues — press GO to hear them.');
+});
+
 async function addLibraryItem(item){
   try{
     const resp=await fetch(item.src);
