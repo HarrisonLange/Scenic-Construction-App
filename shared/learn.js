@@ -75,9 +75,46 @@ function certificate(opts){
   },'image/png');
 }
 
+/* ── Confetti burst: cheap celebration for completions ── */
+function confetti(){
+  const cv=document.createElement('canvas');
+  cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9999';
+  cv.width=innerWidth; cv.height=innerHeight;
+  document.body.appendChild(cv);
+  const g=cv.getContext('2d');
+  const colors=['#7AC143','#F7941E','#ED1C45','#EC008C','#92278F','#2E3192','#00AEEF','#fbbf24'];
+  const parts=Array.from({length:110},()=>({
+    x:cv.width/2+(Math.random()-.5)*cv.width*.4,
+    y:cv.height*.35,
+    vx:(Math.random()-.5)*11,
+    vy:-Math.random()*10-3,
+    s:4+Math.random()*5,
+    r:Math.random()*Math.PI,
+    vr:(Math.random()-.5)*.3,
+    c:colors[Math.floor(Math.random()*colors.length)]
+  }));
+  const t0=performance.now();
+  (function frame(t){
+    const dt=(t-t0)/1400;
+    g.clearRect(0,0,cv.width,cv.height);
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=.35; p.r+=p.vr;
+      g.save(); g.translate(p.x,p.y); g.rotate(p.r);
+      g.globalAlpha=Math.max(0,1-dt);
+      g.fillStyle=p.c; g.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);
+      g.restore();
+    });
+    if(dt<1) requestAnimationFrame(frame); else cv.remove();
+  })(t0);
+}
+
+const NAME_KEY='sdscpa_student_name';
+function savedName(){ try{ return localStorage.getItem(NAME_KEY)||''; }catch(e){ return ''; } }
+
 /* ── Certificate prompt dialog: asks for the student's name, then downloads ── */
 function certificateDialog(opts){
   ensureCss();
+  confetti();
   const wrap=document.createElement('div'); wrap.className='sdscpa-modal-wrap';
   wrap.innerHTML =
     '<div class="sdscpa-modal" role="dialog" aria-label="Certificate">'+
@@ -92,10 +129,12 @@ function certificateDialog(opts){
     '</div>';
   document.body.appendChild(wrap);
   const inp=wrap.querySelector('input');
+  inp.value=savedName();
   inp.focus();
   wrap.addEventListener('click',e=>{
     if(e.target===wrap || e.target.dataset.x==='close'){ wrap.remove(); return; }
     if(e.target.dataset.x==='dl'){
+      try{ if(inp.value.trim()) localStorage.setItem(NAME_KEY, inp.value.trim()); }catch(_){}
       certificate(Object.assign({}, opts, {name: inp.value}));
       wrap.remove();
     }
@@ -130,7 +169,11 @@ function openGlossary(cfg){
       (cfg.goal?'<p class="sdscpa-goal">🎯 '+esc(cfg.goal)+'</p>':'')+
       '<input type="search" placeholder="Type to search…" class="sdscpa-gloss-search">'+
       '<dl class="sdscpa-gloss-list">'+rows+'</dl>'+
-      '<div class="sdscpa-modal-btns"><button class="sdscpa-btn-dim" data-x="close">Close</button></div>'+
+      '<div class="sdscpa-flash"></div>'+
+      '<div class="sdscpa-modal-btns">'+
+        '<button class="sdscpa-btn-dim" data-x="flash">🎴 Test me</button>'+
+        '<button class="sdscpa-btn-dim" data-x="close">Close</button>'+
+      '</div>'+
     '</div>';
   document.body.appendChild(wrap);
   const search=wrap.querySelector('input');
@@ -142,10 +185,58 @@ function openGlossary(cfg){
   });
   wrap.addEventListener('click',e=>{
     if(e.target===wrap || e.target.dataset.x==='close') wrap.remove();
+    else if(e.target.dataset.x==='flash') startFlash(cfg, wrap);
+    else if(e.target.dataset.x==='list'){
+      wrap.querySelector('.sdscpa-flash').innerHTML='';
+      wrap.querySelector('.sdscpa-gloss-list').style.display='';
+      search.style.display='';
+      wrap.querySelector('[data-x=flash]').style.display='';
+    }
   });
   document.addEventListener('keydown',function onk(e){
     if(e.key==='Escape'){ wrap.remove(); document.removeEventListener('keydown',onk); }
   });
+}
+
+/* Flash-card quiz over the glossary: show a definition, pick the term. */
+function startFlash(cfg, wrap){
+  const pool=(cfg.terms||[]).slice();
+  if(pool.length<4) return;
+  const qs=pool.slice().sort(()=>Math.random()-.5).slice(0,Math.min(5,pool.length));
+  let at=0, right=0;
+  const box=wrap.querySelector('.sdscpa-flash');
+  wrap.querySelector('.sdscpa-gloss-list').style.display='none';
+  wrap.querySelector('.sdscpa-gloss-search').style.display='none';
+  wrap.querySelector('[data-x=flash]').style.display='none';
+  function ask(){
+    if(at>=qs.length){
+      box.innerHTML='<div class="sdscpa-flash-end">'+
+        (right===qs.length?'🌟 ':'')+'You got <b>'+right+' of '+qs.length+'</b> right.'+
+        (right===qs.length?' Perfect!':' The list is right here — take another look and try again.')+
+        '</div><div class="sdscpa-modal-btns" style="justify-content:center">'+
+        '<button class="sdscpa-btn-dim" data-x="list">Back to the list</button>'+
+        '<button class="sdscpa-btn-go" data-x="flash">Try again</button></div>';
+      return;
+    }
+    const q=qs[at];
+    const options=[q].concat(pool.filter(t=>t!==q).sort(()=>Math.random()-.5).slice(0,3)).sort(()=>Math.random()-.5);
+    box.innerHTML='<div class="sdscpa-flash-q"><span class="sdscpa-flash-n">'+(at+1)+' / '+qs.length+'</span>“'+esc(q[1])+'”</div>'+
+      options.map((o,i)=>'<button class="sdscpa-flash-opt" data-i="'+i+'">'+esc(o[0])+'</button>').join('')+
+      '<div class="sdscpa-flash-fb"></div>';
+    box.querySelectorAll('.sdscpa-flash-opt').forEach((btn,i)=>{
+      btn.addEventListener('click',()=>{
+        if(box.dataset.locked) return;
+        box.dataset.locked='1';
+        const ok=options[i]===q;
+        if(ok) right++;
+        btn.classList.add(ok?'good':'bad');
+        if(!ok) box.querySelectorAll('.sdscpa-flash-opt')[options.indexOf(q)].classList.add('good');
+        box.querySelector('.sdscpa-flash-fb').textContent=ok?'✓ That’s it!':'✗ It’s “'+q[0]+'” — worth a re-read.';
+        setTimeout(()=>{ delete box.dataset.locked; at++; ask(); }, ok?800:1900);
+      });
+    });
+  }
+  ask();
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -174,7 +265,15 @@ function ensureCss(){
 '.sdscpa-term dt{font-weight:700;font-size:13.5px;color:#fbbf24;margin:0 0 3px}'+
 '.sdscpa-term dd{margin:0;font-size:13px;line-height:1.5;color:#c8c8d0}'+
 '.sdscpa-gloss-pill{position:fixed;right:14px;bottom:14px;z-index:9980;background:#1a1a1a;color:#f0f0f0;border:1px solid #333;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.5);font-family:system-ui,Segoe UI,sans-serif}'+
-'.sdscpa-gloss-pill:hover{border-color:#3b82f6}';
+'.sdscpa-gloss-pill:hover{border-color:#3b82f6}'+
+'.sdscpa-flash-q{font-size:14px;line-height:1.55;color:#e8e8f0;margin:6px 0 12px;font-style:italic}'+
+'.sdscpa-flash-n{display:block;font-style:normal;font-size:10px;font-weight:800;letter-spacing:1.2px;color:#888;margin-bottom:6px}'+
+'.sdscpa-flash-opt{display:block;width:100%;text-align:left;background:#0f0f14;border:1px solid #333;border-radius:8px;color:#f0f0f0;font-size:13px;font-weight:600;padding:10px 12px;margin-bottom:7px;cursor:pointer}'+
+'.sdscpa-flash-opt:hover{border-color:#3b82f6}'+
+'.sdscpa-flash-opt.good{border-color:#22c55e;background:rgba(34,197,94,.14)}'+
+'.sdscpa-flash-opt.bad{border-color:#ef4444;background:rgba(239,68,68,.12)}'+
+'.sdscpa-flash-fb{font-size:12px;color:#aab;min-height:16px;margin-top:4px}'+
+'.sdscpa-flash-end{font-size:14px;line-height:1.6;color:#e8e8f0;text-align:center;padding:16px 0}';
   document.head.appendChild(st);
 }
 
