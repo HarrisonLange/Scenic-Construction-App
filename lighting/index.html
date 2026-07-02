@@ -335,7 +335,22 @@
     #left,#right{border:0;border-top:1px solid #000}
     #focusPanel{display:none}
   }
+/* Guided lessons */
+.ls-item{border:1px solid var(--ui-dark3);border-radius:8px;margin-bottom:7px;overflow:hidden;background:#101014}
+.ls-head{display:flex;align-items:center;gap:7px;padding:8px 9px;cursor:pointer;font-size:12px;font-weight:650;color:var(--text-light)}
+.ls-head:hover{background:#1c1c22}
+.ls-item.open .ls-head{background:rgba(247,148,30,.16)}
+.ls-mark{flex:0 0 16px;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--ui-dark3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#0a0a0a}
+.ls-item.done .ls-mark{background:var(--ok);border-color:var(--ok)}
+.ls-body{display:none;padding:9px;border-top:1px solid var(--ui-dark3)}
+.ls-item.open .ls-body{display:block}
+.ls-desc{font-size:11.5px;color:#c8ccd4;line-height:1.5;margin-bottom:8px}
+.ls-step{display:flex;gap:6px;font-size:11px;line-height:1.45;color:var(--text-dim);padding:3px 0}
+.ls-step.hit{color:var(--ok)}
+.ls-step .sk{flex:0 0 14px}
+.ls-done-note{margin-top:7px;font-size:11px;line-height:1.5;border-radius:6px;padding:7px 9px;display:none;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#b9f0ce}
 </style>
+<script src="../shared/learn.js"></script>
 </head>
 <body>
 
@@ -413,6 +428,10 @@
         <div class="term"><b>Gobo</b>Pattern in a light.</div>
         <div class="term"><b>Cyc</b>Back wall color wash.</div>
       </div>
+    </section>
+    <section class="panel-section">
+      <h2>Guided Lessons</h2>
+      <div id="lessonList"></div>
     </section>
     <section class="panel-section">
       <h2>EOS Command</h2>
@@ -5225,6 +5244,124 @@ function init(){
   initStudioPerformerModel();
 }
 init();
+
+/* ── Guided lessons: build real console skills step by step ────── */
+(function(){
+  const LS_KEY = 'sdscpa-lighting-lessons-v1';
+  let lsDone = {};
+  try{ lsDone = JSON.parse(localStorage.getItem(LS_KEY)) || {}; }catch(_){}
+
+  const ch = n => state.fixtures.find(f => f.channel === n);
+  const lvl = n => { const f = ch(n); return f ? f.intensity : 0; };
+  const isBlue = c => { const r=parseInt(c.slice(1,3),16), b=parseInt(c.slice(5,7),16); return b > r + 30; };
+
+  const LESSONS = [
+    {id:'wash', title:'1 · Warm front wash', desc:'Every show starts with faces you can see. Bring up the three FRONT channels — try typing 1 @ 70 Enter on the EOS command line.', steps:[
+      {label:'Channel 1 (Front Left) at 60% or more', hit:()=>lvl(1)>=60},
+      {label:'Channel 2 (Front Center) at 60% or more', hit:()=>lvl(2)>=60},
+      {label:'Channel 3 (Front Right) at 60% or more', hit:()=>lvl(3)>=60},
+      {label:'Record it: Record Cue 1 Enter', hit:()=>state.cues.length>=1}
+    ]},
+    {id:'special', title:'2 · Actor special', desc:'A “special” is one light doing one job: picking a single actor out of the darkness. Kill the stage, keep one top light.', steps:[
+      {label:'Top Center (channel 11) at 80% or more', hit:()=>lvl(11)>=80},
+      {label:'Every other channel below 20%', hit:()=>state.fixtures.every(f=>f.channel===11||f.intensity<20)},
+      {label:'Record it as a new cue with fade time 3+ (Record Cue 2 Time 3)', hit:()=>state.cues.some(c=>c.fade>=3)&&state.cues.length>=2}
+    ]},
+    {id:'cyc', title:'3 · Blue cyc transition', desc:'The cyc is the back wall — wash it blue for a night transition. Select a Cyc channel, click a blue gel, repeat.', steps:[
+      {label:'Two or more CYC channels (16–18) wearing blue gels', hit:()=>state.fixtures.filter(f=>f.group==='Cyc'&&isBlue(f.color)).length>=2},
+      {label:'Those blue cyc channels at 50% or more', hit:()=>state.fixtures.filter(f=>f.group==='Cyc'&&isBlue(f.color)&&f.intensity>=50).length>=2},
+      {label:'Record the look as another cue', hit:()=>state.cues.length>=3}
+    ]},
+    {id:'show', title:'4 · Blackout & run the show', desc:'Every show ends in darkness. Record a blackout, then run your whole stack from the top with GO.', steps:[
+      {label:'All channels at 0 (try the blackout command)', hit:()=>state.fixtures.every(f=>f.intensity===0)},
+      {label:'At least 4 cues in the stack', hit:()=>state.cues.length>=4},
+      {label:'Play the stack (fire a cue with GO)', hit:()=>state.currentCueIndex>=0||state.playback}
+    ]}
+  ];
+
+  /* Steps latch: once a step is hit inside an open lesson it stays checked,
+     so "kill the other channels" in lesson 2 can't uncheck lesson 1's work. */
+  const latched = {};
+  function render(){
+    const list = $('lessonList');
+    list.innerHTML = '';
+    LESSONS.forEach(ls=>{
+      const item = document.createElement('div');
+      item.className = 'ls-item' + (lsDone[ls.id] ? ' done' : '');
+      item.dataset.ls = ls.id;
+      item.innerHTML =
+        '<div class="ls-head"><span class="ls-mark">' + (lsDone[ls.id] ? '✓' : '') + '</span>' + ls.title + '</div>' +
+        '<div class="ls-body"><div class="ls-desc">' + ls.desc + '</div>' +
+        ls.steps.map((s,i)=>'<div class="ls-step" data-s="'+i+'"><span class="sk">•</span><span>'+s.label+'</span></div>').join('') +
+        '<div class="ls-done-note">✓ Lesson complete — a real board op could follow your work.</div></div>';
+      item.querySelector('.ls-head').addEventListener('click', ()=>{
+        const was = item.classList.contains('open');
+        list.querySelectorAll('.ls-item').forEach(el=>el.classList.remove('open'));
+        if (!was) item.classList.add('open');
+      });
+      list.appendChild(item);
+    });
+  }
+  render();
+
+  setInterval(()=>{
+    const open = document.querySelector('.ls-item.open');
+    if (!open) return;
+    const ls = LESSONS.find(l=>l.id===open.dataset.ls);
+    if (!ls) return;
+    latched[ls.id] = latched[ls.id] || {};
+    let all = true;
+    ls.steps.forEach((s,i)=>{
+      if (!latched[ls.id][i] && s.hit()) latched[ls.id][i] = true;
+      const hit = !!latched[ls.id][i];
+      const row = open.querySelector('.ls-step[data-s="'+i+'"]');
+      row.classList.toggle('hit', hit);
+      row.querySelector('.sk').textContent = hit ? '✓' : '•';
+      if (!hit) all = false;
+    });
+    if (all && !lsDone[ls.id]){
+      lsDone[ls.id] = true;
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(lsDone)); }catch(_){}
+      open.classList.add('done');
+      open.querySelector('.ls-mark').textContent = '✓';
+      open.querySelector('.ls-done-note').style.display = 'block';
+      const n = LESSONS.filter(l=>lsDone[l.id]).length;
+      if (window.SDSCPA && n >= LESSONS.length){
+        SDSCPA.markDone('lighting', {score:100});
+        SDSCPA.certificateDialog({
+          heading:'All lessons complete!',
+          lab:'Lighting Design Lab',
+          line:'completed all four guided console lessons: wash, special, cyc transition, and show run',
+          stats:[['LESSONS','4/4','#F7941E'],['CUES BUILT',state.cues.length,'#3b82f6']],
+          file:'SDSCPA-Lighting-Design-Certificate'
+        });
+      } else if (window.SDSCPA && n >= 2){
+        SDSCPA.markDone('lighting', {score: Math.round(n/LESSONS.length*100)});
+      }
+    }
+  }, 700);
+
+  if (window.SDSCPA) SDSCPA.attachGlossary({
+    labName:'Lighting Design Lab',
+    goal:'I can build a lighting look with color and angle, record it as a cue, and run the show.',
+    terms:[
+      ['Channel','One controllable light (or group of lights) with its own number on the console.'],
+      ['Cue','A saved stage picture. Press GO and the stage becomes that picture.'],
+      ['Cue stack','The ordered list of cues that makes up the whole show.'],
+      ['Fade time','How many seconds the change takes. 0 = snap, 3 = smooth.'],
+      ['Hold','How long an auto-follow cue waits before firing the next one.'],
+      ['Gel','A colored filter on a light. On real fixtures it’s a sheet of plastic.'],
+      ['Gobo','A stencil in the light that projects a pattern — windows, leaves, stars.'],
+      ['Cyc (cyclorama)','The big back wall you wash with color for skies and moods.'],
+      ['Special','One light with one job, like picking out a single actor.'],
+      ['Wash','Even light over a whole area, usually for visibility.'],
+      ['Front / side / top / back light','Angles do jobs: front shows faces, side sculpts bodies, back separates.'],
+      ['Blackout','All channels to zero, instantly. How most shows begin and end.'],
+      ['GO button','Fires the next cue in the stack. The most famous button in theatre.'],
+      ['Board op','The crew member who runs the lighting console during the show.']
+    ]
+  });
+})();
 </script>
 </body>
 </html>
