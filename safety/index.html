@@ -313,7 +313,7 @@ const SAFETY_MODULES = [
         ]},
       { title:'Dust — the slow hazard', grades:[8,12],
         html:'The hazard you can’t feel hurting you:<br><br>🌫 Fine wood dust harms lungs <b>over years</b>, not minutes — which is why nobody takes it seriously until it’s late. Take it seriously now.<br>💨 <b>Dust collection on</b> whenever the sander or saws run.<br>🧹 Clean up dust by <b>sweeping or vacuuming — never by blasting it airborne</b> with the compressor.<br>😮‍💨 The dust mask is for <b>making</b> dust and for <b>cleaning it up</b>.' },
-      { type:'pick', title:'The air hose is not a broom', grades:[8,12],
+      { type:'pick', title:'The air hose is not a broom', grades:[8,9],
         prompt:'You’re covered in sawdust after sanding, and the compressor hose is right there. Blow yourself off?',
         options:['Sure — quick and effective','Yes, but keep it away from your face','Never — compressed air drives debris into skin and eyes and fills the room with the dust you just avoided breathing','Only below the waist'],
         answer:2, why:'Compressed air can inject debris through skin and lofts fine dust straight into the air — brush off, or use the vacuum.' },
@@ -404,7 +404,7 @@ const SAFETY_MODULES = [
         prompt:'Your utility knife is dull and tearing the cardboard instead of cutting it. What do you do?',
         options:['Push harder to get through','Retract, swap in a fresh blade, keep working','Angle the blade sideways for a better bite','Warm up the blade so it cuts smoother'],
         answer:1, why:'A sharp blade needs less force, so it slips less — a dull blade plus extra force is how hands get cut.' },
-      { type:'order', title:'Change a utility-knife blade — in order', grades:[6,12],
+      { type:'order', title:'Change a utility-knife blade — in order', grades:[6,9],
         prompt:'Put a safe blade change in order. <b>Tap the first step, then the next…</b>',
         steps:[
           'Retract the blade fully',
@@ -532,7 +532,7 @@ const SAFETY_MODULES = [
         ]},
       { title:'Pneumatic power: the air rules', grades:[8,12],
         html:'The stapler and nailer run on compressed air, which adds rules of their own:<br><br>• <b>Treat every air tool as loaded.</b> Finger off the trigger until the nose is on the work.<br>• <b>Never point one at anyone</b> — including yourself. Ever. Even “empty.”<br>• <b>Disconnect the air line</b> before clearing a jam, adjusting, or handing it over.<br>• Use the tool’s <b>correct air pressure</b> — too high blows fasteners through the work; too low jams and double-fires.<br>• Hoses get routed <b>out of walkways</b>, like every cord.' },
-      { type:'pick', title:'Jammed nailer', grades:[8,12],
+      { type:'pick', title:'Jammed nailer', grades:[8,9],
         prompt:'The framing nailer jams mid-wall. Before you touch the jam, you…',
         options:['Shake the nailer to free it','Disconnect the air line','Squeeze the trigger a few times to clear it','Pry at the jam with the nailer still connected'],
         answer:1, why:'A jammed nailer that clears itself while connected fires — disconnect the air before your fingers go anywhere near it.' },
@@ -566,7 +566,7 @@ const SAFETY_MODULES = [
         prompt:'You just finished a cut on the miter saw. When do you raise the blade?',
         options:['Immediately — the cut is done','After the blade has stopped spinning','Once the off-cut falls clear','After you pull the stock away'],
         answer:1, why:'A spinning blade coming up can catch the off-cut and throw it — the blade stays down until it stops.' },
-      { type:'pick', title:'The short piece', grades:[8,12],
+      { type:'pick', title:'The short piece', grades:[8,9],
         prompt:'You need a 3-inch block. Holding it for the miter cut would put your fingers inside the no-hand zone. You…',
         options:['Hold it extra carefully, just this once','Clamp it — or cut it from a longer board so your hands stay clear','Have a partner hold it from the other side','Use two hands close together for more control'],
         answer:1, why:'Short stock is the classic miter-saw injury — the clamp (or the longer board) exists exactly for this.' },
@@ -620,7 +620,7 @@ const SAFETY_MODULES = [
         html:'Sanding well is sanding safely — fighting the tool is what causes slips:<br><br>🔢 Work the <b>grit ladder: 80 → 120 → 220</b>. Skipping grits means pressing harder for less result.<br>🔄 Keep the pad <b>flat and moving</b> — parking it in one spot digs a dish you’ll sand an hour to fix.<br>📐 <b>Edges round over in seconds</b> — ease up when you get near them.<br>🪶 Let the paper do the work: if you’re pressing, the paper’s done — <b>change it</b>.' },
       { title:'Stapler & framing nailer', grades:[8,12],
         html:'You learned the air rules in Power Tool Basics — here are the gun-specific ones:<br><br>• The <b>contact safety tip</b> on the nose is what stops accidental fires. It is <b>never held down, taped, or bypassed</b>. Never.<br>• <b>Sequential fire</b>: nose on the work first, then the trigger.<br>• <b>Hands at least a hand-span from the fire line.</b> Staples and nails follow the grain and deflect off knots — they can exit the wood <b>sideways</b>.<br>• The framing nailer <b>recoils</b> — grip it, expect it.<br>• Carry with your <b>finger off the trigger</b>; disconnect air to clear jams or hand it off.' },
-      { type:'pick', title:'Nailer check', grades:[8,12],
+      { type:'pick', title:'Nailer check', grades:[8,9],
         prompt:'Your palm is bracing a stud about 2 inches from where you’re about to shoot a nail. Fire?',
         options:['Yes — the nail goes straight down','Yes, if you use a shorter nail','No — move your hand first; nails deflect along grain and knots and can exit sideways','No — you should hold the stud closer to the nail for control'],
         answer:2, why:'Nails follow the grain and bounce off knots — a hand-span of clearance from the fire line, minimum.' },
@@ -1130,6 +1130,33 @@ function questions(){ return forGrade(SAFETY_QUESTIONS).filter(q => modules().so
 function allTrained(){ return modules().every(m => state.trained[m.id] && !state.retrain[m.id]); }
 function sectionMins(s){ return (!s.type || s.type === 'read') ? 3 : 4; }
 function moduleMins(m){ return forGrade(m.sections).reduce((t,s)=>t+sectionMins(s), 0); }
+function splitDays(mods, days){
+  // classic linear-partition DP: contiguous groups, minimize the max group sum
+  const n = mods.length;
+  const k = Math.min(days, n);
+  if(!n) return [];
+  const pre = [0];
+  mods.forEach(m=>pre.push(pre[pre.length-1] + moduleMins(m)));
+  const sum = (i,j)=>pre[j]-pre[i];
+  const INF = 1e9;
+  const dp  = Array.from({length:k+1}, ()=>new Array(n+1).fill(INF));   // minimize heaviest day…
+  const dpMin = Array.from({length:k+1}, ()=>new Array(n+1).fill(-1)); // …then maximize lightest day
+  const cut = Array.from({length:k+1}, ()=>new Array(n+1).fill(0));
+  dp[0][0] = 0; dpMin[0][0] = INF;
+  for(let d=1; d<=k; d++)
+    for(let j=d; j<=n; j++)
+      for(let i=d-1; i<j; i++){
+        const vMax = Math.max(dp[d-1][i], sum(i,j));
+        const vMin = Math.min(dpMin[d-1][i], sum(i,j));
+        if(vMax < dp[d][j] || (vMax === dp[d][j] && vMin > dpMin[d][j])){
+          dp[d][j] = vMax; dpMin[d][j] = vMin; cut[d][j] = i;
+        }
+      }
+  const groups = [];
+  let j = n;
+  for(let d=k; d>=1; d--){ const i = cut[d][j]; groups.unshift(mods.slice(i,j)); j = i; }
+  return groups;
+}
 function moduleCard(m){
   const trained = state.trained[m.id] && !state.retrain[m.id];
   const retrain = !!state.retrain[m.id];
@@ -1147,21 +1174,17 @@ function renderHome(){
   const list = $('modList');
   list.innerHTML = '';
   const mods = modules();
-  // spread the modules across training days 1-4; day 5 is the quiz
-  const days = 4;
-  const base = Math.floor(mods.length/days), extra = mods.length % days;
-  let idx = 0;
-  for(let d = 0; d < days && idx < mods.length; d++){
-    const n = base + (d < extra ? 1 : 0);
-    if(!n) continue;
-    const group = mods.slice(idx, idx+n);
+  // spread the modules across training days 1-4, balancing estimated
+  // minutes per day (optimal contiguous partition — minimizes the
+  // heaviest day); day 5 is the certification quiz
+  splitDays(mods, 4).forEach((group, d)=>{
+    const mins = group.reduce((t,m)=>t+moduleMins(m), 0);
     const lab = document.createElement('div');
     lab.className = 'day-label';
-    lab.textContent = 'Day ' + (d+1) + ' · ≈' + group.reduce((t,m)=>t+moduleMins(m), 0) + ' min';
+    lab.textContent = 'Day ' + (d+1) + ' · ≈' + mins + ' min';
     list.appendChild(lab);
     group.forEach(m=>list.appendChild(moduleCard(m)));
-    idx += n;
-  }
+  });
   const ready = allTrained() && questions().length > 0;
   $('quizStartBtn').disabled = !ready;
   $('gateNote').textContent = state.passed
