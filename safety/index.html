@@ -156,12 +156,18 @@
 <script>
 'use strict';
 /* ═══════════════════════════════════════════════════════════════════
-   SAFETY CONTENT — placeholder structure, to be populated.
+   SAFETY CONTENT — from "Safety & Vocabulary Progression by Grade
+   Level" (Tech Theatre Skill & Concept Matrix, Grades 6–12, aligned
+   to the CA AED Model Curriculum Standards).
+
+   Expectations are CUMULATIVE: each grade reinforces everything from
+   earlier grades and adds new competencies. Proficiency levels:
+   Introduce (gr 6-7) → Develop (gr 8-9) → Master (gr 10-12).
 
    Every module, section, and question carries a `grades:[min,max]`
-   range; students only see items covering their grade. To give
-   different grades different wording for the SAME topic, add two
-   sections/questions with non-overlapping ranges.
+   range; students only see items covering their grade. The same
+   topic is worded differently per grade band with non-overlapping
+   ranges.
 
    module:  { id, icon, title, blurb, grades, sections:[...], }
    section: { title, html, grades }          — one training screen
@@ -170,50 +176,213 @@
      must retrain before retaking the quiz.
    ═══════════════════════════════════════════════════════════════════ */
 const SAFETY_MODULES = [
-  /* SAMPLE — replace with real content */
-  { id:'general', icon:'🎭', title:'General Stage Safety', blurb:'Moving in the dark, spike tape, emergency exits.', grades:[6,12],
+  { id:'shop', icon:'🦺', title:'Shop Safety & PPE', blurb:'Hazards, personal protective equipment, callouts, and safety culture.', grades:[6,12],
     sections:[
-      { title:'Sample section — replace me', grades:[6,12],
-        html:'This is a <b>placeholder</b> training screen. Real content for each grade level goes here. Sections can be split by grade with the <b>grades</b> range.' },
-      { title:'Second sample section', grades:[6,12],
-        html:'Each section is one screen in the training stepper. Keep them short — one idea per screen.' }
+      /* Introduce — grades 6-7 */
+      { title:'Know your hazards', grades:[6,7],
+        html:'A theatre shop is full of things that can hurt you if you don’t see them coming: <b>sharp tools and blades</b>, <b>things falling from above</b>, <b>dust in the air</b>, <b>loud noise</b>, and <b>cords, lumber, and clutter you can trip over</b>.<br><br>Your first safety skill is simple: <b>look around and name the hazards</b> before you start any task. If you can’t name what could go wrong, you’re not ready to start.' },
+      { title:'PPE — your personal protective equipment', grades:[6,7],
+        html:'PPE is the gear that protects your body:<br><br>👓 <b>Safety glasses</b> — any time cutting, drilling, or chipping could send anything toward your eyes (yours or someone’s next to you).<br>🎧 <b>Hearing protection</b> — whenever loud tools or machines are running near you.<br>😮‍💨 <b>Dust protection</b> — when a task fills the air with fine dust, like sanding.<br><br>Know each one by name and be able to say <b>when it’s required</b>.' },
+      { title:'Safety rules & callouts', grades:[6,7],
+        html:'Shops use short <b>callouts</b> so everyone knows what’s happening around them — like calling out when you’re carrying something long, moving behind someone, or about to make noise.<br><br>At your level you’re expected to <b>repeat the basic safety rules and the standard callouts when your teacher prompts you</b>, and to stop and listen whenever you hear one.' },
+      /* Develop — grades 8-9 */
+      { title:'PPE without reminders', grades:[8,9],
+        html:'You’ve been introduced to PPE — now the bar is higher: <b>select and wear the correct PPE for the task without being reminded</b>.<br><br>Safety glasses for cutting and drilling, hearing protection around loud tools, dust protection when sanding. Nobody should ever have to tell you. If you’re reaching for a tool, you’ve already reached for your PPE.' },
+      { title:'Pre-use checks, callouts & reporting', grades:[8,9],
+        html:'Before you use any tool or equipment, do a <b>pre-use safety check</b>: guards in place, blade sharp, cord undamaged, work area clear.<br><br>During shop work, <b>use callouts appropriately</b> without prompting.<br><br>And if you see something unsafe — a damaged tool, a blocked exit, an unsafe setup — <b>report it</b>. Finding problems is part of your job now, not just the teacher’s.' },
+      /* Master — grades 10-12 */
+      { title:'Model safe work — independently', grades:[10,12],
+        html:'At your level, safety isn’t something done <i>to</i> you — it’s something you <b>model</b>. You’re expected to work safely <b>without supervision</b>, hold <b>all your tool safety qualifications</b>, and <b>anticipate hazards before they occur</b> instead of reacting after.<br><br>Ask yourself before every task: <b>what’s the most likely way this goes wrong, and what am I doing about it right now?</b>' },
+      { title:'You are the safety culture', grades:[10,12],
+        html:'Younger students learn shop safety mostly by watching <b>you</b>. Help maintain the shop’s safety culture: speak up (respectfully) when a peer works unsafely, help train others on tools you’re qualified on, and never let “we’re in a hurry” beat “we do it safely.”<br><br>In Design & Management and the Capstone year, you’re expected to <b>work safely and independently in any shop you enter</b> — and to be the person others copy.' }
     ]},
-  { id:'scenic', icon:'🔨', title:'Scenic & Construction', blurb:'Tools, lumber handling, PPE in the shop.', grades:[6,12],
+
+  { id:'tools', icon:'🧰', title:'Your Tools This Year', blurb:'The tools and equipment you are cleared to use at your grade level.', grades:[6,12],
+    /* Tools are cumulative: once a grade qualifies on a tool, students
+       keep using it in later grades. Each section lists what is new or
+       in active use for that grade.
+       NOTE — Sound equipment (mixer/console, mics, speakers, XLR/TRS
+       cabling, QLab) is defined in the matrix but not yet assigned to
+       grades (TBD); add it here once sound skills are scheduled. */
     sections:[
-      { title:'Sample section — replace me', grades:[6,12],
-        html:'Placeholder for scene-shop safety content.' }
+      { title:'Grade 6 — Intro to Tech Theatre', grades:[6,6],
+        html:'This year you work with:<br><br>🔧 <b>Hand & measuring tools</b> — tape measure, marking & layout tools; <b>utility knife</b> for cardboard scoring and cutting (props).<br>💡 <b>Lighting</b> — Source Four (ERS) with C-clamp, safety cable & wrench; ETC Eos console (basic).<br>🧵 <b>Costume</b> — needle & thread (hand sewing).<br><br><b>No power tools this year.</b> Power tools start in Grade 8, after safety orientation.' },
+      { title:'Grade 7 — Advanced Tech Theatre', grades:[7,7],
+        html:'You keep all your Grade 6 hand tools, plus:<br><br>💡 <b>Lighting</b> — fixtures (Source Four, PAR, movers) with gobos, gels & cable; ETC Eos console.<br>🧵 <b>Costume</b> — scissors, pins & pattern tools.<br>🎭 <b>Props</b> — papier-mâché & armature tools.<br><br><b>Still no power tools.</b> They start in Grade 8, after safety orientation.' },
+      { title:'Grade 8 — Stagecraft', grades:[8,8],
+        html:'This is the year power tools begin.<br><br>🔧 <b>Hand tools</b> — hammer, tape measure, speed/framing square, utility knife, hand saw, screwdrivers.<br>⚡ <b>Power & pneumatic</b> (safety orientation required, supervised) — jigsaw, compound miter saw, panel saw, impact driver, random orbital sander, narrow crown stapler, framing nailer.<br>🎨 <b>Painting</b> — brushes & rollers.<br><br>Every power and pneumatic tool requires <b>passing its safety orientation first</b>.' },
+      { title:'Grade 9 — Tech 1-2', grades:[9,9],
+        html:'You now use the <b>full hand-tool set</b>, and your power tools move to <b>general supervision</b>:<br><br>⚡ <b>Power & pneumatic</b> — jigsaw, compound miter saw, panel saw, impact driver, random orbital sander, narrow crown stapler, framing nailer.<br>💡 <b>Lighting</b> — Source Four hang & focus tools (C-clamp, safety cable, wrench), cable; ETC Eos.<br>🧵 <b>Costume</b> — sewing machine.<br>🎭 <b>Props</b> — hot-wire foam knife.<br>🎨 <b>Painting</b> — brushes & rollers.' },
+      { title:'Grade 10 — Tech 3-4', grades:[10,10],
+        html:'All Grade 8-9 hand and power/pneumatic tools move to <b>independent-use level</b> (after qualification), and you add:<br><br>🛠 <b>Stationary machines</b> (safety orientation required) — <b>table saw, palm router, band saw</b>.<br>⛓ <b>Rigging</b> — Nicopress swaging tool & wire-rope cutters.<br>🎭 <b>Props</b> — 3D printer, vacuum former, casting & molding equipment.<br>🎨 <b>Painting</b> — snap line, lining sticks, stencils.' },
+      { title:'Grade 11 — Design & Management', grades:[11,11],
+        html:'Focus shifts to design and console work:<br><br>💡 <b>ETC Eos console</b> — patching & programming.<br>🖥 <b>Design software</b> — Vectorworks/CAD, Photoshop — and drafting tools.<br><br><b>No new shop power tools this year.</b> You apply the tools you previously qualified on, as needed, and are expected to work safely in any shop you enter.' },
+      { title:'Grade 12 — Capstone', grades:[12,12],
+        html:'You use the <b>full tool set of your chosen discipline</b> — scenic, lighting, sound, costume, props, or management — <b>independently, at an industry-entry level</b>.<br><br>No new tools are introduced. You are responsible for the safe setup and operation of everything you touch, throughout your capstone project.' }
     ]},
-  { id:'electrics', icon:'💡', title:'Lighting & Electrics', blurb:'Ladders, hot fixtures, cable safety, power.', grades:[6,12],
+
+  { id:'power', icon:'🪚', title:'Power & Pneumatic Tools', blurb:'Jigsaw, miter saw, panel saw, drivers, sanders, staplers & nailers.', grades:[8,12],
     sections:[
-      { title:'Sample section — replace me', grades:[6,12],
-        html:'Placeholder for electrics safety content.' }
+      { title:'Rules that never change', grades:[8,12],
+        html:'For every power and pneumatic tool, at every grade level:<br><br>• <b>Guards stay on and working.</b> A tool with a faulty guard doesn’t get used — it gets reported.<br>• <b>PPE first</b> — safety glasses always; hearing and dust protection as the task demands.<br>• <b>Correct body position</b> — balanced stance, hands clear of the cut line, never reaching across a blade.<br>• <b>Disconnect power or air before adjusting</b> — blade changes, depth settings, or clearing jams happen only on a dead tool.' },
+      /* Grade 8 — safety orientation, direct supervision */
+      { title:'Safety orientation first', grades:[8,8],
+        html:'This year you must <b>pass a safety orientation for each tool</b> before using it: <b>jigsaw, compound miter saw, panel saw, impact driver, random orbital sander, narrow crown stapler, and framing nailer</b>.<br><br>After orientation you perform <b>fundamental operations under direct supervision</b> — straight cuts and crosscuts, driving fasteners, sanding flat stock — using guards and correct body position, every time.' },
+      /* Grade 9 — general supervision */
+      { title:'Working with general supervision', grades:[9,9],
+        html:'You now <b>set up and operate each tool with general supervision</b> — the teacher is in the shop, not at your elbow. You’re expected to produce <b>accurate cuts and secure assemblies</b>.<br><br>You’re also expected to <b>recognize and report</b> problems yourself: a dull blade burning the cut, low air pressure on a pneumatic tool, or any unsafe condition. Noticing is now part of your qualification.' },
+      /* Grades 10-12 — independent qualification */
+      { title:'Independent qualification', grades:[10,12],
+        html:'You must <b>pass an independent-use qualification on each Grade 8-9 tool</b>. Once qualified, you work accurately <b>without direct supervision</b> and perform routine adjustments yourself — <b>blade changes, depth settings, air pressure</b> — always with the tool disconnected first.<br><br>You’re also expected to <b>assist in training peers</b>: demonstrating correct technique is proof you actually own it.' }
     ]},
-  { id:'sound', icon:'🔊', title:'Sound', blurb:'Hearing protection, cable runs, rigging speakers.', grades:[6,12],
+
+  { id:'stationary', icon:'⚙️', title:'Stationary Machines', blurb:'Table saw, palm router, band saw — orientation, guards, and kickback.', grades:[10,12],
     sections:[
-      { title:'Sample section — replace me', grades:[6,12],
-        html:'Placeholder for sound safety content.' }
+      { title:'Table saw, palm router, band saw', grades:[10,12],
+        html:'These machines are introduced in Tech 3-4 and each requires its own <b>safety orientation</b> before use. After orientation you perform fundamental operations <b>under direct supervision</b>.<br><br>Non-negotiables: <b>guards in place</b>, <b>push sticks</b> for narrow stock, <b>featherboards</b> to hold work against the fence or table, and <b>correct body position</b> at all times.' },
+      { title:'Kickback & body position', grades:[10,12],
+        html:'The table saw’s biggest danger is <b>kickback</b> — the blade grabbing stock and throwing it back at operator speed.<br><br>Defend against it: stand <b>to the side of the blade, never directly behind the stock</b>; keep stock tight against the <b>rip fence</b>; never cut freehand; use a <b>push stick</b> the moment your hand would come near the blade; and let the blade stop completely before reaching for anything.' }
     ]},
-  { id:'costume', icon:'🧵', title:'Costume Shop', blurb:'Irons, needles, machines, fitting-room rules.', grades:[6,12],
+
+  { id:'electrics', icon:'💡', title:'Lighting & Electrics', blurb:'Ladders, working at height, safety cables, and electrical hazards.', grades:[6,12],
     sections:[
-      { title:'Sample section — replace me', grades:[6,12],
-        html:'Placeholder for costume-shop safety content.' }
+      /* Introduce — grades 6-7 */
+      { title:'Ladders & working at height', grades:[6,7],
+        html:'Know the <b>ladder and working-at-height rules</b> and be able to state them:<br><br>• A ladder is set on stable ground and steadied — never climbed alone in the shop.<br>• Keep <b>three points of contact</b> and never overreach; climb down and move the ladder instead.<br>• Nothing is carried up that can’t be carried safely; nothing gets dropped, ever.<br><br>Anyone working below wears the hazard in mind: <b>if work is happening overhead, stay clear or call it out.</b>' },
+      { title:'Safety cables & spotting hazards', grades:[6,7],
+        html:'Every fixture you hang gets a <b>safety cable — always</b>, attached with supervision. The safety cable is the backup that catches the fixture if the clamp fails.<br><br>You should also be able to <b>identify electrical hazards when they’re pointed out</b>: a damaged or frayed cable, or an overloaded circuit. Spotting them is the first step to never plugging into one.' },
+      /* Develop — grades 8-9 */
+      { title:'Inspect before you use', grades:[8,9],
+        html:'You now work <b>safely at height and around circuits with general supervision</b>. That comes with a duty: <b>inspect cables and fixtures before use</b> — cracked connectors, frayed jacket, loose clamp, missing safety cable.<br><br>And when you find a fault, <b>report it without prompting</b>. A damaged cable that goes back in the bin unfixed is a trap for the next person.' },
+      /* Master — grades 10-12 */
+      { title:'Work like a professional', grades:[10,12],
+        html:'At this level you work at height and around power <b>independently and safely</b> — and you <b>model</b> the practices for everyone else: safety cable on every fixture, inspect before use, tag out and report faults immediately, never work an energized problem.<br><br>In Design & Management and Capstone work, you’re expected to bring these habits into <b>any</b> space you work in, without being told.' }
+    ]},
+
+  { id:'rigging', icon:'⛓️', title:'Rigging Safety', blurb:'Wire rope, swaged terminations, and working load limits.', grades:[10,12],
+    sections:[
+      { title:'Wire rope & terminations', grades:[10,12],
+        html:'Anything flown or suspended rides on <b>wire rope</b> — never tie line or hope. You build <b>wire-rope terminations to standard</b>: a <b>thimble</b> protecting the loop, a <b>Nicopress sleeve</b> swaged with the correct tool, and every crimp checked with the gauge.<br><br>A termination that isn’t built to standard and verified <b>does not take load. Ever.</b>' },
+      { title:'Working Load Limit (WLL)', grades:[10,12],
+        html:'Every piece of rigging hardware — wire rope, shackles, clips — is rated with a <b>Working Load Limit (WLL)</b>: the maximum load it may safely carry.<br><br>You rig scenic elements <b>within the WLL of every component in the system</b> — the rig is only as strong as its weakest piece. Add up the real weight, know your ratings, and when in doubt, size up and ask.' }
+    ]},
+
+  /* NOTE — the matrix defines Audio Safety (hearing conservation & SPL
+     awareness; safe handling and rigging of speakers) but its grade
+     placement is still TBD. Per the source doc's recommendation it is
+     included here as a station for all grades; re-range these sections
+     once the sound skills are scheduled. */
+  { id:'audio', icon:'🔊', title:'Hearing & Audio Safety', blurb:'Hearing conservation, SPL awareness, and safe speaker handling.', grades:[6,12],
+    sections:[
+      { title:'Protect your hearing', grades:[6,12],
+        html:'Sound level is measured as <b>SPL</b> (sound pressure level). Loud sound damages the tiny hair cells in your inner ear — and that damage is <b>cumulative and permanent</b>. It never heals, it only adds up.<br><br>So: wear <b>hearing protection</b> around loud tools and loud playback, keep your distance from speakers at show level, and treat ringing ears as a warning you already went too far.' },
+      { title:'Handling & rigging speakers', grades:[8,12],
+        html:'Speakers are heavy, awkward, and often end up over people’s heads.<br><br>• <b>Lift and move them with help</b> — protect your back and the cabinet.<br>• Anything flown or mounted overhead uses <b>rated hardware and rigging points</b>, secured so it cannot fall.<br>• Never stack or perch a speaker where a bump or a cable snag could bring it down.' }
     ]}
 ];
 
 const SAFETY_QUESTIONS = [
-  /* SAMPLE — replace with real content */
-  { module:'general', grades:[6,12],
-    q:'SAMPLE: What should you do before crossing a dark stage?',
-    options:['Run quickly','Wait for your eyes to adjust and use running lights','Use your phone flashlight during a performance','Yell for the board op'],
-    answer:1, why:'Placeholder explanation shown after the quiz.' },
-  { module:'scenic', grades:[6,12],
-    q:'SAMPLE: Placeholder scene-shop question?',
-    options:['Wrong answer','Right answer','Wrong answer','Wrong answer'],
-    answer:1, why:'Placeholder explanation.' },
-  { module:'electrics', grades:[6,12],
-    q:'SAMPLE: Placeholder electrics question?',
-    options:['Right answer','Wrong answer','Wrong answer','Wrong answer'],
-    answer:0, why:'Placeholder explanation.' }
+  /* ── Shop Safety & PPE ── */
+  { module:'shop', grades:[6,7],
+    q:'A task is going to fill the air with fine dust. Which PPE does that call for?',
+    options:['Hearing protection','Dust protection, like a dust mask','Just safety glasses','Gloves'],
+    answer:1, why:'Dust protection is required whenever a task puts fine dust in the air; safety glasses and hearing protection guard against different hazards.' },
+  { module:'shop', grades:[6,7],
+    q:'When do you need safety glasses in the shop?',
+    options:['Only when you are the one using a tool','Only when the teacher says so','Any time work around you could send chips, dust, or debris toward your eyes','Never — glasses are only for power tools'],
+    answer:2, why:'Safety glasses protect you from other people’s work too — you wear them whenever anything around you could reach your eyes.' },
+  { module:'shop', grades:[8,9],
+    q:'Whose job is it to make sure you are wearing the right PPE before you start?',
+    options:['The teacher’s — they will remind you','Yours — you select and wear correct PPE without reminders','Your work partner’s','The stage manager’s'],
+    answer:1, why:'From Grade 8 on, choosing and wearing the correct PPE without being reminded is your responsibility.' },
+  { module:'shop', grades:[8,9],
+    q:'You notice a tool with a cracked handle in the shop, but you weren’t planning to use it. What do you do?',
+    options:['Leave it — it’s not your task','Put it back in the drawer','Report the unsafe condition right away','Try it first to confirm it’s broken'],
+    answer:2, why:'Reporting unsafe conditions is part of your job at this level — a hazard you walk past becomes the next person’s injury.' },
+  { module:'shop', grades:[10,12],
+    q:'A younger student is about to make a cut without safety glasses. What does the shop expect of you?',
+    options:['Nothing — supervising is the teacher’s job','Say something and help them do it right — you help maintain the safety culture','Look away so you aren’t a witness','Finish your own task first, then maybe mention it'],
+    answer:1, why:'At the Master level you model safe habits and help maintain the shop’s safety culture with peers — that means speaking up before something happens.' },
+
+  /* ── Your Tools This Year ── */
+  { module:'tools', grades:[6,7],
+    q:'Which of these are you cleared to use at your grade level?',
+    options:['Jigsaw','Framing nailer','Utility knife for cardboard, with supervision','Table saw'],
+    answer:2, why:'Grades 6-7 use hand and measuring tools only — no power or pneumatic tools until the Grade 8 safety orientations.' },
+  { module:'tools', grades:[8,9],
+    q:'Before using any power or pneumatic tool for the first time, you must…',
+    options:['Watch one other student use it','Pass a safety orientation for that specific tool','Just start on scrap wood','Get permission from any older student'],
+    answer:1, why:'Every power and pneumatic tool requires passing its own safety orientation before you use it.' },
+  { module:'tools', grades:[10,12],
+    q:'Which stationary machines are introduced in Tech 3-4 and require their own safety orientation?',
+    options:['Table saw, palm router, and band saw','Jigsaw, impact driver, and sander','3D printer, vacuum former, and hot-wire knife','Miter saw, panel saw, and framing nailer'],
+    answer:0, why:'The table saw, palm router, and band saw are new at Grade 10 and each requires a safety orientation with direct supervision at first.' },
+
+  /* ── Power & Pneumatic Tools ── */
+  { module:'power', grades:[8,9],
+    q:'The blade guard on the miter saw is sticking and won’t drop back over the blade. What do you do?',
+    options:['Use the saw carefully and keep your fingers back','Tape the guard out of the way','Stop, don’t use the saw, and report it','Only make short cuts until it’s fixed'],
+    answer:2, why:'A tool with a faulty guard never gets used — it gets reported and taken out of service.' },
+  { module:'power', grades:[8,9],
+    q:'The saw is cutting slowly and burning the wood. That most likely means…',
+    options:['You should push harder','The blade is dull — stop and report it','The wood is too dry','That’s normal for plywood'],
+    answer:1, why:'Burning and slow cutting are the signs of a dull blade. Recognizing and reporting dull blades, low air pressure, and unsafe conditions is part of your qualification.' },
+  { module:'power', grades:[10,12],
+    q:'Before changing a blade or adjusting the cutting depth on a power tool, you must…',
+    options:['Put on gloves','Lower the tool’s speed setting','Disconnect the power (or air supply) first','Ask a peer to watch'],
+    answer:2, why:'Routine adjustments — blade changes, depth settings, air pressure — happen only on a tool that is disconnected from power or air.' },
+  { module:'power', grades:[10,12],
+    q:'Who may operate shop power tools without direct supervision?',
+    options:['Anyone in Grade 10 or above','Students who have passed the independent-use qualification on that tool','Anyone who used the tool last year','Whoever the crew head picks that day'],
+    answer:1, why:'Independent use requires passing the independent-use qualification on each specific tool — grade level alone doesn’t qualify you.' },
+
+  /* ── Stationary Machines ── */
+  { module:'stationary', grades:[10,12],
+    q:'You’re ripping a narrow strip on the table saw and your hand is getting close to the blade. You should…',
+    options:['Slow down and keep your fingers low','Finish the pass with a push stick','Pull the stock back toward you','Reach over the blade to support the off-cut'],
+    answer:1, why:'A push stick feeds narrow stock past the blade so your hand never gets near it — pulling stock back or reaching over the blade invites kickback and contact.' },
+  { module:'stationary', grades:[10,12],
+    q:'Where do you stand while running stock through the table saw?',
+    options:['Directly behind the stock so you can push in a straight line','To the side of the blade, out of the kickback line','Wherever you can see the blade best','On the outfeed side, pulling the stock through'],
+    answer:1, why:'Kickback throws stock straight back along the blade line — you stand to the side so you’re never in its path.' },
+
+  /* ── Lighting & Electrics ── */
+  { module:'electrics', grades:[6,7],
+    q:'Every time you hang a lighting fixture on a pipe, you attach…',
+    options:['A spare gel frame','A safety cable','An extra C-clamp','A label with your name'],
+    answer:1, why:'The safety cable is the backup that catches the fixture if the clamp ever fails — it goes on every fixture, every time.' },
+  { module:'electrics', grades:[6,7],
+    q:'While working on a ladder, the pipe you need is just out of reach. You should…',
+    options:['Lean out and stretch for it','Stand on the very top step','Climb down and move the ladder','Have someone toss you the wrench'],
+    answer:2, why:'Never overreach on a ladder — keep three points of contact and move the ladder instead.' },
+  { module:'electrics', grades:[8,9],
+    q:'Before plugging in a stage cable, you…',
+    options:['Inspect it for damage — connectors, jacket, kinks','Plug it in and see if it works','Shake it out to full length','Check the color of the tape on it'],
+    answer:0, why:'Inspecting cables and fixtures before use is your responsibility now — faults get found before power goes through them.' },
+  { module:'electrics', grades:[8,12],
+    q:'During focus you find a cable with a cracked connector. What do you do with it?',
+    options:['Coil it back into the bin for later','Use it anyway if it still passes power','Tag it out, set it aside, and report it','Wrap the connector in gel and keep going'],
+    answer:2, why:'Report faults without prompting — a damaged cable returned to stock unmarked is a trap for the next person who grabs it.' },
+
+  /* ── Rigging ── */
+  { module:'rigging', grades:[10,12],
+    q:'WLL stands for…',
+    options:['Wire Length Limit — the longest cable you may cut','Working Load Limit — the maximum load the rigging is rated to safely carry','Weight Lifting License — your rigging qualification','Wire, Loop & Lock — the three parts of a termination'],
+    answer:1, why:'The Working Load Limit is the maximum safe load a piece of rigging is rated for — and you always rig within it.' },
+  { module:'rigging', grades:[10,12],
+    q:'A wire-rope termination is ready to take load when…',
+    options:['The loop looks tight','It’s built to standard — thimble in the loop, sleeve properly swaged — and checked','It held a test pull by hand','Someone qualified built one like it before'],
+    answer:1, why:'Terminations are built to standard and verified — a thimbled loop, a correctly swaged Nicopress sleeve, and a check with the gauge — before they ever carry load.' },
+
+  /* ── Hearing & Audio Safety ── */
+  { module:'audio', grades:[6,12],
+    q:'Hearing damage from loud sound is…',
+    options:['Temporary — it heals in a few days','Only a risk for adults','Cumulative and permanent — it adds up and never heals','Only caused by music, not tools'],
+    answer:2, why:'Hearing damage is cumulative and permanent, which is why hearing protection matters from your very first day in the shop.' },
+  { module:'audio', grades:[8,12],
+    q:'A speaker needs to be mounted above the stage. It must be…',
+    options:['Rigged with rated hardware, secured so it cannot fall','Set on the tallest platform available','Held with heavy-duty zip ties','Balanced carefully so no hardware is needed'],
+    answer:0, why:'Anything overhead — speakers included — hangs from rated hardware and rigging points, secured so it cannot come down on anyone.' }
 ];
 /* ═══════════════ end of content — framework below ═══════════════ */
 
