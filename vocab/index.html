@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDSCPA — Vocab Lab</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2392278F'/><text x='16' y='24' font-family='Arial' font-weight='900' font-size='21' fill='white' text-anchor='middle'>V</text></svg>">
+<script src="../shared/learn.js"></script>
+<style>
+  :root{
+    --ui-dark:#0a0a0a; --ui-dark2:#1a1a1a; --ui-dark3:#333333;
+    --accent:#3b82f6; --violet:#92278F; --amber:#fbbf24;
+    --ok:#22c55e; --bad:#ef4444; --text-light:#f0f0f0; --text-dim:#888888;
+    --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
+    --rainbow:linear-gradient(90deg,#7AC143,#F7941E,#ED1C45,#EC008C,#92278F,#2E3192,#00AEEF);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--ui-dark);color:var(--text-light);display:flex;flex-direction:column}
+  #topbar{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--ui-dark);border-bottom:1px solid #000;position:relative;z-index:30}
+  #topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--rainbow);opacity:.9}
+  .back{font-size:11px;color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 9px;white-space:nowrap}
+  .back:hover{color:#fff;border-color:var(--accent)}
+  .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;line-height:1}
+  .brand-logo{height:22px;width:auto;display:block;flex:0 0 auto}
+  .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .spacer{flex:1}
+  #gradeBadge{font-size:11px;font-weight:700;color:var(--amber);border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 10px;background:none;cursor:pointer;white-space:nowrap}
+  #gradeBadge:hover{border-color:var(--amber)}
+  #homeBtn{font-size:11px;color:var(--text-dim);border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 10px;background:none;cursor:pointer}
+  #homeBtn:hover{color:#fff;border-color:var(--accent)}
+
+  main{flex:1;overflow-y:auto;padding:26px 18px 40px}
+  .wrap{max-width:680px;margin:0 auto}
+  .view{display:none}
+  .view.active{display:block}
+  h1{font-size:20px;margin-bottom:6px}
+  .sub{font-size:13px;color:#aab;line-height:1.6;margin-bottom:18px}
+  .sec-label{font-size:10.5px;font-weight:800;letter-spacing:1.4px;color:var(--text-dim);text-transform:uppercase;margin:18px 0 9px}
+
+  .disc-grid{display:flex;flex-wrap:wrap;gap:8px}
+  .disc-grid button{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:999px;color:var(--text-light);font-size:12.5px;font-weight:700;padding:9px 16px;cursor:pointer}
+  .disc-grid button:hover{border-color:var(--violet)}
+  .disc-grid button.on{background:rgba(146,39,143,.25);border-color:var(--violet)}
+  .disc-grid button .n{color:var(--text-dim);font-weight:600;font-size:11px}
+
+  .mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .mode-card{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:12px;padding:16px;cursor:pointer;text-align:left}
+  .mode-card:hover{border-color:var(--violet);transform:translateY(-2px)}
+  .mode-card .mi{font-size:22px;margin-bottom:8px}
+  .mode-card b{display:block;font-size:14px;color:var(--text-light);margin-bottom:4px}
+  .mode-card span{font-size:11.5px;color:var(--text-dim);line-height:1.5}
+
+  /* List mode */
+  #listSearch{width:100%;background:var(--ui-dark2);border:1px solid var(--ui-dark3);color:var(--text-light);border-radius:9px;padding:10px 13px;font-size:13.5px;margin-bottom:12px}
+  #listSearch:focus{outline:none;border-color:var(--violet)}
+  .v-term{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:11px;padding:13px 15px;margin-bottom:9px}
+  .v-term dt{font-size:14.5px;font-weight:800;color:var(--amber);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .v-term dt .tag{font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-dim);border:1px solid var(--ui-dark3);border-radius:999px;padding:2px 7px}
+  .v-term dd{font-size:13px;line-height:1.6;color:#d6d6de}
+  .v-term .ex{margin-top:6px;font-size:12px;color:#9aa2b1;font-style:italic;border-left:2px solid var(--violet);padding-left:9px}
+
+  /* Flash cards */
+  #flashCard{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:16px;min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;cursor:pointer;user-select:none}
+  #flashCard:hover{border-color:var(--violet)}
+  #flashCard .fc-side{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--violet);text-transform:uppercase;margin-bottom:12px}
+  #flashCard .fc-main{font-size:22px;font-weight:800}
+  #flashCard .fc-def{font-size:14.5px;line-height:1.65;font-weight:400;color:#d6d6de}
+  #flashCard .fc-ex{margin-top:12px;font-size:12.5px;color:#9aa2b1;font-style:italic}
+  #flashCard .fc-hint{margin-top:16px;font-size:11px;color:var(--text-dim)}
+  .flash-nav{display:flex;gap:9px;justify-content:center;margin-top:14px}
+  .flash-nav button{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:8px;color:var(--text-light);font-size:12.5px;font-weight:700;padding:9px 16px;cursor:pointer}
+  .flash-nav button:hover{border-color:var(--violet)}
+  #flashCount{text-align:center;font-size:11px;color:var(--text-dim);margin-top:10px;font-family:var(--mono)}
+
+  /* Quiz */
+  .q-card{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:14px;padding:22px}
+  .q-n{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--violet);text-transform:uppercase;margin-bottom:8px}
+  .q-card h2{font-size:15.5px;line-height:1.55;margin-bottom:14px;font-style:italic;font-weight:500;color:#e6e6ee}
+  .q-opt{display:block;width:100%;text-align:left;background:#101014;border:1px solid var(--ui-dark3);border-radius:9px;color:var(--text-light);font-size:13.5px;font-weight:700;padding:11px 13px;margin-bottom:8px;cursor:pointer}
+  .q-opt:hover{border-color:var(--violet)}
+  .q-opt.good{border-color:var(--ok);background:rgba(34,197,94,.14)}
+  .q-opt.bad{border-color:var(--bad);background:rgba(239,68,68,.12)}
+  .q-fb{font-size:12px;color:#aab;min-height:16px;margin-top:4px}
+  .result{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:14px;padding:22px;font-size:13.5px;line-height:1.7}
+  .result b.big{font-size:20px}
+  .result ul{margin:10px 0 0 20px;color:#c8ccd4;font-size:12.5px}
+  .primary-btn{background:var(--violet);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;padding:10px 18px;cursor:pointer;margin-top:14px;margin-right:8px}
+
+  /* Grade modal */
+  #gradeWrap{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:950;display:none;align-items:center;justify-content:center;padding:16px}
+  #gradeWrap.open{display:flex}
+  #gradeCard{background:#16161c;border:1px solid #333;border-radius:14px;max-width:420px;width:100%;padding:24px;text-align:center}
+  #gradeCard h3{font-size:18px;margin-bottom:6px}
+  #gradeCard p{font-size:12.5px;color:#aab;line-height:1.55;margin-bottom:16px}
+  .grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .grade-grid button{background:#101014;border:1px solid var(--ui-dark3);border-radius:10px;color:var(--text-light);font-size:16px;font-weight:800;padding:14px 0;cursor:pointer}
+  .grade-grid button:hover{border-color:var(--amber);color:var(--amber)}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a class="back" href="../" title="Back to all labs">&lsaquo; Labs</a>
+  <div style="display:flex;align-items:center;gap:12px">
+    <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
+      <defs><linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#7AC143"/><stop offset=".17" stop-color="#F7941E"/><stop offset=".34" stop-color="#ED1C45"/>
+        <stop offset=".50" stop-color="#EC008C"/><stop offset=".66" stop-color="#92278F"/><stop offset=".83" stop-color="#2E3192"/><stop offset="1" stop-color="#00AEEF"/>
+      </linearGradient></defs>
+      <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
+    </svg>
+    <div class="brand"><span class="brand-tag">Vocab Lab</span></div>
+  </div>
+  <div class="spacer"></div>
+  <button id="homeBtn" style="display:none">‹ Choose mode</button>
+  <button id="gradeBadge" title="Change grade level">Grade —</button>
+</div>
+
+<main><div class="wrap">
+
+  <div class="view active" id="viewHome">
+    <h1>📚 Theatre Vocabulary</h1>
+    <p class="sub">Pick a discipline, then learn the words the way that works for you — read the list, drill flash cards, or test yourself.</p>
+    <div class="sec-label">Discipline</div>
+    <div class="disc-grid" id="discGrid"></div>
+    <div class="sec-label">How do you want to learn?</div>
+    <div class="mode-grid">
+      <button class="mode-card" data-mode="list"><div class="mi">📖</div><b>Word list</b><span>Every term with its definition and a real example, searchable.</span></button>
+      <button class="mode-card" data-mode="flash"><div class="mi">🎴</div><b>Flash cards</b><span>Term on the front, definition on the back. Flip, shuffle, repeat.</span></button>
+      <button class="mode-card" data-mode="quiz"><div class="mi">✏️</div><b>Practice quiz</b><span>Multiple choice on the words you need to know. See what to re-study.</span></button>
+    </div>
+  </div>
+
+  <div class="view" id="viewList">
+    <input id="listSearch" type="search" placeholder="Search terms…">
+    <div id="listBody"></div>
+  </div>
+
+  <div class="view" id="viewFlash">
+    <div id="flashCard"></div>
+    <div class="flash-nav">
+      <button id="fcPrev">‹ Previous</button>
+      <button id="fcFlip">Flip</button>
+      <button id="fcShuffle">🔀 Shuffle</button>
+      <button id="fcNext">Next ›</button>
+    </div>
+    <div id="flashCount"></div>
+  </div>
+
+  <div class="view" id="viewQuiz">
+    <div class="q-card" id="qCard"></div>
+  </div>
+
+</div></main>
+
+<div id="gradeWrap">
+  <div id="gradeCard">
+    <h3>What grade are you in?</h3>
+    <p>Your word lists and quizzes are matched to your grade level. You can change this any time from the badge in the top bar.</p>
+    <div class="grade-grid" id="gradeGrid"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   VOCAB CONTENT — placeholder structure, to be populated.
+
+   Disciplines are the chips students pick from ("All" is automatic).
+   Each term: { term, def, example, discipline, grades:[min,max] }
+   Students only see terms whose grade range covers their grade —
+   to give older students harder words, just set grades:[9,12] etc.
+   ═══════════════════════════════════════════════════════════════════ */
+const DISCIPLINES = [
+  { id:'scenic',   label:'Scenic & Construction' },
+  { id:'lighting', label:'Lighting' },
+  { id:'sound',    label:'Sound' },
+  { id:'costume',  label:'Costume' },
+  { id:'design',   label:'Design & Drafting' },
+  { id:'stagemgmt',label:'Stage Management' }
+];
+
+const VOCAB = [
+  /* SAMPLE — replace with real content */
+  { term:'Sample term (scenic)', def:'Placeholder definition written at the right reading level for the grade range below.', example:'Placeholder example sentence using the term in a real theatre situation.', discipline:'scenic', grades:[6,12] },
+  { term:'Sample term (lighting)', def:'Placeholder definition.', example:'Placeholder example.', discipline:'lighting', grades:[6,12] },
+  { term:'Sample term (sound)', def:'Placeholder definition.', example:'Placeholder example.', discipline:'sound', grades:[6,12] },
+  { term:'Sample term (costume)', def:'Placeholder definition.', example:'Placeholder example.', discipline:'costume', grades:[6,12] },
+  { term:'Sample term (design)', def:'Placeholder definition.', example:'Placeholder example.', discipline:'design', grades:[6,12] },
+  { term:'Sample term (stage mgmt)', def:'Placeholder definition.', example:'Placeholder example.', discipline:'stagemgmt', grades:[6,12] },
+  { term:'Sample older-grades term', def:'Placeholder shown only to grades 9-12.', example:'Placeholder example.', discipline:'scenic', grades:[9,12] }
+];
+const QUIZ_LENGTH = 10;   // questions per practice quiz (or fewer if the pool is small)
+/* ═══════════════ end of content — framework below ═══════════════ */
+
+const $ = id => document.getElementById(id);
+const GRADE_KEY = 'sdscpa_grade';
+const PREF_KEY = 'sdscpa-vocab-prefs-v1';
+let prefs = { discipline:'all' };
+try{ prefs = Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY)) || {}); }catch(e){}
+function savePrefs(){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} }
+
+function grade(){ const g = parseInt(localStorage.getItem(GRADE_KEY)); return (g>=6 && g<=12) ? g : null; }
+function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + grade() : 'Grade —'; }
+(function buildGradeGrid(){
+  for(let g=6; g<=12; g++){
+    const b = document.createElement('button');
+    b.textContent = g;
+    b.addEventListener('click', ()=>{
+      try{ localStorage.setItem(GRADE_KEY, String(g)); }catch(e){}
+      $('gradeWrap').classList.remove('open');
+      renderGradeBadge(); renderDiscGrid();
+    });
+    $('gradeGrid').appendChild(b);
+  }
+})();
+$('gradeBadge').addEventListener('click', ()=>$('gradeWrap').classList.add('open'));
+if(!grade()) $('gradeWrap').classList.add('open');
+renderGradeBadge();
+
+function pool(){
+  const g = grade() || 6;
+  return VOCAB.filter(t =>
+    (g >= t.grades[0] && g <= t.grades[1]) &&
+    (prefs.discipline === 'all' || t.discipline === prefs.discipline));
+}
+function discLabel(id){ return id === 'all' ? 'All disciplines' : (DISCIPLINES.find(d=>d.id===id)||{}).label || id; }
+
+function show(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $(view).classList.add('active');
+  $('homeBtn').style.display = view === 'viewHome' ? 'none' : '';
+}
+$('homeBtn').addEventListener('click', ()=>show('viewHome'));
+
+/* ── Discipline chips ── */
+function renderDiscGrid(){
+  const g = grade() || 6;
+  const counts = {};
+  VOCAB.forEach(t=>{ if(g >= t.grades[0] && g <= t.grades[1]) counts[t.discipline] = (counts[t.discipline]||0)+1; });
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  const grid = $('discGrid');
+  grid.innerHTML = '';
+  [{id:'all',label:'⭐ All'}].concat(DISCIPLINES).forEach(d=>{
+    const n = d.id === 'all' ? total : (counts[d.id]||0);
+    const b = document.createElement('button');
+    b.className = prefs.discipline === d.id ? 'on' : '';
+    b.innerHTML = d.label + ' <span class="n">· ' + n + '</span>';
+    b.addEventListener('click', ()=>{ prefs.discipline = d.id; savePrefs(); renderDiscGrid(); });
+    grid.appendChild(b);
+  });
+}
+renderDiscGrid();
+
+/* ── Mode selection ── */
+document.querySelectorAll('.mode-card').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    const p = pool();
+    if(!p.length){ alert('No terms loaded yet for this discipline and grade.'); return; }
+    const mode = card.dataset.mode;
+    if(mode === 'list'){ renderList(''); show('viewList'); $('listSearch').value=''; }
+    if(mode === 'flash'){ startFlash(); show('viewFlash'); }
+    if(mode === 'quiz'){ startQuiz(); show('viewQuiz'); }
+  });
+});
+
+/* ── Word list ── */
+function renderList(q){
+  const body = $('listBody');
+  const items = pool().filter(t => !q || (t.term+' '+t.def).toLowerCase().includes(q.toLowerCase()));
+  body.innerHTML = items.map(t =>
+    '<div class="v-term"><dt>' + t.term +
+    '<span class="tag">' + discLabel(t.discipline) + '</span></dt>' +
+    '<dd>' + t.def +
+    (t.example ? '<div class="ex">' + t.example + '</div>' : '') +
+    '</dd></div>').join('') || '<div class="sub">No matches.</div>';
+}
+$('listSearch').addEventListener('input', e=>renderList(e.target.value));
+
+/* ── Flash cards ── */
+let fc = null;
+function startFlash(){
+  fc = { cards: pool().slice().sort(()=>Math.random()-.5), at:0, back:false };
+  renderFlash();
+}
+function renderFlash(){
+  const t = fc.cards[fc.at];
+  $('flashCard').innerHTML = fc.back
+    ? '<div class="fc-side">Definition</div><div class="fc-def">' + t.def + '</div>' +
+      (t.example ? '<div class="fc-ex">' + t.example + '</div>' : '') +
+      '<div class="fc-hint">click to see the term</div>'
+    : '<div class="fc-side">' + discLabel(t.discipline) + '</div><div class="fc-main">' + t.term + '</div>' +
+      '<div class="fc-hint">click to flip</div>';
+  $('flashCount').textContent = (fc.at+1) + ' / ' + fc.cards.length;
+}
+$('flashCard').addEventListener('click', ()=>{ fc.back = !fc.back; renderFlash(); });
+$('fcFlip').addEventListener('click', ()=>{ fc.back = !fc.back; renderFlash(); });
+$('fcPrev').addEventListener('click', ()=>{ fc.at = (fc.at - 1 + fc.cards.length) % fc.cards.length; fc.back = false; renderFlash(); });
+$('fcNext').addEventListener('click', ()=>{ fc.at = (fc.at + 1) % fc.cards.length; fc.back = false; renderFlash(); });
+$('fcShuffle').addEventListener('click', startFlash);
+document.addEventListener('keydown', e=>{
+  if(!$('viewFlash').classList.contains('active')) return;
+  if(e.key === 'ArrowRight') $('fcNext').click();
+  else if(e.key === 'ArrowLeft') $('fcPrev').click();
+  else if(e.key === ' '){ e.preventDefault(); $('fcFlip').click(); }
+});
+
+/* ── Practice quiz ── */
+let quiz = null;
+function startQuiz(){
+  const p = pool().slice().sort(()=>Math.random()-.5);
+  quiz = { qs: p.slice(0, Math.min(QUIZ_LENGTH, p.length)), at:0, right:0, missed:[] };
+  renderQuestion();
+}
+function renderQuestion(){
+  const card = $('qCard');
+  if(quiz.at >= quiz.qs.length) return finishQuiz();
+  const q = quiz.qs[quiz.at];
+  const all = pool();
+  const options = [q].concat(
+    all.filter(t=>t!==q).sort(()=>Math.random()-.5).slice(0,3)
+  ).sort(()=>Math.random()-.5);
+  card.innerHTML = '<div class="q-n">' + (quiz.at+1) + ' / ' + quiz.qs.length + ' · ' + discLabel(prefs.discipline) + '</div>' +
+    '<h2>“' + q.def + '”</h2>' +
+    options.map((o,i)=>'<button class="q-opt" data-i="'+i+'">'+o.term+'</button>').join('') +
+    '<div class="q-fb"></div>';
+  card.querySelectorAll('.q-opt').forEach((btn,i)=>{
+    btn.addEventListener('click', ()=>{
+      if(card.dataset.locked) return;
+      card.dataset.locked = '1';
+      const ok = options[i] === q;
+      if(ok) quiz.right++; else quiz.missed.push(q);
+      btn.classList.add(ok ? 'good' : 'bad');
+      if(!ok) card.querySelectorAll('.q-opt')[options.indexOf(q)].classList.add('good');
+      card.querySelector('.q-fb').textContent = ok ? '✓ Right!' : '✗ It\'s “' + q.term + '.”';
+      setTimeout(()=>{ delete card.dataset.locked; quiz.at++; renderQuestion(); }, ok ? 700 : 1800);
+    });
+  });
+}
+function finishQuiz(){
+  const card = $('qCard');
+  const pct = Math.round(quiz.right / quiz.qs.length * 100);
+  card.innerHTML = '<div class="result"><b class="big">' + quiz.right + ' / ' + quiz.qs.length + ' (' + pct + '%)</b><br>' +
+    (pct === 100 ? '🌟 Perfect — you own these words.' :
+     pct >= 80 ? 'Strong! Re-study the missed words below and go for 100%.' :
+     'Keep going — hit the word list or flash cards for the ones below, then try again.') +
+    (quiz.missed.length ? '<ul>' + quiz.missed.map(t=>'<li><b>' + t.term + '</b> — ' + t.def + '</li>').join('') + '</ul>' : '') +
+    '</div>' +
+    '<button class="primary-btn" id="againBtn">Try again</button>' +
+    '<button class="primary-btn" style="background:none;border:1px solid var(--ui-dark3);color:var(--text-dim)" id="homeBtn2">Choose mode</button>';
+  if(window.SDSCPA && pct >= 80){
+    SDSCPA.markDone('vocab', { score: pct, grade: grade(), discipline: prefs.discipline });
+  }
+  card.querySelector('#againBtn').addEventListener('click', startQuiz);
+  card.querySelector('#homeBtn2').addEventListener('click', ()=>show('viewHome'));
+}
+</script>
+</body>
+</html>

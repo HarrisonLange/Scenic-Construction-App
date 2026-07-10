@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDSCPA — Safety Lab</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23ED1C45'/><text x='16' y='24' font-family='Arial' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
+<script src="../shared/learn.js"></script>
+<style>
+  :root{
+    --ui-dark:#0a0a0a; --ui-dark2:#1a1a1a; --ui-dark3:#333333;
+    --accent:#3b82f6; --violet:#8b5cf6; --amber:#fbbf24; --red:#ED1C45;
+    --ok:#22c55e; --bad:#ef4444; --text-light:#f0f0f0; --text-dim:#888888;
+    --mono:'SF Mono','Cascadia Mono','Consolas',ui-monospace,monospace;
+    --rainbow:linear-gradient(90deg,#7AC143,#F7941E,#ED1C45,#EC008C,#92278F,#2E3192,#00AEEF);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--ui-dark);color:var(--text-light);display:flex;flex-direction:column}
+  #topbar{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--ui-dark);border-bottom:1px solid #000;position:relative;z-index:30}
+  #topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--rainbow);opacity:.9}
+  .back{font-size:11px;color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 9px;white-space:nowrap}
+  .back:hover{color:#fff;border-color:var(--accent)}
+  .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;line-height:1}
+  .brand-logo{height:22px;width:auto;display:block;flex:0 0 auto}
+  .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .spacer{flex:1}
+  #gradeBadge{font-size:11px;font-weight:700;color:var(--amber);border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 10px;background:none;cursor:pointer;white-space:nowrap}
+  #gradeBadge:hover{border-color:var(--amber)}
+
+  main{flex:1;overflow-y:auto;padding:26px 18px 40px}
+  .wrap{max-width:680px;margin:0 auto}
+  .view{display:none}
+  .view.active{display:block}
+  h1{font-size:20px;margin-bottom:6px}
+  .sub{font-size:13px;color:#aab;line-height:1.6;margin-bottom:20px}
+
+  .mod{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px}
+  .mod .ic{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;background:rgba(237,28,69,.14);flex:0 0 40px}
+  .mod .mt{flex:1}
+  .mod .mt b{display:block;font-size:14px;margin-bottom:2px}
+  .mod .mt span{font-size:11.5px;color:var(--text-dim);line-height:1.4}
+  .chip{font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .chip.todo{border:1px solid var(--ui-dark3);color:var(--text-dim)}
+  .chip.done{background:var(--ok);color:#0a0a0a}
+  .chip.retrain{background:var(--amber);color:#0a0a0a}
+  .mod button{background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+  .mod button:hover{filter:brightness(1.15)}
+  .mod button.again{background:var(--amber);color:#0a0a0a}
+
+  #quizGate{background:var(--ui-dark2);border:1px solid var(--red);border-radius:12px;padding:18px;margin-top:22px}
+  #quizGate h2{font-size:15px;margin-bottom:6px}
+  #quizGate p{font-size:12.5px;color:#aab;line-height:1.6;margin-bottom:12px}
+  #quizGate button{background:var(--red);border:none;border-radius:9px;color:#fff;font-weight:800;font-size:13.5px;padding:11px 20px;cursor:pointer}
+  #quizGate button:disabled{filter:grayscale(.8) brightness(.55);cursor:not-allowed}
+  #quizGate .gate-note{font-size:11px;color:var(--amber);margin-top:9px}
+
+  /* Training stepper */
+  .tr-card{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:14px;padding:22px}
+  .tr-step{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--red);text-transform:uppercase;margin-bottom:8px}
+  .tr-card h2{font-size:17px;margin-bottom:10px}
+  .tr-body{font-size:13.5px;line-height:1.7;color:#d6d6de;min-height:120px}
+  .tr-body b{color:var(--amber)}
+  .tr-nav{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
+  .tr-nav button{border-radius:8px;font-size:13px;font-weight:700;padding:9px 16px;cursor:pointer}
+  .tr-back{background:none;border:1px solid var(--ui-dark3);color:var(--text-dim)}
+  .tr-back:hover{color:#fff;border-color:#555}
+  .tr-next{background:var(--accent);border:none;color:#fff}
+  .tr-dots{display:flex;gap:5px;align-items:center;justify-content:center;margin-top:14px}
+  .tr-dots i{width:7px;height:7px;border-radius:50%;background:var(--ui-dark3)}
+  .tr-dots i.on{background:var(--red)}
+
+  /* Quiz */
+  .q-card{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:14px;padding:22px}
+  .q-n{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--red);text-transform:uppercase;margin-bottom:8px}
+  .q-card h2{font-size:15.5px;line-height:1.5;margin-bottom:14px}
+  .q-opt{display:block;width:100%;text-align:left;background:#101014;border:1px solid var(--ui-dark3);border-radius:9px;color:var(--text-light);font-size:13.5px;font-weight:600;padding:11px 13px;margin-bottom:8px;cursor:pointer}
+  .q-opt:hover{border-color:var(--accent)}
+  .q-opt.picked{border-color:var(--accent);background:rgba(59,130,246,.14)}
+  .result-ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.45);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7}
+  .result-bad{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);border-radius:12px;padding:18px;font-size:13px;line-height:1.7}
+  .result-bad b{color:var(--amber)}
+  .result-bad ul{margin:8px 0 12px 20px}
+  .primary-btn{background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;padding:10px 18px;cursor:pointer;margin-top:14px}
+
+  /* Grade modal */
+  #gradeWrap{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:950;display:none;align-items:center;justify-content:center;padding:16px}
+  #gradeWrap.open{display:flex}
+  #gradeCard{background:#16161c;border:1px solid #333;border-radius:14px;max-width:420px;width:100%;padding:24px;text-align:center}
+  #gradeCard h3{font-size:18px;margin-bottom:6px}
+  #gradeCard p{font-size:12.5px;color:#aab;line-height:1.55;margin-bottom:16px}
+  .grade-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .grade-grid button{background:#101014;border:1px solid var(--ui-dark3);border-radius:10px;color:var(--text-light);font-size:16px;font-weight:800;padding:14px 0;cursor:pointer}
+  .grade-grid button:hover{border-color:var(--amber);color:var(--amber)}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a class="back" href="../" title="Back to all labs">&lsaquo; Labs</a>
+  <div style="display:flex;align-items:center;gap:12px">
+    <svg class="brand-logo" viewBox="0 0 196 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SDSCPA">
+      <defs><linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#7AC143"/><stop offset=".17" stop-color="#F7941E"/><stop offset=".34" stop-color="#ED1C45"/>
+        <stop offset=".50" stop-color="#EC008C"/><stop offset=".66" stop-color="#92278F"/><stop offset=".83" stop-color="#2E3192"/><stop offset="1" stop-color="#00AEEF"/>
+      </linearGradient></defs>
+      <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
+    </svg>
+    <div class="brand"><span class="brand-tag">Safety Lab</span></div>
+  </div>
+  <div class="spacer"></div>
+  <button id="gradeBadge" title="Change grade level">Grade —</button>
+</div>
+
+<main><div class="wrap">
+
+  <div class="view active" id="viewHome">
+    <h1>🦺 Theatre Safety Training</h1>
+    <p class="sub">Work through every discipline's safety module, then take the quiz. <b>100% is required</b> — in a real shop, "mostly safe" isn't safe. Miss a question and you'll retrain on that topic before trying again.</p>
+    <div id="modList"></div>
+    <div id="quizGate">
+      <h2>🧯 Safety Quiz</h2>
+      <p>Answer every question correctly to earn your safety certificate. Download it and submit it to your teacher.</p>
+      <button id="quizStartBtn" disabled>Take the safety quiz</button>
+      <div class="gate-note" id="gateNote"></div>
+    </div>
+  </div>
+
+  <div class="view" id="viewTrain">
+    <div class="tr-card">
+      <div class="tr-step" id="trStep"></div>
+      <h2 id="trTitle"></h2>
+      <div class="tr-body" id="trBody"></div>
+      <div class="tr-nav">
+        <button class="tr-back" id="trBack">‹ Back</button>
+        <button class="tr-next" id="trNext">Next ›</button>
+      </div>
+      <div class="tr-dots" id="trDots"></div>
+    </div>
+  </div>
+
+  <div class="view" id="viewQuiz">
+    <div class="q-card" id="qCard"></div>
+  </div>
+
+</div></main>
+
+<div id="gradeWrap">
+  <div id="gradeCard">
+    <h3>What grade are you in?</h3>
+    <p>Your training and quiz questions are matched to your grade level. You can change this any time from the badge in the top bar.</p>
+    <div class="grade-grid" id="gradeGrid"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   SAFETY CONTENT — placeholder structure, to be populated.
+
+   Every module, section, and question carries a `grades:[min,max]`
+   range; students only see items covering their grade. To give
+   different grades different wording for the SAME topic, add two
+   sections/questions with non-overlapping ranges.
+
+   module:  { id, icon, title, blurb, grades, sections:[...], }
+   section: { title, html, grades }          — one training screen
+   question:{ module, grades, q, options:[...], answer:<index>, why }
+     `module` ties a wrong answer back to the module the student
+     must retrain before retaking the quiz.
+   ═══════════════════════════════════════════════════════════════════ */
+const SAFETY_MODULES = [
+  /* SAMPLE — replace with real content */
+  { id:'general', icon:'🎭', title:'General Stage Safety', blurb:'Moving in the dark, spike tape, emergency exits.', grades:[6,12],
+    sections:[
+      { title:'Sample section — replace me', grades:[6,12],
+        html:'This is a <b>placeholder</b> training screen. Real content for each grade level goes here. Sections can be split by grade with the <b>grades</b> range.' },
+      { title:'Second sample section', grades:[6,12],
+        html:'Each section is one screen in the training stepper. Keep them short — one idea per screen.' }
+    ]},
+  { id:'scenic', icon:'🔨', title:'Scenic & Construction', blurb:'Tools, lumber handling, PPE in the shop.', grades:[6,12],
+    sections:[
+      { title:'Sample section — replace me', grades:[6,12],
+        html:'Placeholder for scene-shop safety content.' }
+    ]},
+  { id:'electrics', icon:'💡', title:'Lighting & Electrics', blurb:'Ladders, hot fixtures, cable safety, power.', grades:[6,12],
+    sections:[
+      { title:'Sample section — replace me', grades:[6,12],
+        html:'Placeholder for electrics safety content.' }
+    ]},
+  { id:'sound', icon:'🔊', title:'Sound', blurb:'Hearing protection, cable runs, rigging speakers.', grades:[6,12],
+    sections:[
+      { title:'Sample section — replace me', grades:[6,12],
+        html:'Placeholder for sound safety content.' }
+    ]},
+  { id:'costume', icon:'🧵', title:'Costume Shop', blurb:'Irons, needles, machines, fitting-room rules.', grades:[6,12],
+    sections:[
+      { title:'Sample section — replace me', grades:[6,12],
+        html:'Placeholder for costume-shop safety content.' }
+    ]}
+];
+
+const SAFETY_QUESTIONS = [
+  /* SAMPLE — replace with real content */
+  { module:'general', grades:[6,12],
+    q:'SAMPLE: What should you do before crossing a dark stage?',
+    options:['Run quickly','Wait for your eyes to adjust and use running lights','Use your phone flashlight during a performance','Yell for the board op'],
+    answer:1, why:'Placeholder explanation shown after the quiz.' },
+  { module:'scenic', grades:[6,12],
+    q:'SAMPLE: Placeholder scene-shop question?',
+    options:['Wrong answer','Right answer','Wrong answer','Wrong answer'],
+    answer:1, why:'Placeholder explanation.' },
+  { module:'electrics', grades:[6,12],
+    q:'SAMPLE: Placeholder electrics question?',
+    options:['Right answer','Wrong answer','Wrong answer','Wrong answer'],
+    answer:0, why:'Placeholder explanation.' }
+];
+/* ═══════════════ end of content — framework below ═══════════════ */
+
+const $ = id => document.getElementById(id);
+const LS_KEY = 'sdscpa-safety-v1';
+const GRADE_KEY = 'sdscpa_grade';
+let state = { trained:{}, retrain:{}, passed:false };
+try{ state = Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY)) || {}); }catch(e){}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ── Grade selection (shared key with the Vocab Lab) ── */
+function grade(){ const g = parseInt(localStorage.getItem(GRADE_KEY)); return (g>=6 && g<=12) ? g : null; }
+function forGrade(items){ const g = grade() || 6; return items.filter(it => !it.grades || (g >= it.grades[0] && g <= it.grades[1])); }
+function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + grade() : 'Grade —'; }
+(function buildGradeGrid(){
+  for(let g=6; g<=12; g++){
+    const b = document.createElement('button');
+    b.textContent = g;
+    b.addEventListener('click', ()=>{
+      try{ localStorage.setItem(GRADE_KEY, String(g)); }catch(e){}
+      $('gradeWrap').classList.remove('open');
+      renderGradeBadge(); renderHome();
+    });
+    $('gradeGrid').appendChild(b);
+  }
+})();
+$('gradeBadge').addEventListener('click', ()=>$('gradeWrap').classList.add('open'));
+if(!grade()) $('gradeWrap').classList.add('open');
+renderGradeBadge();
+
+function show(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $(view).classList.add('active');
+}
+
+/* ── Home: module list + quiz gate ── */
+function modules(){ return forGrade(SAFETY_MODULES); }
+function questions(){ return forGrade(SAFETY_QUESTIONS).filter(q => modules().some(m => m.id === q.module)); }
+function allTrained(){ return modules().every(m => state.trained[m.id] && !state.retrain[m.id]); }
+function renderHome(){
+  const list = $('modList');
+  list.innerHTML = '';
+  modules().forEach(m=>{
+    const trained = state.trained[m.id] && !state.retrain[m.id];
+    const retrain = !!state.retrain[m.id];
+    const div = document.createElement('div');
+    div.className = 'mod';
+    div.innerHTML = '<div class="ic">' + m.icon + '</div>' +
+      '<div class="mt"><b>' + m.title + '</b><span>' + m.blurb + '</span></div>' +
+      '<span class="chip ' + (retrain ? 'retrain' : trained ? 'done' : 'todo') + '">' +
+        (retrain ? '⚠ Retrain' : trained ? '✓ Trained' : 'Not started') + '</span>' +
+      '<button class="' + (retrain ? 'again' : '') + '">' + (trained ? 'Review' : retrain ? 'Retrain' : 'Start') + '</button>';
+    div.querySelector('button').addEventListener('click', ()=>startTraining(m.id));
+    list.appendChild(div);
+  });
+  const ready = allTrained() && questions().length > 0;
+  $('quizStartBtn').disabled = !ready;
+  $('gateNote').textContent = state.passed
+    ? '✓ Passed! You can retake the quiz any time to re-download your certificate.'
+    : ready ? '' :
+      Object.keys(state.retrain).length ? 'Retrain the ⚠ modules above to unlock the quiz again.'
+      : 'Finish every module above to unlock the quiz.';
+}
+
+/* ── Training stepper ── */
+let tr = null;
+function startTraining(modId){
+  const m = modules().find(x=>x.id===modId);
+  if(!m) return;
+  tr = { m, sections: forGrade(m.sections), at:0 };
+  renderTrain();
+  show('viewTrain');
+}
+function renderTrain(){
+  const s = tr.sections[tr.at];
+  $('trStep').textContent = tr.m.title + ' — ' + (tr.at+1) + ' / ' + tr.sections.length;
+  $('trTitle').textContent = s.title;
+  $('trBody').innerHTML = s.html;
+  $('trBack').textContent = tr.at === 0 ? '‹ All modules' : '‹ Back';
+  $('trNext').textContent = tr.at === tr.sections.length-1 ? 'Finish module ✓' : 'Next ›';
+  $('trDots').innerHTML = tr.sections.map((_,i)=>'<i class="'+(i<=tr.at?'on':'')+'"></i>').join('');
+}
+$('trBack').addEventListener('click', ()=>{
+  if(tr.at === 0){ show('viewHome'); renderHome(); return; }
+  tr.at--; renderTrain();
+});
+$('trNext').addEventListener('click', ()=>{
+  if(tr.at < tr.sections.length-1){ tr.at++; renderTrain(); return; }
+  state.trained[tr.m.id] = true;
+  delete state.retrain[tr.m.id];
+  save();
+  show('viewHome'); renderHome();
+});
+
+/* ── Quiz: 100% or retrain the missed modules ── */
+let quiz = null;
+$('quizStartBtn').addEventListener('click', ()=>{
+  quiz = { qs: questions().sort(()=>Math.random()-.5), at:0, wrong:[] };
+  renderQuestion();
+  show('viewQuiz');
+});
+function renderQuestion(){
+  const card = $('qCard');
+  if(quiz.at >= quiz.qs.length){ return finishQuiz(); }
+  const q = quiz.qs[quiz.at];
+  card.innerHTML = '<div class="q-n">Question ' + (quiz.at+1) + ' of ' + quiz.qs.length + '</div>' +
+    '<h2>' + q.q + '</h2>' +
+    q.options.map((o,i)=>'<button class="q-opt" data-i="'+i+'">'+o+'</button>').join('');
+  card.querySelectorAll('.q-opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(Number(btn.dataset.i) !== q.answer) quiz.wrong.push(q);
+      quiz.at++; renderQuestion();
+    });
+  });
+}
+function finishQuiz(){
+  const card = $('qCard');
+  if(quiz.wrong.length === 0){
+    state.passed = true; save();
+    card.innerHTML = '<div class="result-ok"><b>💯 100% — that\'s the only passing grade in safety.</b><br><br>' +
+      'Download your certificate and submit it to your teacher.</div>' +
+      '<button class="primary-btn" id="backHomeBtn">Back to modules</button>';
+    if(window.SDSCPA){
+      SDSCPA.markDone('safety', { score:100, grade: grade() });
+      SDSCPA.certificateDialog({
+        heading:'Safety training complete!',
+        lab:'Safety Lab',
+        line:'passed the full theatre safety quiz with a perfect score (grade ' + grade() + ' level)',
+        stats:[['SCORE','100%','#22c55e'], ['QUESTIONS', quiz.qs.length, '#3b82f6'], ['GRADE', grade(), '#fbbf24']],
+        file:'SDSCPA-Safety-Certificate'
+      });
+    }
+  } else {
+    const mods = [...new Set(quiz.wrong.map(q=>q.module))];
+    mods.forEach(id=>{ state.retrain[id] = true; });
+    save();
+    const modTitle = id => (SAFETY_MODULES.find(m=>m.id===id)||{}).title || id;
+    card.innerHTML = '<div class="result-bad"><b>' + (quiz.qs.length - quiz.wrong.length) + ' / ' + quiz.qs.length +
+      ' — close, but safety needs 100%.</b><br>You missed questions on:' +
+      '<ul>' + quiz.wrong.map(q=>'<li><b>' + modTitle(q.module) + '</b>' + (q.why ? ' — ' + q.why : '') + '</li>').join('') + '</ul>' +
+      'Those modules are now marked <b>⚠ Retrain</b>. Go through them again, then retake the quiz.</div>' +
+      '<button class="primary-btn" id="backHomeBtn">Retrain now</button>';
+  }
+  card.querySelector('#backHomeBtn').addEventListener('click', ()=>{ show('viewHome'); renderHome(); });
+}
+
+renderHome();
+</script>
+</body>
+</html>
