@@ -121,7 +121,9 @@
 
   <div class="view active" id="viewHome">
     <h1>📚 Theatre Vocabulary</h1>
-    <p class="sub">Pick a discipline, then learn the words the way that works for you — read the list, drill flash cards, or test yourself.</p>
+    <p class="sub">Learn the words for your grade the way that works for you — read the list, drill flash cards, or test yourself. Start with this year's new words, or review everything you've learned so far.</p>
+    <div class="sec-label">Word set</div>
+    <div class="disc-grid" id="scopeGrid"></div>
     <div class="sec-label">Discipline</div>
     <div class="disc-grid" id="discGrid"></div>
     <div class="sec-label">How do you want to learn?</div>
@@ -467,7 +469,7 @@ const QUIZ_LENGTH = 10;   // questions per practice quiz (or fewer if the pool i
 const $ = id => document.getElementById(id);
 const GRADE_KEY = 'sdscpa_grade';
 const PREF_KEY = 'sdscpa-vocab-prefs-v1';
-let prefs = { discipline:'all' };
+let prefs = { discipline:'all', scope:'grade' };   // scope: 'grade' = this year's new words, 'all' = cumulative bank
 try{ prefs = Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY)) || {}); }catch(e){}
 function savePrefs(){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }catch(e){} }
 
@@ -480,7 +482,7 @@ function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + 
     b.addEventListener('click', ()=>{
       try{ localStorage.setItem(GRADE_KEY, String(g)); }catch(e){}
       $('gradeWrap').classList.remove('open');
-      renderGradeBadge(); renderDiscGrid();
+      renderGradeBadge(); renderScopeGrid(); renderDiscGrid();
     });
     $('gradeGrid').appendChild(b);
   }
@@ -489,10 +491,16 @@ $('gradeBadge').addEventListener('click', ()=>$('gradeWrap').classList.add('open
 if(!grade()) $('gradeWrap').classList.add('open');
 renderGradeBadge();
 
+/* A term is introduced at t.grades[0] and reinforced through t.grades[1].
+   'grade' scope = only the words introduced at MY grade; 'all' = every
+   word my grade is responsible for (cumulative). */
+function inScope(t, g){
+  return prefs.scope === 'grade' ? t.grades[0] === g
+       : (g >= t.grades[0] && g <= t.grades[1]);
+}
 function pool(){
   const g = grade() || 6;
-  return VOCAB.filter(t =>
-    (g >= t.grades[0] && g <= t.grades[1]) &&
+  return VOCAB.filter(t => inScope(t, g) &&
     (prefs.discipline === 'all' || t.discipline === prefs.discipline));
 }
 function discLabel(id){ return id === 'all' ? 'All disciplines' : (DISCIPLINES.find(d=>d.id===id)||{}).label || id; }
@@ -504,11 +512,29 @@ function show(view){
 }
 $('homeBtn').addEventListener('click', ()=>show('viewHome'));
 
+/* ── Word-set toggle: this year's new words vs the cumulative bank ── */
+function renderScopeGrid(){
+  const g = grade() || 6;
+  const nNew = VOCAB.filter(t => t.grades[0] === g).length;
+  const nAll = VOCAB.filter(t => g >= t.grades[0] && g <= t.grades[1]).length;
+  const grid = $('scopeGrid');
+  grid.innerHTML = '';
+  [ {id:'grade', label:'🆕 Grade ' + g + ' words', n:nNew},
+    {id:'all',   label:'📚 Everything so far',     n:nAll} ].forEach(s=>{
+    const b = document.createElement('button');
+    b.className = prefs.scope === s.id ? 'on' : '';
+    b.innerHTML = s.label + ' <span class="n">· ' + s.n + '</span>';
+    b.addEventListener('click', ()=>{ prefs.scope = s.id; savePrefs(); renderScopeGrid(); renderDiscGrid(); });
+    grid.appendChild(b);
+  });
+}
+renderScopeGrid();
+
 /* ── Discipline chips ── */
 function renderDiscGrid(){
   const g = grade() || 6;
   const counts = {};
-  VOCAB.forEach(t=>{ if(g >= t.grades[0] && g <= t.grades[1]) counts[t.discipline] = (counts[t.discipline]||0)+1; });
+  VOCAB.forEach(t=>{ if(inScope(t, g)) counts[t.discipline] = (counts[t.discipline]||0)+1; });
   const total = Object.values(counts).reduce((a,b)=>a+b,0);
   const grid = $('discGrid');
   grid.innerHTML = '';
@@ -589,10 +615,13 @@ function renderQuestion(){
   const card = $('qCard');
   if(quiz.at >= quiz.qs.length) return finishQuiz();
   const q = quiz.qs[quiz.at];
-  const all = pool();
-  const options = [q].concat(
-    all.filter(t=>t!==q).sort(()=>Math.random()-.5).slice(0,3)
-  ).sort(()=>Math.random()-.5);
+  // distractors come from the current pool; if it's too small (a narrow
+  // discipline in 'this year' scope), top up from the full grade bank
+  const g = grade() || 6;
+  const others = pool().filter(t=>t!==q).sort(()=>Math.random()-.5);
+  const extra = VOCAB.filter(t => t!==q && !others.includes(t) &&
+    g >= t.grades[0] && g <= t.grades[1]).sort(()=>Math.random()-.5);
+  const options = [q].concat(others.concat(extra).slice(0,3)).sort(()=>Math.random()-.5);
   card.innerHTML = '<div class="q-n">' + (quiz.at+1) + ' / ' + quiz.qs.length + ' · ' + discLabel(prefs.discipline) + '</div>' +
     '<h2>“' + q.def + '”</h2>' +
     options.map((o,i)=>'<button class="q-opt" data-i="'+i+'">'+o.term+'</button>').join('') +
