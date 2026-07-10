@@ -47,6 +47,9 @@
   .mod button{background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;padding:8px 14px;cursor:pointer;white-space:nowrap}
   .mod button:hover{filter:brightness(1.15)}
   .mod button.again{background:var(--amber);color:#0a0a0a}
+  .day-label{font-size:10.5px;font-weight:800;letter-spacing:1.4px;color:var(--text-dim);text-transform:uppercase;margin:20px 0 9px}
+  #modList .day-label:first-child{margin-top:0}
+  .mod .mins{color:var(--text-dim);font-weight:600;white-space:nowrap}
 
   #quizGate{background:var(--ui-dark2);border:1px solid var(--red);border-radius:12px;padding:18px;margin-top:22px}
   #quizGate h2{font-size:15px;margin-bottom:6px}
@@ -147,11 +150,11 @@
 
   <div class="view active" id="viewHome">
     <h1>🦺 Theatre Safety Training</h1>
-    <p class="sub">Work through every discipline's safety module, then take the quiz. <b>100% is required</b> — in a real shop, "mostly safe" isn't safe. Miss a question and you'll retrain on that topic before trying again.</p>
+    <p class="sub">This is your first-week shop certification — about an hour a day, all week. You train on <b>everything you're expected to know at your grade level</b>: the core safety rules plus the specifics of every tool you've learned, this year <b>and</b> in past years. <b>100% is required</b> on the quiz — in a real shop, "mostly safe" isn't safe. Miss a question and you'll retrain on that topic before trying again.</p>
     <div id="modList"></div>
     <div id="quizGate">
-      <h2>🧯 Safety Quiz</h2>
-      <p>Answer every question correctly to earn your safety certificate. Download it and submit it to your teacher.</p>
+      <h2>🧯 Day 5 — Certification Quiz</h2>
+      <p>The quiz covers <b>everything</b> in your modules — every rule and every tool, from this year and every year before. Answer every question correctly to earn your safety certificate. Download it and submit it to your teacher.</p>
       <button id="quizStartBtn" disabled>Take the safety quiz</button>
       <div class="gate-note" id="gateNote"></div>
     </div>
@@ -191,14 +194,19 @@
    Level" (Tech Theatre Skill & Concept Matrix, Grades 6–12, aligned
    to the CA AED Model Curriculum Standards).
 
-   Expectations are CUMULATIVE: each grade reinforces everything from
-   earlier grades and adds new competencies. Proficiency levels:
-   Introduce (gr 6-7) → Develop (gr 8-9) → Master (gr 10-12).
+   This is the FIRST-WEEK LAB: students train and certify on
+   EVERYTHING they are expected to know at their grade level —
+   the core rules plus per-tool specifics for every tool learned
+   this year and in all previous years. Content is CUMULATIVE:
+   a section introduced at grade G carries grades:[G,12], so a
+   grade-10 student retrains the grade-6 fundamentals too. The one
+   exception is the "Your Tools This Year" module, whose per-grade
+   screens are intentionally grade-specific.
 
-   Every module, section, and question carries a `grades:[min,max]`
-   range; students only see items covering their grade. The same
-   topic is worded differently per grade band with non-overlapping
-   ranges.
+   Pacing: the home screen spreads modules across Days 1-4;
+   Day 5 is the certification quiz. Grade 12 ≈ 3h of screens plus
+   a ~43-question quiz; younger grades scale down with their
+   smaller tool set.
 
    module:  { id, icon, title, blurb, grades, sections:[...], }
    section: one training screen; interactive types gate the Next
@@ -217,12 +225,15 @@
      must retrain before retaking the quiz.
    ═══════════════════════════════════════════════════════════════════ */
 const SAFETY_MODULES = [
-  { id:'shop', icon:'🦺', title:'Shop Safety & PPE', blurb:'Hazards, personal protective equipment, callouts, and safety culture.', grades:[6,12],
+
+  /* ────────────────── 1 · SHOP SAFETY & PPE ────────────────── */
+  { id:'shop', icon:'🦺', title:'Shop Safety & PPE', blurb:'Hazards, personal protective equipment, callouts, emergencies, and safety culture.', grades:[6,12],
     sections:[
-      /* Introduce — grades 6-7 */
-      { title:'Know your hazards', grades:[6,7],
+      { title:'Welcome to certification week', grades:[6,12],
+        html:'This week you earn your <b>shop certification</b> — proof that you know every rule and every tool you’re responsible for at your grade level, including everything from past years.<br><br>Plan on about <b>an hour a day</b>: Days 1–4 are training modules, Day 5 is the certification quiz. The quiz needs <b>100%</b> — and anything you miss sends you back to retrain that module. That’s not punishment; it’s how real shops qualify people.' },
+      { title:'Know your hazards', grades:[6,12],
         html:'A theatre shop is full of things that can hurt you if you don’t see them coming: <b>sharp tools and blades</b>, <b>things falling from above</b>, <b>dust in the air</b>, <b>loud noise</b>, and <b>cords, lumber, and clutter you can trip over</b>.<br><br>Your first safety skill is simple: <b>look around and name the hazards</b> before you start any task. If you can’t name what could go wrong, you’re not ready to start.' },
-      { type:'find', title:'Spot the hazards', grades:[6,7],
+      { type:'find', title:'Spot the hazards', grades:[6,12],
         prompt:'Time to use that skill. Look around this shop and <b>tap everything that’s a hazard</b> — there are <b>5</b>.',
         items:[
           { icon:'🔌', label:'Extension cord run across the walkway', hazard:true,  why:'Trip hazard — cords get routed out of walking paths.' },
@@ -234,7 +245,7 @@ const SAFETY_MODULES = [
           { icon:'🧯', label:'Fire extinguisher on its wall hook',    hazard:false, why:'visible and ready — just right.' },
           { icon:'🧹', label:'Swept floor, broom racked',             hazard:false, why:'good housekeeping is what prevents hazards.' }
         ]},
-      { type:'sort', title:'Pick the right PPE', grades:[6,7],
+      { type:'sort', title:'Pick the right PPE', grades:[6,12],
         prompt:'PPE is the gear that protects your body: 👓 <b>safety glasses</b> for your eyes, 🎧 <b>hearing protection</b> for loud noise, 😮‍💨 <b>dust protection</b> for fine dust in the air.<br>For each task, pick the PPE it calls for:',
         buckets:['👓 Safety glasses','🎧 Hearing','😮‍💨 Dust'],
         items:[
@@ -243,14 +254,16 @@ const SAFETY_MODULES = [
           { label:'The miter saw will be running all period',    bucket:1, why:'Loud tools running near you call for hearing protection.' },
           { label:'Chipping old paint off stage hardware',       bucket:0, why:'Flying chips go straight for the eyes.' }
         ]},
-      { type:'pick', title:'Callouts', grades:[6,7],
+      { type:'pick', title:'Callouts', grades:[6,12],
         prompt:'Shops use short <b>callouts</b> so everyone knows what’s happening around them — and you stop and listen whenever you hear one.<br><br>You’re about to carry a 12-foot board across the shop, behind two classmates. What do you do?',
         options:['Walk quietly so you don’t distract them','Call it out so everyone knows you’re coming through','Wait until the shop is completely empty','Carry it faster so it’s over sooner'],
         answer:1, why:'A callout tells everyone around you what’s happening — that’s how a busy shop stays safe.' },
-      /* Develop — grades 8-9 */
-      { title:'PPE without reminders', grades:[8,9],
+      { title:'Emergencies & injuries', grades:[6,12],
+        html:'Know these before you touch a single tool:<br><br>🚪 <b>Exits stay clear</b> and you know where they are.<br>🧯 <b>Know where the fire extinguisher and first-aid kit live.</b><br>🛑 If anyone yells <b>“STOP”</b> or <b>“HOLD”</b>, all work stops instantly — no questions, hands off, tools down.<br>🩹 <b>Every injury gets reported to the teacher — no matter how small.</b> A tiny cut in a dusty shop gets infected; a “small” incident often means a hazard that will hurt the next person worse.' },
+      /* Develop — grades 8+ */
+      { title:'PPE without reminders', grades:[8,12],
         html:'You’ve been introduced to PPE — now the bar is higher: <b>select and wear the correct PPE for the task without being reminded</b>.<br><br>Safety glasses for cutting and drilling, hearing protection around loud tools, dust protection when sanding. Nobody should ever have to tell you. If you’re reaching for a tool, you’ve already reached for your PPE.' },
-      { type:'sort', title:'Pre-use check: good to go, or report it?', grades:[8,9],
+      { type:'sort', title:'Pre-use check: good to go, or report it?', grades:[8,12],
         prompt:'Before using any tool you do a <b>pre-use safety check</b> — and anything unsafe gets <b>reported</b>, even if it isn’t yours. Sort each finding:',
         buckets:['✅ Good to go','⚠️ Report it'],
         items:[
@@ -260,7 +273,7 @@ const SAFETY_MODULES = [
           { label:'Work area clear, stock supported on both sides',  bucket:0, why:'That’s a pre-use check passing.' },
           { label:'Someone left a puddle of paint by the bench',     bucket:1, why:'Unsafe conditions get reported even when they aren’t yours.' }
         ]},
-      /* Master — grades 10-12 */
+      /* Master — grades 10+ */
       { title:'Model safe work — independently', grades:[10,12],
         html:'At your level, safety isn’t something done <i>to</i> you — it’s something you <b>model</b>. You’re expected to work safely <b>without supervision</b>, hold <b>all your tool safety qualifications</b>, and <b>anticipate hazards before they occur</b> instead of reacting after.<br><br>Ask yourself before every task: <b>what’s the most likely way this goes wrong, and what am I doing about it right now?</b>' },
       { type:'pick', title:'You are the safety culture', grades:[10,12],
@@ -269,13 +282,13 @@ const SAFETY_MODULES = [
         answer:2, why:'You help maintain the safety culture — that means speaking up before something happens, not after.' }
     ]},
 
-  { id:'tools', icon:'🧰', title:'Your Tools This Year', blurb:'The tools and equipment you are cleared to use at your grade level.', grades:[6,12],
-    /* Tools are cumulative: once a grade qualifies on a tool, students
-       keep using it in later grades. Each section lists what is new or
-       in active use for that grade.
-       NOTE — Sound equipment (mixer/console, mics, speakers, XLR/TRS
-       cabling, QLab) is defined in the matrix but not yet assigned to
-       grades (TBD); add it here once sound skills are scheduled. */
+  /* ────────────────── 2 · YOUR TOOLS THIS YEAR ──────────────────
+     Intentionally grade-specific: each grade sees what is NEW for
+     them; the per-tool modules below cover the cumulative specifics.
+     NOTE — Sound equipment (mixer/console, mics, speakers, XLR/TRS
+     cabling, QLab) is defined in the matrix but not yet assigned to
+     grades (TBD); add it here once sound skills are scheduled. */
+  { id:'tools', icon:'🧰', title:'Your Tools This Year', blurb:'What’s new for you this year — and everything you carry forward.', grades:[6,12],
     sections:[
       { title:'Grade 6 — Intro to Tech Theatre', grades:[6,6],
         html:'This year you work with:<br><br>🔧 <b>Hand & measuring tools</b> — tape measure, marking & layout tools; <b>utility knife</b> for cardboard scoring and cutting (props).<br>💡 <b>Lighting</b> — Source Four (ERS) with C-clamp, safety cable & wrench; ETC Eos console (basic).<br>🧵 <b>Costume</b> — needle & thread (hand sewing).<br><br><b>No power tools this year.</b> Power tools start in Grade 8, after safety orientation.' },
@@ -321,27 +334,91 @@ const SAFETY_MODULES = [
           { label:'Band saw',         bucket:1, why:'New this year — safety orientation, then direct supervision at first.' }
         ]},
       { title:'Grade 11 — Design & Management', grades:[11,11],
-        html:'Focus shifts to design and console work:<br><br>💡 <b>ETC Eos console</b> — patching & programming.<br>🖥 <b>Design software</b> — Vectorworks/CAD, Photoshop — and drafting tools.<br><br><b>No new shop power tools this year.</b> You apply the tools you previously qualified on, as needed, and are expected to work safely in any shop you enter.' },
+        html:'Focus shifts to design and console work:<br><br>💡 <b>ETC Eos console</b> — patching & programming.<br>🖥 <b>Design software</b> — Vectorworks/CAD, Photoshop — and drafting tools.<br><br><b>No new shop power tools this year.</b> You apply the tools you previously qualified on, as needed, and are expected to work safely in any shop you enter — which is why this week still retrains you on all of them.' },
       { title:'Grade 12 — Capstone', grades:[12,12],
-        html:'You use the <b>full tool set of your chosen discipline</b> — scenic, lighting, sound, costume, props, or management — <b>independently, at an industry-entry level</b>.<br><br>No new tools are introduced. You are responsible for the safe setup and operation of everything you touch, throughout your capstone project.' },
+        html:'You use the <b>full tool set of your chosen discipline</b> — scenic, lighting, sound, costume, props, or management — <b>independently, at an industry-entry level</b>.<br><br>No new tools are introduced. You are responsible for the safe setup and operation of everything you touch, throughout your capstone project — which is why this week retrains you on all of it.' },
       { type:'pick', title:'Working on qualification', grades:[11,12],
         prompt:'No new shop tools are introduced at your level. A project needs a cut on the table saw — you qualified on it in Tech 3-4. What applies?',
         options:['You can’t touch shop tools any more','You apply your previous qualification and work safely, like in any shop you enter','You must retake the Grade 8 orientations first','Only the teacher may make cuts now'],
         answer:1, why:'Grades 11-12 apply previously qualified tools as needed — and are expected to work safely and independently in any shop.' }
     ]},
 
-  { id:'power', icon:'🪚', title:'Power & Pneumatic Tools', blurb:'Jigsaw, miter saw, panel saw, drivers, sanders, staplers & nailers.', grades:[8,12],
+  /* ────────────────── 3 · HAND TOOLS & KNIVES ────────────────── */
+  { id:'hand', icon:'🔪', title:'Hand Tools & Knives', blurb:'Tape measure, utility knife, hammer, screwdrivers, hand saw — the tools everything else is built on.', grades:[6,12],
+    sections:[
+      { title:'Measuring & layout tools', grades:[6,12],
+        html:'Even “safe” tools have rules:<br><br>📏 <b>Tape measure</b> — control the blade on the way back in; a spring-loaded steel edge returning at full speed can cut. Watch the hook edge on long pulls.<br>✏️ <b>Marking & layout tools</b> — carry pointed tools (awls, compasses, pencils) <b>tip-down</b>, and never walk with them in a pocket point-up.<br>🧰 Every tool goes <b>back to its rack</b> when you set it down — a bench you can’t see the surface of is a bench hiding a blade.' },
+      { title:'Utility knife', grades:[6,12],
+        html:'The tool you’ll use most, and the one that sends the most people to the first-aid kit:<br><br>• <b>A sharp blade is safer than a dull one</b> — it needs less force, so it slips less. Swap dull blades.<br>• <b>Cut away from your body</b> — and away from the hand bracing the work. Ask: “if this slips, where does the blade finish?”<br>• Cut on a <b>mat or scrap</b>, never on the bare table or your knee.<br>• <b>Retract the blade the second you stop cutting.</b> No exceptions.<br>• Pass it <b>handle-first</b>, blade retracted. Used snap-off blades go in the taped sharps container, never loose in the trash.' },
+      { type:'pick', title:'Utility knife check', grades:[6,12],
+        prompt:'Your utility knife is dull and tearing the cardboard instead of cutting it. What do you do?',
+        options:['Push harder to get through','Retract, swap in a fresh blade, keep working','Angle the blade sideways for a better bite','Warm up the blade so it cuts smoother'],
+        answer:1, why:'A sharp blade needs less force, so it slips less — a dull blade plus extra force is how hands get cut.' },
+      { title:'Hammer, screwdrivers & hand saw', grades:[8,12],
+        html:'🔨 <b>Hammer</b> — check the head is tight before swinging; clear your swing arc (people <i>and</i> your other hand); start nails with a light tap, fingers gone before the real swing.<br><br>🪛 <b>Screwdrivers</b> — use the right size tip so it doesn’t cam out; never drive toward your palm or hold the work in your hand; a screwdriver is <b>not a chisel or a pry bar</b> — tips snap and hands slip.<br><br>🪚 <b>Hand saw</b> — start the kerf with short, light strokes; keep your free hand clear of the cut line; support the off-cut so it doesn’t tear free at the end.' },
+      { type:'sort', title:'Hand-tool habits', grades:[8,12],
+        prompt:'Sort each habit:',
+        buckets:['✅ Safe habit','🚫 Bad habit'],
+        items:[
+          { label:'Passing a knife handle-first, blade retracted',   bucket:0, why:'The next hand should never meet an edge.' },
+          { label:'Using a screwdriver as a pry bar',                bucket:1, why:'Wrong tool — tips snap and hands slip. Get the pry bar.' },
+          { label:'Carrying pointed tools tip-down',                 bucket:0, why:'A trip with a tip-up awl is a bad day.' },
+          { label:'Cutting toward the hand bracing the work',        bucket:1, why:'If it slips, the blade finishes where your hand is.' },
+          { label:'Racking a tool the moment you’re done with it',   bucket:0, why:'A clear bench is a safe bench.' }
+        ]},
+      { type:'order', title:'Make a hand-saw cut — in order', grades:[8,12],
+        prompt:'Put a clean, safe hand-saw cut in order. <b>Tap the first step, then the next…</b>',
+        steps:[
+          'Mark the line and check the stock for nails or staples',
+          'Clamp or brace the stock so it can’t shift',
+          'Start the kerf with short, light strokes',
+          'Saw with long, easy strokes — let the teeth work',
+          'Support the off-cut so the end doesn’t tear free'
+        ]}
+    ]},
+
+  /* ────────────────── 4 · COSTUME & CRAFT TOOLS ────────────────── */
+  { id:'costume', icon:'🧵', title:'Costume & Craft Tools', blurb:'Needles, pins, shears, the sewing machine, and the hot-wire foam knife.', grades:[6,12],
+    sections:[
+      { title:'Needles, pins & hand sewing', grades:[6,12],
+        html:'Small tools, real rules:<br><br>🪡 <b>Count your needles and pins out — and back in.</b> A lost pin ends up in a costume, a couch, or a foot.<br>🧲 Pins live in a <b>pincushion or magnetic tray</b> — never in your lips, never in your clothes.<br>🗑 Broken needles and bent pins get <b>taped and binned</b>, not tossed loose.<br>✂️ Anything sharp gets passed <b>handle-first</b>.' },
+      { title:'Scissors & pattern tools', grades:[7,12],
+        html:'✂️ <b>Fabric shears are seriously sharp</b> — that’s the point.<br><br>• Carry them <b>closed, point-down</b>. Never run — it’s a cliché because it’s true.<br>• Pass them <b>handle-first</b>.<br>• Cut <b>on the table</b>, fabric flat, free hand behind the blades — not in the air toward yourself.<br>• Fabric shears cut fabric <b>only</b>: paper and cardboard dull them into tools that slip.' },
+      { type:'sort', title:'At the sewing bench', grades:[6,12],
+        prompt:'Sort each habit at the sewing bench:',
+        buckets:['✅ Safe','🚫 Not safe'],
+        items:[
+          { label:'Pins parked in a magnetic tray',                 bucket:0, why:'Contained and countable.' },
+          { label:'Holding pins in your lips during a fitting',     bucket:1, why:'One breath, one bump — and it’s in your mouth.' },
+          { label:'Broken needle taped before it goes in the bin',  bucket:0, why:'No surprises for whoever empties the trash.' },
+          { label:'Handing shears to a friend point-first',         bucket:1, why:'Handle-first, always.' },
+          { label:'Counting pins back in at the end of the call',   bucket:0, why:'A missing pin is a costume hazard.' }
+        ]},
+      { title:'Sewing machine', grades:[9,12],
+        html:'The machine drives a needle up and down faster than you can react — respect the zone around it:<br><br>• <b>Fingers stay a needle-width away</b> — guide fabric from the sides, never push it from directly in front of the needle.<br>• <b>No loose sleeves, jewelry, or hair</b> near the needle and handwheel.<br>• Control speed with the pedal — <b>start slow</b>; speed is earned, not assumed.<br>• <b>Power off (or unplug) before changing the needle</b> or working close to it.<br>• Let the machine <b>stop completely</b> before reaching in to pull threads or fabric.' },
+      { type:'pick', title:'Sewing machine check', grades:[9,12],
+        prompt:'The needle on your machine is bent and needs changing. First move?',
+        options:['Change it quickly while the machine idles','Power off or unplug the machine before touching the needle','Turn the handwheel with your finger near the needle to check it first','Speed the pedal to snap the needle out'],
+        answer:1, why:'A pedal bump with your fingers at the needle is exactly how sewing-machine injuries happen — kill the power first.' },
+      { title:'Hot-wire foam knife', grades:[9,12],
+        html:'It doesn’t look dangerous — it’s a wire. But it cuts by <b>heat</b>:<br><br>🔥 The wire <b>burns skin instantly</b> and <b>stays hot after you switch it off</b> — it rests on its stand until cool.<br>☠️ <b>Only cut approved foam</b> (polystyrene). Unknown foams and polyurethane can release <b>toxic fumes</b> when hot. If you don’t know what the foam is, you don’t cut it.<br>🌬 Cut with <b>ventilation on</b>, away from anything flammable.<br>🩹 A burn gets cool water and gets <b>reported</b> — like every injury.' },
+      { type:'pick', title:'Hot-wire check', grades:[9,12],
+        prompt:'A scrap of foam with no label shows up in the bin, and it would be perfect for your prop. Hot-wire it?',
+        options:['Yes — foam is foam','Yes, but do it fast to limit fumes','No — unknown foam can release toxic fumes; only approved foam gets cut','Only if you wear safety glasses'],
+        answer:2, why:'Heat plus mystery plastic is a chemistry experiment nobody signed up for — approved foam only, with ventilation.' }
+    ]},
+
+  /* ────────────────── 5 · POWER TOOL BASICS ────────────────── */
+  { id:'power', icon:'⚡', title:'Power Tool Basics', blurb:'The rules that cover every power and pneumatic tool, and your path to qualification.', grades:[8,12],
     sections:[
       { title:'Rules that never change', grades:[8,12],
         html:'For every power and pneumatic tool, at every grade level:<br><br>• <b>Guards stay on and working.</b> A tool with a faulty guard doesn’t get used — it gets reported.<br>• <b>PPE first</b> — safety glasses always; hearing and dust protection as the task demands.<br>• <b>Correct body position</b> — balanced stance, hands clear of the cut line, never reaching across a blade.<br>• <b>Disconnect power or air before adjusting</b> — blade changes, depth settings, or clearing jams happen only on a dead tool.' },
-      /* Grade 8 — safety orientation, direct supervision */
-      { title:'Safety orientation first', grades:[8,8],
-        html:'This year you must <b>pass a safety orientation for each tool</b> before using it: <b>jigsaw, compound miter saw, panel saw, impact driver, random orbital sander, narrow crown stapler, and framing nailer</b>.<br><br>After orientation you perform <b>fundamental operations under direct supervision</b> — straight cuts and crosscuts, driving fasteners, sanding flat stock — using guards and correct body position, every time.' },
-      /* Grade 9 — general supervision */
-      { title:'Working with general supervision', grades:[9,9],
-        html:'You now <b>set up and operate each tool with general supervision</b> — the teacher is in the shop, not at your elbow. You’re expected to produce <b>accurate cuts and secure assemblies</b>.<br><br>You’re also expected to <b>recognize and report</b> problems yourself: a dull blade burning the cut, low air pressure on a pneumatic tool, or any unsafe condition. Noticing is now part of your qualification.' },
-      { type:'order', title:'Set up a cut — in order', grades:[8,9],
-        prompt:'Put the steps of a safe cut in order. <b>Tap the first step, then the next…</b>',
+      { title:'Your path: orientation → supervision → independence', grades:[8,12],
+        html:'Qualification is a ladder, and every tool has its own rung:<br><br>1️⃣ <b>Safety orientation</b> (Grade 8) — you pass an orientation for each tool, then perform fundamental operations <b>under direct supervision</b>: straight cuts, crosscuts, driving fasteners, sanding flat stock.<br>2️⃣ <b>General supervision</b> (Grade 9) — you set up and operate each tool with the teacher in the shop, not at your elbow, producing accurate cuts and secure assemblies.<br>3️⃣ <b>Independent qualification</b> (Grade 10+) — you pass an independent-use qualification per tool, handle routine adjustments yourself, and help train peers.<br><br>Grade level alone never qualifies you — <b>passing the orientation or qualification for that specific tool does</b>.' },
+      { title:'Notice and report', grades:[9,12],
+        html:'From Grade 9 on, <b>noticing problems is part of your qualification</b>:<br><br>• A blade that <b>burns the wood or cuts slowly</b> is dull — stop and report it.<br>• A pneumatic tool that <b>sputters or double-fires</b> may have low or wrong air pressure — stop and report it.<br>• Anything loose, cracked, wobbling, or smelling hot — <b>stop and report it</b>.<br><br>You are not “bothering the teacher.” You are doing the job.' },
+      { type:'order', title:'Set up a cut — in order', grades:[8,12],
+        prompt:'Put the steps of a safe power-tool cut in order. <b>Tap the first step, then the next…</b>',
         steps:[
           'Put on your PPE',
           'Check guards, blade, and cord or hose',
@@ -349,9 +426,12 @@ const SAFETY_MODULES = [
           'Make the cut with correct body position',
           'Let the blade stop completely before reaching in'
         ]},
-      /* Grades 10-12 — independent qualification */
-      { title:'Independent qualification', grades:[10,12],
-        html:'You must <b>pass an independent-use qualification on each Grade 8-9 tool</b>. Once qualified, you work accurately <b>without direct supervision</b> and perform routine adjustments yourself — <b>blade changes, depth settings, air pressure</b> — always with the tool disconnected first.<br><br>You’re also expected to <b>assist in training peers</b>: demonstrating correct technique is proof you actually own it.' },
+      { title:'Pneumatic power: the air rules', grades:[8,12],
+        html:'The stapler and nailer run on compressed air, which adds rules of their own:<br><br>• <b>Treat every air tool as loaded.</b> Finger off the trigger until the nose is on the work.<br>• <b>Never point one at anyone</b> — including yourself. Ever. Even “empty.”<br>• <b>Disconnect the air line</b> before clearing a jam, adjusting, or handing it over.<br>• Use the tool’s <b>correct air pressure</b> — too high blows fasteners through the work; too low jams and double-fires.<br>• Hoses get routed <b>out of walkways</b>, like every cord.' },
+      { type:'pick', title:'Jammed nailer', grades:[8,12],
+        prompt:'The framing nailer jams mid-wall. Before you touch the jam, you…',
+        options:['Shake the nailer to free it','Disconnect the air line','Squeeze the trigger a few times to clear it','Pry at the jam with the nailer still connected'],
+        answer:1, why:'A jammed nailer that clears itself while connected fires — disconnect the air before your fingers go anywhere near it.' },
       { type:'order', title:'Blade change — in order', grades:[10,12],
         prompt:'You’re qualified for routine adjustments now. Put a safe blade change in order. <b>Tap the first step, then the next…</b>',
         steps:[
@@ -363,10 +443,74 @@ const SAFETY_MODULES = [
         ]}
     ]},
 
-  { id:'stationary', icon:'⚙️', title:'Stationary Machines', blurb:'Table saw, palm router, band saw — orientation, guards, and kickback.', grades:[10,12],
+  /* ────────────────── 6 · POWER SAWS ────────────────── */
+  { id:'saws', icon:'🪚', title:'Power Saws: Jigsaw, Miter, Panel', blurb:'Tool-by-tool specifics for the three saws you qualified on in Stagecraft.', grades:[8,12],
     sections:[
-      { title:'Table saw, palm router, band saw', grades:[10,12],
-        html:'These machines are introduced in Tech 3-4 and each requires its own <b>safety orientation</b> before use. After orientation you perform fundamental operations <b>under direct supervision</b>.<br><br>Non-negotiables: <b>guards in place</b>, <b>push sticks</b> for narrow stock, <b>featherboards</b> to hold work against the fence or table, and <b>correct body position</b> at all times.' },
+      { title:'Jigsaw', grades:[8,12],
+        html:'The curve-cutter. Its specifics:<br><br>• <b>Clamp your stock</b> — small pieces walk with the blade and take fingers along.<br>• <b>Base plate flat</b> on the work before you pull the trigger.<br>• <b>Know what’s under the cut</b> — the blade sticks out below the stock. Nothing under the line: not the bench edge, not the cord, not your hand.<br>• <b>Let the blade stop before lifting the saw</b> out of the cut.<br>• Forcing the cut bends and snaps blades — <b>let the blade do the work</b>. Unplug to change blades.' },
+      { title:'Compound miter saw', grades:[8,12],
+        html:'The crosscut machine. Its specifics:<br><br>• <b>Stock tight against the fence</b> — always. A gap lets the blade grab and slam the stock.<br>• Hands outside the <b>no-hand zone</b> (at least 6 inches from the blade path). <b>Never cross your arms</b> — left hand holding the right side of the blade is how people meet the blade.<br>• <b>Full speed before the cut</b> — let it spin up, then bring it down smoothly.<br>• After the cut, <b>keep the blade down until it stops</b> — a spinning blade coming up can grab the off-cut and throw it.<br>• <b>Support long stock</b> on both ends; never balance it.' },
+      { type:'pick', title:'Miter saw check', grades:[8,12],
+        prompt:'You just finished a cut on the miter saw. When do you raise the blade?',
+        options:['Immediately — the cut is done','After the blade has stopped spinning','Once the off-cut falls clear','After you pull the stock away'],
+        answer:1, why:'A spinning blade coming up can catch the off-cut and throw it — the blade stays down until it stops.' },
+      { title:'Panel saw', grades:[8,12],
+        html:'The sheet-goods saw. Its specifics:<br><br>• <b>Seat the sheet fully on the rollers/rails</b> before cutting — a cocked sheet binds the blade.<br>• <b>Both hands on the carriage handle.</b> Never steady the sheet with a hand near the cut line.<br>• Let the carriage <b>return home</b> before touching anything.<br>• <b>Mind the off-cut</b> — full sheets are heavy, and freed panels pinch fingers and toes. Get help catching big pieces.' },
+      { type:'sort', title:'Which saw for the job?', grades:[8,12],
+        prompt:'Choosing the right saw is a safety skill — the wrong tool fights you. Match each cut to its saw:',
+        buckets:['Jigsaw','Miter saw','Panel saw'],
+        items:[
+          { label:'A curved edge in 1/4-inch plywood',      bucket:0, why:'The jigsaw is the curve cutter.' },
+          { label:'Crosscut a 2×4 to length',               bucket:1, why:'Fast, square crosscuts are the miter saw’s whole job.' },
+          { label:'Break down a full 4×8 sheet of luan',    bucket:2, why:'Full sheets go on the panel saw, supported on the rails.' },
+          { label:'A 45° angle on door trim',               bucket:1, why:'It’s called a miter saw for a reason.' },
+          { label:'Cut a porthole circle in a flat',        bucket:0, why:'Interior curves: drill a starter hole, then jigsaw.' }
+        ]},
+      { type:'find', title:'Spot what’s wrong: the cutting station', grades:[8,12],
+        prompt:'Walk the saw stations and <b>tap the 4 problems</b>.',
+        items:[
+          { icon:'🪵', label:'Small block held by hand for a jigsaw cut',      hazard:true,  why:'Clamp small pieces — they walk, and fingers follow.' },
+          { icon:'✋', label:'Fingers inside the miter saw’s no-hand zone',    hazard:true,  why:'Six inches minimum from the blade path, always.' },
+          { icon:'🔌', label:'Blade change with the saw still plugged in',     hazard:true,  why:'Adjustments happen on dead tools only.' },
+          { icon:'🙌', label:'One hand steadying the sheet near the cut line', hazard:true,  why:'On the panel saw both hands stay on the carriage handle.' },
+          { icon:'🗜️', label:'Stock clamped tight to the bench',              hazard:false, why:'exactly right — clamped stock can’t walk.' },
+          { icon:'🥽', label:'Everyone at the station in safety glasses',      hazard:false, why:'PPE without reminders — that’s the standard.' },
+          { icon:'🧹', label:'Off-cuts cleared between cuts',                  hazard:false, why:'a clear station is a safe station.' }
+        ]}
+    ]},
+
+  /* ────────────────── 7 · DRIVERS, SANDERS & NAILERS ────────────────── */
+  { id:'drivers', icon:'🔩', title:'Drivers, Sanders & Nailers', blurb:'Impact driver, random orbital sander, narrow crown stapler, and framing nailer.', grades:[8,12],
+    sections:[
+      { title:'Impact driver', grades:[8,12],
+        html:'Small tool, huge torque. Its specifics:<br><br>• <b>Seat the bit fully</b> in the screw head before pulling the trigger — a half-seated bit cams out and skates.<br>• <b>Hand off the fastener line.</b> When the bit slips, it goes exactly where your hand was going to be.<br>• <b>Start slow</b> to set the threads, then run it home.<br>• <b>Brace small work</b> — the driver will happily spin the workpiece instead of the screw.<br>• Eye protection: screw heads <b>snap</b> and bits shatter.' },
+      { title:'Random orbital sander', grades:[8,12],
+        html:'The dust machine. Its specifics:<br><br>• <b>Dust protection on, dust collection attached</b> — fine dust is the hazard you can’t see hurting you.<br>• <b>Don’t press.</b> The tool’s weight is enough; leaning on it burns the paper, scorches the stock, and stalls the pad.<br>• <b>Let the pad stop before you set it down</b> — a live sander walks off the bench.<br>• <b>Secure small pieces</b>; the sander is strong enough to launch them.<br>• Keep the <b>cord behind the tool</b>, never under the pad.' },
+      { title:'Stapler & framing nailer', grades:[8,12],
+        html:'You learned the air rules in Power Tool Basics — here are the gun-specific ones:<br><br>• The <b>contact safety tip</b> on the nose is what stops accidental fires. It is <b>never held down, taped, or bypassed</b>. Never.<br>• <b>Sequential fire</b>: nose on the work first, then the trigger.<br>• <b>Hands at least a hand-span from the fire line.</b> Staples and nails follow the grain and deflect off knots — they can exit the wood <b>sideways</b>.<br>• The framing nailer <b>recoils</b> — grip it, expect it.<br>• Carry with your <b>finger off the trigger</b>; disconnect air to clear jams or hand it off.' },
+      { type:'pick', title:'Nailer check', grades:[8,12],
+        prompt:'Your palm is bracing a stud about 2 inches from where you’re about to shoot a nail. Fire?',
+        options:['Yes — the nail goes straight down','Yes, if you use a shorter nail','No — move your hand first; nails deflect along grain and knots and can exit sideways','No — you should hold the stud closer to the nail for control'],
+        answer:2, why:'Nails follow the grain and bounce off knots — a hand-span of clearance from the fire line, minimum.' },
+      { type:'sort', title:'Driver & sander habits', grades:[8,12],
+        prompt:'Sort each habit:',
+        buckets:['✅ Safe','🚫 Unsafe'],
+        items:[
+          { label:'Letting the sander pad stop before setting it down', bucket:0, why:'A live pad walks the sander right off the bench.' },
+          { label:'Pressing down hard to sand faster',                  bucket:1, why:'The tool’s weight is enough — pressing burns paper and stock.' },
+          { label:'Seating the bit fully before pulling the trigger',   bucket:0, why:'A seated bit doesn’t cam out and skate.' },
+          { label:'Holding a small block in one hand while driving into it', bucket:1, why:'Brace or clamp it — the driver will spin the block, not the screw.' },
+          { label:'Dust collection hooked up before sanding starts',    bucket:0, why:'The dust you don’t breathe is the point.' }
+        ]}
+    ]},
+
+  /* ────────────────── 8 · STATIONARY MACHINES ────────────────── */
+  { id:'stationary', icon:'⚙️', title:'Stationary Machines', blurb:'Table saw, band saw, and palm router — tool-by-tool specifics.', grades:[10,12],
+    sections:[
+      { title:'Table saw — setup', grades:[10,12],
+        html:'The most powerful — and least forgiving — machine in the shop. Each stationary machine requires its own <b>safety orientation</b>, then fundamental operations <b>under direct supervision</b>.<br><br>Setup non-negotiables:<br>• <b>Blade height</b>: teeth just clear the top of the stock — a tall blade exposes more steel for no benefit.<br>• <b>Guard and riving knife in place.</b><br>• <b>Rip fence for rips, miter gauge for crosscuts — never both together.</b> Trapping stock between them binds the off-cut and fires it back at you.<br>• <b>Push sticks and featherboards within reach before you start.</b>' },
+      { title:'Kickback & body position', grades:[10,12],
+        html:'The table saw’s biggest danger is <b>kickback</b> — the blade grabbing stock and throwing it back at operator speed.<br><br>Defend against it: stand <b>to the side of the blade, never directly behind the stock</b>; keep stock tight against the <b>rip fence</b>; never cut freehand; use a <b>push stick</b> the moment your hand would come near the blade; and let the blade stop completely before reaching for anything.' },
       { type:'find', title:'Spot what’s wrong at the table saw', grades:[10,12],
         prompt:'A classmate is about to rip a board. <b>Tap the 4 problems</b> before they start the cut.',
         items:[
@@ -378,16 +522,61 @@ const SAFETY_MODULES = [
           { icon:'🪶', label:'Featherboard clamped to hold the stock',    hazard:false, why:'that’s good pressure toward the fence.' },
           { icon:'🥽', label:'Operator wearing safety glasses',           hazard:false, why:'PPE is on — good.' }
         ]},
-      { title:'Kickback & body position', grades:[10,12],
-        html:'The table saw’s biggest danger is <b>kickback</b> — the blade grabbing stock and throwing it back at operator speed.<br><br>Defend against it: stand <b>to the side of the blade, never directly behind the stock</b>; keep stock tight against the <b>rip fence</b>; never cut freehand; use a <b>push stick</b> the moment your hand would come near the blade; and let the blade stop completely before reaching for anything.' }
+      { type:'order', title:'Rip cut on the table saw — in order', grades:[10,12],
+        prompt:'Put a safe rip cut in order. <b>Tap the first step, then the next…</b>',
+        steps:[
+          'Set blade height — teeth just above the stock',
+          'Lock the rip fence at the cut width',
+          'Check the guard and riving knife are in place',
+          'Feed the stock tight against the fence',
+          'Finish the narrow end with a push stick',
+          'Let the blade stop before collecting the pieces'
+        ]},
+      { title:'Band saw', grades:[10,12],
+        html:'The curve machine for thick stock. Its specifics:<br><br>• <b>Upper blade guide about 1/4 inch above the stock</b> — an exposed blade is a cutting hazard and snaps easier.<br>• <b>Hands to the sides of the cut line, never in line with the blade</b> — push from beside the line, not behind it.<br>• Plan tight curves with <b>relief cuts</b> so the blade doesn’t bind.<br>• <b>Never back out of a long curve with the blade running</b> — it pulls the blade off the wheels. Stop the saw first.<br>• Blade stopped completely before clearing scraps off the table.' },
+      { title:'Palm router', grades:[10,12],
+        html:'Small base, spinning cutter, strong opinions. Its specifics:<br><br>• <b>Bit tight and fully seated</b> (but not bottomed-out) in the collet — unplugged while you do it.<br>• <b>Feed against the bit’s rotation</b> — the correct direction lets you control the cut; feeding with the rotation lets the router yank itself along.<br>• <b>Full speed before contact</b>, then steady motion — pausing burns, forcing chatters.<br>• <b>Small pieces get clamped</b>, never hand-held under a router.<br>• Bits stay <b>hot</b> after cutting — let them cool before touching.' },
+      { type:'pick', title:'Band saw curve', grades:[10,12],
+        prompt:'Halfway through a long curve on the band saw, the blade starts to bind. You…',
+        options:['Back the stock out quickly while the blade runs','Push harder through the bind','Stop the saw, let the blade stop, then back the stock out','Twist the stock to free the blade'],
+        answer:2, why:'Backing out with the blade running pulls the blade off its wheels — stop the machine first.' }
     ]},
 
-  { id:'electrics', icon:'💡', title:'Lighting & Electrics', blurb:'Ladders, working at height, safety cables, and electrical hazards.', grades:[6,12],
+  /* ────────────────── 9 · PROPS FABRICATION EQUIPMENT ────────────────── */
+  { id:'props', icon:'🎭', title:'Props Fabrication Equipment', blurb:'3D printer, vacuum former, and casting & molding — heat and chemistry.', grades:[10,12],
     sections:[
-      /* Introduce — grades 6-7 */
-      { title:'Ladders & working at height', grades:[6,7],
+      { title:'3D printer', grades:[10,12],
+        html:'Slow, quiet, and hot:<br><br>🔥 The <b>nozzle runs at 200°C+</b> and the bed is hot too — hands out of the machine while it prints <b>and right after</b>.<br>🤖 <b>Don’t reach into the moving gantry</b> — pause the print first.<br>🌬 Print in the <b>ventilated space</b> — melting filament off-gasses.<br>✂️ Removing supports: <b>eye protection</b> — snipped support bits fly, and fresh edges are sharp.' },
+      { title:'Vacuum former', grades:[10,12],
+        html:'A heating element hot enough to sag plastic — treat it that way:<br><br>🔥 The <b>heater and every fresh pull are burn-hot</b>. Gloves, or wait.<br>🎭 <b>Never touch a sagging sheet</b> — hot plastic drapes onto skin and <b>sticks</b>. That’s a serious burn, instantly.<br>💇 Loose hair, sleeves, and lanyards stay away from the heater.<br>🔪 Trimming pulls uses your <b>utility-knife rules</b>: sharp blade, cut away, mat underneath.' },
+      { title:'Casting, molding & resin', grades:[10,12],
+        html:'The chemistry corner. Its specifics:<br><br>🧤 <b>Gloves and ventilation, every time.</b> Resins <b>sensitize</b> skin — each exposure makes the next reaction worse, and it’s permanent. “Just a little batch” counts.<br>🔥 Curing resin <b>generates heat</b> (exotherm) — large pours get genuinely hot; follow mix ratios and pour sizes.<br>🏷 <b>Label and lid everything.</b> Unlabeled chemicals are hazards twice: now and later.<br>🧽 Spills get cleaned <b>immediately</b>; no food or drink anywhere near the casting bench.' },
+      { type:'sort', title:'Hot — or safe to touch?', grades:[10,12],
+        prompt:'Props equipment punishes the casual grab. Sort each one:',
+        buckets:['🔥 Hot — hands off','✅ Safe to touch'],
+        items:[
+          { label:'Printer nozzle right after a print finishes',  bucket:0, why:'200°C+ and it looks exactly like a cold nozzle.' },
+          { label:'A vacuum-form pull fresh off the machine',     bucket:0, why:'Fresh pulls hold heat — gloves or wait.' },
+          { label:'A resin part that cured yesterday',            bucket:1, why:'Fully cured and cooled — fine.' },
+          { label:'Filament spools on the shelf',                 bucket:1, why:'Just plastic until it meets the nozzle.' },
+          { label:'The vac former’s heating element',             bucket:0, why:'The hottest thing in the props area.' }
+        ]},
+      { type:'pick', title:'Resin check', grades:[10,12],
+        prompt:'You’re mixing a tiny batch of resin — thirty seconds of work. Gloves are across the room. Skip them?',
+        options:['Yes — it’s a tiny batch','Yes, if you wash your hands right after','No — resins sensitize skin, and every exposure counts','Only skip them for clear resin'],
+        answer:2, why:'Sensitization is cumulative and permanent — the “quick batch” is exactly how it happens. Gloves every time.' }
+    ]},
+
+  /* ────────────────── 10 · LIGHTING & ELECTRICS ────────────────── */
+  { id:'electrics', icon:'💡', title:'Lighting & Electrics', blurb:'Ladders, safety cables, hot fixtures, cable care, and electrical hazards.', grades:[6,12],
+    sections:[
+      { title:'Ladders & working at height', grades:[6,12],
         html:'Know the <b>ladder and working-at-height rules</b> and be able to state them:<br><br>• A ladder is set on stable ground and steadied — never climbed alone in the shop.<br>• Keep <b>three points of contact</b> and never overreach; climb down and move the ladder instead.<br>• Nothing is carried up that can’t be carried safely; nothing gets dropped, ever.<br><br>Anyone working below wears the hazard in mind: <b>if work is happening overhead, stay clear or call it out.</b>' },
-      { type:'sort', title:'Hazard — or fine?', grades:[6,7],
+      { type:'pick', title:'Overhead work', grades:[6,12],
+        prompt:'A classmate is up the ladder focusing a light, and your fastest path to the prop table runs right under them. You…',
+        options:['Walk through quickly and quietly','Go around — or call out and wait for the all-clear','Toss them the wrench they asked for on the way','Steady the ladder as you pass'],
+        answer:1, why:'Dropped tools travel at ladder speed. Nobody stands or walks under overhead work without calling it.' },
+      { type:'sort', title:'Hazard — or fine?', grades:[6,12],
         prompt:'Every fixture you hang gets a <b>safety cable — always</b> (attached with supervision): it’s the backup that catches the fixture if the clamp fails. And you should be able to <b>spot electrical hazards</b> when you see them. Sort each of these:',
         buckets:['⚠️ Hazard','✅ Fine'],
         items:[
@@ -396,8 +585,7 @@ const SAFETY_MODULES = [
           { label:'Fixture with the C-clamp tight and safety cable attached', bucket:1, why:'Clamp plus safety cable — hung right.' },
           { label:'Cable coiled neatly with clean, intact connectors',        bucket:1, why:'That’s what ready-to-use looks like.' }
         ]},
-      /* Develop — grades 8-9 */
-      { type:'order', title:'Hang a fixture — in order', grades:[8,9],
+      { type:'order', title:'Hang a fixture — in order', grades:[8,12],
         prompt:'Put the steps of hanging a fixture in order. <b>Tap the first step, then the next…</b>',
         steps:[
           'Inspect the fixture and its cable',
@@ -406,9 +594,10 @@ const SAFETY_MODULES = [
           'Plug into the circuit',
           'Test it from the console'
         ]},
-      { title:'Inspect before you use', grades:[8,9],
+      { title:'Inspect before you use', grades:[8,12],
         html:'You now work <b>safely at height and around circuits with general supervision</b>. That comes with a duty: <b>inspect cables and fixtures before use</b> — cracked connectors, frayed jacket, loose clamp, missing safety cable.<br><br>And when you find a fault, <b>report it without prompting</b>. A damaged cable that goes back in the bin unfixed is a trap for the next person.' },
-      /* Master — grades 10-12 */
+      { title:'Hot fixtures & cable care', grades:[8,12],
+        html:'Two habits that separate electricians from casualties:<br><br>🔥 <b>Fixtures get burn-hot.</b> A Source Four that’s been on all rehearsal will blister skin — <b>gloves to refocus a hot fixture</b>, or kill it and let it cool.<br>🔌 <b>Cable is equipment, not rope</b>: coil it <b>over-under</b>, keep it out of walkways, never yank a connector out by the cable, and never run cable over sharp edges or through doorways that close.' },
       { title:'Work like a professional', grades:[10,12],
         html:'At this level you work at height and around power <b>independently and safely</b> — and you <b>model</b> the practices for everyone else: safety cable on every fixture, inspect before use, tag out and report faults immediately, never work an energized problem.<br><br>In Design & Management and Capstone work, you’re expected to bring these habits into <b>any</b> space you work in, without being told.' },
       { type:'pick', title:'The energized problem', grades:[10,12],
@@ -417,6 +606,7 @@ const SAFETY_MODULES = [
         answer:1, why:'You never work an energized problem — de-energize first, then handle it.' }
     ]},
 
+  /* ────────────────── 11 · RIGGING ────────────────── */
   { id:'rigging', icon:'⛓️', title:'Rigging Safety', blurb:'Wire rope, swaged terminations, and working load limits.', grades:[10,12],
     sections:[
       { title:'Wire rope & terminations', grades:[10,12],
@@ -438,11 +628,12 @@ const SAFETY_MODULES = [
         answer:2, why:'A rig is only as strong as its weakest piece — every component must stay within its own WLL.' }
     ]},
 
-  /* NOTE — the matrix defines Audio Safety (hearing conservation & SPL
-     awareness; safe handling and rigging of speakers) but its grade
-     placement is still TBD. Per the source doc's recommendation it is
-     included here as a station for all grades; re-range these sections
-     once the sound skills are scheduled. */
+  /* ────────────────── 12 · HEARING & AUDIO ──────────────────
+     NOTE — the matrix defines Audio Safety (hearing conservation &
+     SPL awareness; safe handling and rigging of speakers) but its
+     grade placement is still TBD. Per the source doc's
+     recommendation it is included as a station for all grades;
+     re-range these sections once the sound skills are scheduled. */
   { id:'audio', icon:'🔊', title:'Hearing & Audio Safety', blurb:'Hearing conservation, SPL awareness, and safe speaker handling.', grades:[6,12],
     sections:[
       { title:'Protect your hearing', grades:[6,12],
@@ -467,19 +658,23 @@ const SAFETY_MODULES = [
 
 const SAFETY_QUESTIONS = [
   /* ── Shop Safety & PPE ── */
-  { module:'shop', grades:[6,7],
+  { module:'shop', grades:[6,12],
     q:'A task is going to fill the air with fine dust. Which PPE does that call for?',
     options:['Hearing protection','Dust protection, like a dust mask','Just safety glasses','Gloves'],
     answer:1, why:'Dust protection is required whenever a task puts fine dust in the air; safety glasses and hearing protection guard against different hazards.' },
-  { module:'shop', grades:[6,7],
+  { module:'shop', grades:[6,12],
     q:'When do you need safety glasses in the shop?',
     options:['Only when you are the one using a tool','Only when the teacher says so','Any time work around you could send chips, dust, or debris toward your eyes','Never — glasses are only for power tools'],
     answer:2, why:'Safety glasses protect you from other people’s work too — you wear them whenever anything around you could reach your eyes.' },
-  { module:'shop', grades:[8,9],
+  { module:'shop', grades:[6,12],
+    q:'You get a small cut in the shop — barely bleeding. What do you do?',
+    options:['Wrap it yourself and keep working','Report it to the teacher, like every injury, no matter how small','Only report it if it needs stitches','Rinse it off and say nothing'],
+    answer:1, why:'Every injury gets reported — small cuts get infected in a dusty shop, and a “small” incident often points to a hazard that will hurt the next person worse.' },
+  { module:'shop', grades:[8,12],
     q:'Whose job is it to make sure you are wearing the right PPE before you start?',
     options:['The teacher’s — they will remind you','Yours — you select and wear correct PPE without reminders','Your work partner’s','The stage manager’s'],
     answer:1, why:'From Grade 8 on, choosing and wearing the correct PPE without being reminded is your responsibility.' },
-  { module:'shop', grades:[8,9],
+  { module:'shop', grades:[8,12],
     q:'You notice a tool with a cracked handle in the shop, but you weren’t planning to use it. What do you do?',
     options:['Leave it — it’s not your task','Put it back in the drawer','Report the unsafe condition right away','Try it first to confirm it’s broken'],
     answer:2, why:'Reporting unsafe conditions is part of your job at this level — a hazard you walk past becomes the next person’s injury.' },
@@ -488,7 +683,7 @@ const SAFETY_QUESTIONS = [
     options:['Nothing — supervising is the teacher’s job','Say something and help them do it right — you help maintain the safety culture','Look away so you aren’t a witness','Finish your own task first, then maybe mention it'],
     answer:1, why:'At the Master level you model safe habits and help maintain the shop’s safety culture with peers — that means speaking up before something happens.' },
 
-  /* ── Your Tools This Year ── */
+  /* ── Your Tools This Year (grade-specific by design) ── */
   { module:'tools', grades:[6,7],
     q:'Which of these are you cleared to use at your grade level?',
     options:['Jigsaw','Framing nailer','Utility knife for cardboard, with supervision','Table saw'],
@@ -502,15 +697,51 @@ const SAFETY_QUESTIONS = [
     options:['Table saw, palm router, and band saw','Jigsaw, impact driver, and sander','3D printer, vacuum former, and hot-wire knife','Miter saw, panel saw, and framing nailer'],
     answer:0, why:'The table saw, palm router, and band saw are new at Grade 10 and each requires a safety orientation with direct supervision at first.' },
 
-  /* ── Power & Pneumatic Tools ── */
-  { module:'power', grades:[8,9],
+  /* ── Hand Tools & Knives ── */
+  { module:'hand', grades:[6,12],
+    q:'Which utility-knife blade is safer?',
+    options:['A dull one — it cuts more slowly','A sharp one — it needs less force, so it slips less','They’re the same','Whichever one is already in the knife'],
+    answer:1, why:'Dull blades need force, and force is what slips — fresh, sharp blades are the safe ones.' },
+  { module:'hand', grades:[6,12],
+    q:'The moment you finish a utility-knife cut, you…',
+    options:['Set the knife down at the edge of the bench','Retract the blade','Hand it to whoever needs it next, blade out','Stick it into the bench top so it’s visible'],
+    answer:1, why:'The blade retracts the second the cut ends — an open blade on a bench is a hand injury waiting for its moment.' },
+  { module:'hand', grades:[8,12],
+    q:'Your screwdriver doesn’t fit a prying job, and the pry bar is across the shop. You…',
+    options:['Use the screwdriver — it’s basically the same shape','Use two screwdrivers for leverage','Walk over and get the pry bar','Hammer the screwdriver in deeper first'],
+    answer:2, why:'A screwdriver is not a chisel or pry bar — tips snap and hands slip. The right tool is always worth the walk.' },
+
+  /* ── Costume & Craft Tools ── */
+  { module:'costume', grades:[6,12],
+    q:'Where do pins live while you’re working?',
+    options:['In your lips, so they’re close','Pinned to your sleeve','In a pincushion or magnetic tray','Loose on the table, next to the fabric'],
+    answer:2, why:'Pins stay contained and countable — never in lips or clothes, and always counted back in at the end.' },
+  { module:'costume', grades:[9,12],
+    q:'Before changing a sewing-machine needle you…',
+    options:['Lower the presser foot','Power off or unplug the machine','Speed up the pedal to eject it','Just do it quickly between seams'],
+    answer:1, why:'A pedal bump with your fingers at the needle is exactly how machine injuries happen — kill the power first.' },
+  { module:'costume', grades:[9,12],
+    q:'The hot-wire foam knife may cut…',
+    options:['Any foam that fits on the table','Only approved foam (polystyrene), with ventilation on','Anything, if you work fast','Foam and thin plastic sheet'],
+    answer:1, why:'Unknown foams and polyurethane can release toxic fumes when hot — approved foam only, ventilated, away from flammables.' },
+
+  /* ── Power Tool Basics ── */
+  { module:'power', grades:[8,12],
     q:'The blade guard on the miter saw is sticking and won’t drop back over the blade. What do you do?',
     options:['Use the saw carefully and keep your fingers back','Tape the guard out of the way','Stop, don’t use the saw, and report it','Only make short cuts until it’s fixed'],
     answer:2, why:'A tool with a faulty guard never gets used — it gets reported and taken out of service.' },
-  { module:'power', grades:[8,9],
+  { module:'power', grades:[8,12],
     q:'The saw is cutting slowly and burning the wood. That most likely means…',
     options:['You should push harder','The blade is dull — stop and report it','The wood is too dry','That’s normal for plywood'],
     answer:1, why:'Burning and slow cutting are the signs of a dull blade. Recognizing and reporting dull blades, low air pressure, and unsafe conditions is part of your qualification.' },
+  { module:'power', grades:[8,12],
+    q:'Before clearing a jammed stapler or nailer, you always…',
+    options:['Point it at the floor and test-fire','Disconnect the air line','Shake it until the jam falls out','Squeeze the trigger while pulling the fastener'],
+    answer:1, why:'A jam that clears itself while connected fires — the air line comes off before fingers go near the nose.' },
+  { module:'power', grades:[8,12],
+    q:'When is it okay to hold down or bypass the contact safety tip on a nailer?',
+    options:['When you have a long row of nails to drive','When the wood is very hard','Never','When the teacher is watching'],
+    answer:2, why:'The contact tip is the one thing standing between you and an accidental fire — it is never bypassed, taped, or held down.' },
   { module:'power', grades:[10,12],
     q:'Before changing a blade or adjusting the cutting depth on a power tool, you must…',
     options:['Put on gloves','Lower the tool’s speed setting','Disconnect the power (or air supply) first','Ask a peer to watch'],
@@ -519,6 +750,38 @@ const SAFETY_QUESTIONS = [
     q:'Who may operate shop power tools without direct supervision?',
     options:['Anyone in Grade 10 or above','Students who have passed the independent-use qualification on that tool','Anyone who used the tool last year','Whoever the crew head picks that day'],
     answer:1, why:'Independent use requires passing the independent-use qualification on each specific tool — grade level alone doesn’t qualify you.' },
+
+  /* ── Power Saws ── */
+  { module:'saws', grades:[8,12],
+    q:'You need a jigsaw cut in a small block of wood. The block gets…',
+    options:['Held firmly in your other hand','Clamped to the bench','Braced against your leg','Held by a partner'],
+    answer:1, why:'Small pieces walk with the blade — and fingers follow. Clamp anything small.' },
+  { module:'saws', grades:[8,12],
+    q:'On the miter saw, your hands stay…',
+    options:['Wherever they’re comfortable','One on each side of the blade for balance','Outside the no-hand zone, with the stock tight against the fence','On top of the stock, close to the cut'],
+    answer:2, why:'At least six inches from the blade path, stock against the fence, and never cross-armed.' },
+  { module:'saws', grades:[8,12],
+    q:'After a miter-saw cut, you raise the blade…',
+    options:['Immediately, while it spins down','After the blade has completely stopped','As soon as the off-cut drops','While pulling the stock away with your other hand'],
+    answer:1, why:'A spinning blade coming up can grab the off-cut and throw it — blade down until it stops.' },
+  { module:'saws', grades:[8,12],
+    q:'On the panel saw, your hands belong…',
+    options:['On the carriage handle — not steadying the sheet near the cut line','One on the handle, one steadying the sheet by the blade','On the sheet, guiding it through the blade','Wherever keeps the sheet from wobbling'],
+    answer:0, why:'The sheet sits on the rails; your hands stay on the carriage. A steadying hand near the cut line is a hand in the blade’s path.' },
+
+  /* ── Drivers, Sanders & Nailers ── */
+  { module:'drivers', grades:[8,12],
+    q:'You’re about to drive a nail about 2 inches from the hand bracing the stud. You…',
+    options:['Fire — nails go straight','Use a shorter nail and fire','Move your hand a full hand-span clear first','Angle the nailer away from your hand slightly'],
+    answer:2, why:'Nails deflect along grain and off knots and can exit the wood sideways — clear the fire line before you shoot.' },
+  { module:'drivers', grades:[8,12],
+    q:'You finish sanding a panel. You set the sander down…',
+    options:['Immediately, pad-down','After the pad stops spinning','On its side while still running, to save time','On a soft surface while it spins down'],
+    answer:1, why:'A live pad walks the sander off the bench — let it stop first.' },
+  { module:'drivers', grades:[8,12],
+    q:'Driving a screw, the bit keeps slipping out of the head (cam-out). The fix is…',
+    options:['Push harder at an angle','Seat the correct-size bit fully in the head and start slow','Hold the screw steady with your fingers while driving','Switch to a longer screw'],
+    answer:1, why:'Cam-out comes from the wrong bit or a half-seated bit — and a skating bit lands wherever your hand is.' },
 
   /* ── Stationary Machines ── */
   { module:'stationary', grades:[10,12],
@@ -529,17 +792,39 @@ const SAFETY_QUESTIONS = [
     q:'Where do you stand while running stock through the table saw?',
     options:['Directly behind the stock so you can push in a straight line','To the side of the blade, out of the kickback line','Wherever you can see the blade best','On the outfeed side, pulling the stock through'],
     answer:1, why:'Kickback throws stock straight back along the blade line — you stand to the side so you’re never in its path.' },
+  { module:'stationary', grades:[10,12],
+    q:'Using the rip fence and the miter gauge at the same time is…',
+    options:['The most accurate setup','Fine for short stock','Never done — trapped stock binds and kicks back','Required for angled cuts'],
+    answer:2, why:'Stock trapped between fence and gauge binds against the blade and fires back — one guide at a time, always.' },
+  { module:'stationary', grades:[10,12],
+    q:'You need to back out of a long band-saw curve. You…',
+    options:['Back out slowly with the blade running','Stop the saw, let the blade stop, then back out','Speed up and finish the curve instead','Twist the stock to widen the kerf first'],
+    answer:1, why:'Backing out with the blade running pulls the blade off its wheels — stop the machine first.' },
+  { module:'stationary', grades:[10,12],
+    q:'With the palm router, you feed…',
+    options:['With the bit’s rotation — it pulls itself along nicely','Against the bit’s rotation, so you stay in control','In whichever direction feels smoother','Straight down only'],
+    answer:1, why:'Feeding against rotation keeps you in control; feeding with it lets the router yank itself — and your hands — along the edge.' },
+
+  /* ── Props Fabrication ── */
+  { module:'props', grades:[10,12],
+    q:'Mixing resin without gloves is…',
+    options:['Fine for small batches','Fine if you wash up right after','Never okay — resins sensitize skin, and every exposure counts','Only risky with polyester resins'],
+    answer:2, why:'Sensitization is cumulative and permanent — gloves and ventilation every time, no matter how small the batch.' },
+  { module:'props', grades:[10,12],
+    q:'A vacuum-form pull just came off the machine. It is…',
+    options:['Cool enough — plastic sheds heat fast','Hot — let it cool or use gloves before handling','Safe to touch at the edges only','Only hot if it looks shiny'],
+    answer:1, why:'Fresh pulls (and the heating element) hold serious heat — the casual grab is how props people get burned.' },
 
   /* ── Lighting & Electrics ── */
-  { module:'electrics', grades:[6,7],
+  { module:'electrics', grades:[6,12],
     q:'Every time you hang a lighting fixture on a pipe, you attach…',
     options:['A spare gel frame','A safety cable','An extra C-clamp','A label with your name'],
     answer:1, why:'The safety cable is the backup that catches the fixture if the clamp ever fails — it goes on every fixture, every time.' },
-  { module:'electrics', grades:[6,7],
+  { module:'electrics', grades:[6,12],
     q:'While working on a ladder, the pipe you need is just out of reach. You should…',
     options:['Lean out and stretch for it','Stand on the very top step','Climb down and move the ladder','Have someone toss you the wrench'],
     answer:2, why:'Never overreach on a ladder — keep three points of contact and move the ladder instead.' },
-  { module:'electrics', grades:[8,9],
+  { module:'electrics', grades:[8,12],
     q:'Before plugging in a stage cable, you…',
     options:['Inspect it for damage — connectors, jacket, kinks','Plug it in and see if it works','Shake it out to full length','Check the color of the tape on it'],
     answer:0, why:'Inspecting cables and fixtures before use is your responsibility now — faults get found before power goes through them.' },
@@ -547,6 +832,10 @@ const SAFETY_QUESTIONS = [
     q:'During focus you find a cable with a cracked connector. What do you do with it?',
     options:['Coil it back into the bin for later','Use it anyway if it still passes power','Tag it out, set it aside, and report it','Wrap the connector in gel and keep going'],
     answer:2, why:'Report faults without prompting — a damaged cable returned to stock unmarked is a trap for the next person who grabs it.' },
+  { module:'electrics', grades:[8,12],
+    q:'A fixture that’s been on all rehearsal needs refocusing. You…',
+    options:['Grab it quickly — brief contact is fine','Use gloves, or kill it and let it cool first','Blow on it for a few seconds first','Hold it by the gel frame instead'],
+    answer:1, why:'A fixture that’s been running is hot enough to blister skin — gloves for hot focus, or de-energize and wait.' },
 
   /* ── Rigging ── */
   { module:'rigging', grades:[10,12],
@@ -557,8 +846,12 @@ const SAFETY_QUESTIONS = [
     q:'A wire-rope termination is ready to take load when…',
     options:['The loop looks tight','It’s built to standard — thimble in the loop, sleeve properly swaged — and checked','It held a test pull by hand','Someone qualified built one like it before'],
     answer:1, why:'Terminations are built to standard and verified — a thimbled loop, a correctly swaged Nicopress sleeve, and a check with the gauge — before they ever carry load.' },
+  { module:'rigging', grades:[10,12],
+    q:'Your scenery weighs 190 lb and your wire rope is rated 200 lb WLL. Rig it?',
+    options:['Yes — 190 is under 200','Yes, if it’s only flown for one scene','No — that’s too close to the limit; leave real margin and consult on sizing up','Yes, if you add a second safety cable'],
+    answer:2, why:'You rig well under the WLL — the margin is the safety. A rig at 95% of its rating has none.' },
 
-  /* ── Hearing & Audio Safety ── */
+  /* ── Hearing & Audio ── */
   { module:'audio', grades:[6,12],
     q:'Hearing damage from loud sound is…',
     options:['Temporary — it heals in a few days','Only a risk for adults','Cumulative and permanent — it adds up and never heals','Only caused by music, not tools'],
@@ -606,22 +899,39 @@ function show(view){
 function modules(){ return forGrade(SAFETY_MODULES); }
 function questions(){ return forGrade(SAFETY_QUESTIONS).filter(q => modules().some(m => m.id === q.module)); }
 function allTrained(){ return modules().every(m => state.trained[m.id] && !state.retrain[m.id]); }
+function sectionMins(s){ return (!s.type || s.type === 'read') ? 2 : 3; }
+function moduleMins(m){ return forGrade(m.sections).reduce((t,s)=>t+sectionMins(s), 0); }
+function moduleCard(m){
+  const trained = state.trained[m.id] && !state.retrain[m.id];
+  const retrain = !!state.retrain[m.id];
+  const div = document.createElement('div');
+  div.className = 'mod';
+  div.innerHTML = '<div class="ic">' + m.icon + '</div>' +
+    '<div class="mt"><b>' + m.title + '</b><span>' + m.blurb + ' <span class="mins">· ≈' + moduleMins(m) + ' min</span></span></div>' +
+    '<span class="chip ' + (retrain ? 'retrain' : trained ? 'done' : 'todo') + '">' +
+      (retrain ? '⚠ Retrain' : trained ? '✓ Trained' : 'Not started') + '</span>' +
+    '<button class="' + (retrain ? 'again' : '') + '">' + (trained ? 'Review' : retrain ? 'Retrain' : 'Start') + '</button>';
+  div.querySelector('button').addEventListener('click', ()=>startTraining(m.id));
+  return div;
+}
 function renderHome(){
   const list = $('modList');
   list.innerHTML = '';
-  modules().forEach(m=>{
-    const trained = state.trained[m.id] && !state.retrain[m.id];
-    const retrain = !!state.retrain[m.id];
-    const div = document.createElement('div');
-    div.className = 'mod';
-    div.innerHTML = '<div class="ic">' + m.icon + '</div>' +
-      '<div class="mt"><b>' + m.title + '</b><span>' + m.blurb + '</span></div>' +
-      '<span class="chip ' + (retrain ? 'retrain' : trained ? 'done' : 'todo') + '">' +
-        (retrain ? '⚠ Retrain' : trained ? '✓ Trained' : 'Not started') + '</span>' +
-      '<button class="' + (retrain ? 'again' : '') + '">' + (trained ? 'Review' : retrain ? 'Retrain' : 'Start') + '</button>';
-    div.querySelector('button').addEventListener('click', ()=>startTraining(m.id));
-    list.appendChild(div);
-  });
+  const mods = modules();
+  // spread the modules across training days 1-4; day 5 is the quiz
+  const days = 4;
+  const base = Math.floor(mods.length/days), extra = mods.length % days;
+  let idx = 0;
+  for(let d = 0; d < days && idx < mods.length; d++){
+    const n = base + (d < extra ? 1 : 0);
+    if(!n) continue;
+    const lab = document.createElement('div');
+    lab.className = 'day-label';
+    lab.textContent = 'Day ' + (d+1);
+    list.appendChild(lab);
+    mods.slice(idx, idx+n).forEach(m=>list.appendChild(moduleCard(m)));
+    idx += n;
+  }
   const ready = allTrained() && questions().length > 0;
   $('quizStartBtn').disabled = !ready;
   $('gateNote').textContent = state.passed
