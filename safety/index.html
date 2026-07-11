@@ -154,7 +154,7 @@
     <div id="modList"></div>
     <div id="quizGate">
       <h2>🧯 Day 5 — Certification Quiz</h2>
-      <p>The quiz covers <b>everything</b> in your modules — every rule and every tool, from this year and every year before. Answer every question correctly to earn your safety certificate. Download it and submit it to your teacher.</p>
+      <p>The quiz covers <b>everything</b> in your modules — every rule and every tool, from this year and every year before. Answer every question correctly to earn your safety certificate. Download it, have your <b>parent/guardian sign it</b>, and submit it to your teacher — then complete your teacher's <b>hands-on demonstrations and guided practice</b> before using any equipment.</p>
       <button id="quizStartBtn" disabled>Take the safety quiz</button>
       <div class="gate-note" id="gateNote"></div>
     </div>
@@ -230,9 +230,11 @@ const SAFETY_MODULES = [
   { id:'shop', icon:'🦺', title:'Shop Safety & PPE', blurb:'Dress code, hazards, PPE, lifting, housekeeping, emergencies, and safety culture.', grades:[6,12],
     sections:[
       { title:'Welcome to certification week', grades:[6,12],
-        html:'This week you earn your <b>shop certification</b> — proof that you know every rule and every tool you’re responsible for at your grade level, including everything from past years.<br><br>Plan on about <b>45 minutes of training a day</b>: Days 1–4 are training modules, Day 5 is the certification quiz. The quiz needs <b>100%</b> — and anything you miss sends you back to retrain that module. That’s not punishment; it’s how real shops qualify people.' },
+        html:'This week you earn your <b>shop certification</b> — proof that you know every rule and every tool you’re responsible for at your grade level, including everything from past years.<br><br>Plan on about <b>45 minutes of training a day</b>: Days 1–4 are training modules, Day 5 is the certification quiz. The quiz needs <b>100%</b> — and anything you miss sends you back to retrain that module. That’s not punishment; it’s how real shops qualify people.<br><br>Passing this lab is <b>step one</b> of the district’s safety program. Before you operate anything, your teacher still gives you <b>hands-on demonstrations and a guided-practice sign-off</b> on each piece of equipment — and nothing in this shop is <b>ever operated without the instructor’s permission</b>.' },
+      { title:'Permission & attention', grades:[6,12],
+        html:'The rule the district prints in capital letters: <b>DO NOT OPERATE EQUIPMENT WITHOUT PERMISSION FROM THE INSTRUCTOR.</b> Not before class, not during, not after — safety instruction and the instructor’s go-ahead come first, every time.<br><br>🧠 <b>Keep your mind on the work.</b> A moment of lost attention is how serious accidents happen.<br>🎧 <b>No earbuds or headphones</b> in the work environment — they mask warnings, callouts, and the sound of a machine going wrong. (Production intercom during shows is the one exception, used with discipline.)<br>🙋 <b>When in doubt, ask the instructor</b> — not the student next to you.' },
       { title:'Dress for the shop', grades:[6,12],
-        html:'Shop safety starts before you touch a tool — with what you’re wearing:<br><br>👟 <b>Closed-toe shoes, every shop day.</b> No sandals, no slides, no exceptions — dropped lumber doesn’t care how careful you were.<br>💇 <b>Long hair tied back.</b> Hair near a spinning tool gets pulled in faster than you can react.<br>💍 <b>No dangling anything</b> — jewelry, hoodie strings, loose sleeves, lanyards. If it hangs, it catches.<br>🏃 <b>No running, no horseplay. Ever.</b> The shop is the one room where a joke shove can cost a finger.' },
+        html:'Shop safety starts before you touch a tool — with what you’re wearing:<br><br>👟 <b>Closed-toe shoes, every shop day.</b> No sandals, no slides, no exceptions — dropped lumber doesn’t care how careful you were.<br>💇 <b>Long hair tied back.</b> Hair near a spinning tool gets pulled in faster than you can react.<br>💍 <b>No dangling anything</b> — jewelry, hoodie strings, loose sleeves, lanyards. If it hangs, it catches.<br>👕 <b>Sleeves rolled above the elbows</b>, nothing loose at the wrists.<br>🧤 <b>Gloves only where the task calls for them</b> — rough lumber, hot fixtures, chemicals. Never around spinning blades or bits: a caught glove pulls the hand in with it.<br>🏃 <b>No running, no horseplay. Ever.</b> The shop is the one room where a joke shove can cost a finger.' },
       { title:'The shop map', grades:[6,7],
         html:'Learn the room before you work in it:<br><br>🧰 <b>The tool wall</b> — every tool has a home outline; empty outline = someone’s using it or it’s missing. Tools go back to their spot, not “somewhere close.”<br>🥽 <b>The PPE shelf</b> — glasses, hearing protection, dust masks. Grab yours on the way in.<br>🎨 <b>The paint sink</b> — brushes and hands get washed here, not in the drinking fountain.<br>🧑‍🏫 <b>The teacher’s station</b> — where you check in, check out, and bring every question and every injury.' },
       { type:'find', title:'Dress check', grades:[6,7],
@@ -278,13 +280,13 @@ const SAFETY_MODULES = [
         options:['Shove back — it’s just fun','Laugh it off and keep working','Step away, make it clear the shop is a no-horseplay zone, and tell the teacher if it continues','Wait until you’re both outside and settle it there'],
         answer:2, why:'Horseplay next to benches, blades, and lumber is how “just fun” becomes an injury report. It stops immediately, every time.' },
       { title:'Lifting & carrying', grades:[6,12],
-        html:'More shop injuries come from carrying than from cutting:<br><br>🦵 <b>Lift with your legs</b> — squat, hug the load close, stand. Your back is not a crane.<br>🤝 <b>Team-lift anything long or heavy</b>, and lift on a call: “ready — lift on three.” Same for setting down.<br>👀 Carrying long stock: <b>watch both ends</b>, keep the front end high, and call the corners (“coming around!”).<br>🧤 Gloves for rough lumber — splinters are the tax on bare hands.<br>🤏 Watch the <b>pinch points</b> when setting anything down: fingers out from under, always.' },
+        html:'More shop injuries come from carrying than from cutting:<br><br>🦵 <b>Lift with your legs</b> — squat, keep your back near-vertical, hug the load close, stand. Your back is not a crane.<br>⚖️ <b>Never lift more than you can handle easily — over about 25 pounds, get help.</b><br>🛣 <b>Clear your path before you pick anything up</b> — most carrying accidents are collisions with things left on the floor or hanging at head height.<br>🤝 <b>Team-lift anything long or heavy</b>, and lift on a call: “ready — lift on three.” Same for setting down.<br>👀 Carrying long stock: <b>watch both ends</b>, keep the front end high, and call the corners (“coming around!”).<br>🧤 Gloves for rough lumber — splinters are the tax on bare hands.<br>🤏 Watch the <b>pinch points</b> when setting anything down: fingers out from under, always.' },
       { type:'pick', title:'Setting the flat down', grades:[6,7],
         prompt:'You and a partner just carried a 4×8 flat across the shop. How does it go down?',
         options:['Whoever gets tired first lowers their end','Drop it the last few inches — flats are tough','Agree on the call — “set on three” — and lower it together, fingers clear','Lean it against the nearest wall quickly'],
         answer:2, why:'Uncoordinated set-downs pin fingers and drop corners on toes — the call is what keeps four hands safe.' },
       { title:'Housekeeping', grades:[6,7],
-        html:'A messy shop hurts people on a delay:<br><br>🧹 <b>Sweep as you go</b> — sawdust on a smooth floor is ice.<br>🪵 Scrap goes to the <b>scrap bin now</b>, not “after this cut.” A board with a nail in it never lies flat waiting for someone.<br>🔌 Cords and hoses <b>coiled and out of walkways</b> the moment you’re done.<br>⏱ The last <b>10 minutes of every work session is cleanup</b> — it’s part of the job, not extra credit.' },
+        html:'A messy shop hurts people on a delay:<br><br>🧹 <b>Sweep as you go</b> — sawdust on a smooth floor is ice.<br>🧴 <b>Clean up spills the moment they happen</b> — paint or water, a wet floor is ice too.<br>🪵 Scrap goes to the <b>scrap bin now</b>, not “after this cut.” A board with a nail in it never lies flat waiting for someone.<br>🔌 Cords and hoses <b>coiled and out of walkways</b> the moment you’re done.<br>⏱ The last <b>10 minutes of every work session is cleanup</b> — it’s part of the job, not extra credit.' },
       { type:'order', title:'End-of-class cleanup — in order', grades:[6,7],
         prompt:'Put the end-of-class routine in order. <b>Tap the first step, then the next…</b>',
         steps:[
@@ -295,7 +297,11 @@ const SAFETY_MODULES = [
           'Check out with the teacher'
         ]},
       { title:'Emergencies & injuries', grades:[6,12],
-        html:'Know these before you touch a single tool:<br><br>🚪 <b>Exits stay clear</b> and you know where they are.<br>🧯 <b>Know where the fire extinguisher and first-aid kit live.</b><br>🛑 If anyone yells <b>“STOP”</b> or <b>“HOLD”</b>, all work stops instantly — no questions, hands off, tools down.<br>🩹 <b>Every injury gets reported to the teacher — no matter how small.</b> A tiny cut in a dusty shop gets infected; a “small” incident often means a hazard that will hurt the next person worse.' },
+        html:'Know these before you touch a single tool:<br><br>🛑 If anyone yells <b>“STOP”</b> or <b>“HOLD”</b>, all work stops instantly — no questions, hands off, tools down.<br>🩹 <b>Every injury gets reported to the teacher immediately — no matter how slight — and an incident report is filed.</b> A tiny cut in a dusty shop gets infected; a “small” incident often means a hazard that will hurt the next person worse.<br>🧰 Know where the <b>first-aid kit</b> lives.<br>🔥 Fire gets its own full module — alarms, exits, extinguisher classes, and how to report one.' },
+      { type:'pick', title:'Reaching for high places', grades:[6,7],
+        prompt:'The gaff tape lives on the top shelf, just out of reach. What do you climb?',
+        options:['The nearest chair','A stepladder','A stack of sturdy boxes','The lower shelves, carefully'],
+        answer:1, why:'Chairs, boxes, and shelving aren’t made to be climbed — the stepladder is. Reaching high places is its whole job.' },
       { title:'What supervision means', grades:[6,7],
         html:'You’ll hear two phrases all through tech theatre:<br><br>👁 <b>Direct supervision</b> — the teacher is <i>at your side</i>, watching the task. This is how every new tool starts.<br>🏫 <b>General supervision</b> — the teacher is in the shop, and you’re trusted to run what you’re qualified on.<br><br>At your grade, work is closely supervised — and that’s a resource, not a leash. <b>Asking early is a skill.</b> The students who ask questions are the ones who get qualified on more tools, sooner.' },
       /* Develop — grades 8+ */
@@ -317,6 +323,8 @@ const SAFETY_MODULES = [
         prompt:'You’re covered in sawdust after sanding, and the compressor hose is right there. Blow yourself off?',
         options:['Sure — quick and effective','Yes, but keep it away from your face','Never — compressed air drives debris into skin and eyes and fills the room with the dust you just avoided breathing','Only below the waist'],
         answer:2, why:'Compressed air can inject debris through skin and lofts fine dust straight into the air — brush off, or use the vacuum.' },
+      { title:'Chemicals, SDS & the eyewash station', grades:[8,12],
+        html:'Paint, adhesives, solvents, and fog fluid are chemicals — and every chemical in the shop has a <b>Safety Data Sheet (SDS)</b>:<br><br>📒 The <b>SDS binder</b> lists each product’s hazards, handling rules, and first aid. Know where it lives.<br>🏷 Chemicals stay in <b>labeled, closed containers</b> — never in mystery cups or water bottles.<br>🧤 <b>Rubber gloves</b> are the exception to the no-gloves rule: wear them for stains, resins, and bleaches (never around spinning machines).<br>🚿 Know where the <b>eyewash station</b> is <i>before</i> you need it — you won’t be able to look for it with chemicals in your eyes.' },
       /* Master — grades 10+ */
       { title:'Model safe work — independently', grades:[10,12],
         html:'At your level, safety isn’t something done <i>to</i> you — it’s something you <b>model</b>. You’re expected to work safely <b>without supervision</b>, hold <b>all your tool safety qualifications</b>, and <b>anticipate hazards before they occur</b> instead of reacting after.<br><br>Ask yourself before every task: <b>what’s the most likely way this goes wrong, and what am I doing about it right now?</b>' },
@@ -324,6 +332,33 @@ const SAFETY_MODULES = [
         prompt:'Younger students learn shop safety mostly by watching <b>you</b> — and never let “we’re in a hurry” beat “we do it safely.”<br><br>A younger student picks up the impact driver without safety glasses on. The teacher is across the shop. What does the shop expect of you?',
         options:['Nothing — supervising is the teacher’s job','Move away so you’re not involved','Step in, stop them kindly, and help them do it right','Mention it to the teacher after class'],
         answer:2, why:'You help maintain the safety culture — that means speaking up before something happens, not after.' }
+    ]},
+
+  /* ────────────────── 1b · FIRE SAFETY & EMERGENCIES ──────────────────
+     District safety Module 4 (fire precautions & emergencies). */
+  { id:'fire', icon:'🔥', title:'Fire Safety & Emergencies', blurb:'Alarms, exits, extinguisher classes, reporting a fire, and flammable storage.', grades:[6,12],
+    sections:[
+      { title:'Alarms, drills & exits', grades:[6,12],
+        html:'Fire safety starts before there’s ever a fire:<br><br>🔔 Know the <b>fire bell/alarm</b> and the <b>fire-drill procedure</b> for the shop and the theatre.<br>🚪 Know <b>every fire-exit location</b> — and keep <b>all exits and corridors clear at all times</b>. In an evacuation, a blocked hallway costs lives, not minutes.<br>🧯 Know the <b>types and locations of the fire extinguishers</b> in your space — before you need them.' },
+      { title:'Reporting a fire', grades:[6,12],
+        html:'If you discover a fire:<br><br>🗣 <b>Immediately notify the closest adult</b> with the <b>exact location</b> and the <b>nature of the fire</b> (what’s burning).<br>🙅 <b>Do NOT shout “Fire!”</b> — panic in a crowded theatre is its own disaster; information moves faster than fear.<br>🧯 If someone’s <b>clothing catches fire: smother the flames</b> — get them down and roll them in a blanket if one is close.' },
+      { title:'Fire classes & extinguishers', grades:[6,12],
+        html:'Extinguishers match the fire — the wrong one can make it worse:<br><br>🅰️ <b>Class A</b> — wood, paper, cloth. Water or CO₂ works.<br>🅱️ <b>Class B</b> — flammable liquids (paint thinner, solvents). <b>Smother it</b>: foam or CO₂. Water spreads it.<br>⚡ <b>Class C</b> — electrical equipment. <b>Non-conducting only</b>: CO₂ or dry powder. <b>Never water</b> — electricity travels up the stream to you.' },
+      { type:'sort', title:'Pick the extinguisher', grades:[6,12],
+        prompt:'Match the fire to the response:',
+        buckets:['💧 Water works (Class A)','🧯 CO₂ / dry powder only'],
+        items:[
+          { label:'Scrap lumber and paper burning in the bin',       bucket:0, why:'Class A — ordinary combustibles; water or CO₂.' },
+          { label:'A dimmer rack sparking and smoking',              bucket:1, why:'Class C electrical — non-conducting extinguisher, never water.' },
+          { label:'Spilled paint thinner catches fire',              bucket:1, why:'Class B flammable liquid — smother with foam or CO₂; water spreads it.' },
+          { label:'Muslin scraps smoldering in the paint corner',    bucket:0, why:'Class A — cloth burns like paper.' }
+        ]},
+      { type:'pick', title:'You spot smoke', grades:[6,12],
+        prompt:'You smell smoke and find a small fire behind the scene shop. What do you do first?',
+        options:['Shout “Fire!” so everyone hears','Notify the closest adult with the exact location and what’s burning','Find a bucket of water','Investigate how it started'],
+        answer:1, why:'Exact location and the nature of the fire, to the nearest adult, immediately — and never a panic shout.' },
+      { title:'Flammables, rags & finishes', grades:[8,12],
+        html:'The scene shop makes its own fire hazards:<br><br>🪣 Rags soaked with finish, stain, or solvent go in a <b>covered metal container</b> — oily rags in a pile can <b>self-ignite</b>. That’s not a myth; it’s chemistry.<br>🌬 Use finishes and solvents only in <b>well-ventilated areas, away from open flame</b> and heat.<br>💡 Keep <b>flammable items away from lighting instruments</b> — and instruments away from soft goods, paper, and scenery that could cook against a hot fixture.<br>🎇 Pyrotechnics, flame effects, and prop firearms are <b>never student-operated</b> — district approval and the fire marshal come first, every time.' }
     ]},
 
   /* ────────────────── 2 · YOUR TOOLS THIS YEAR ──────────────────
@@ -716,6 +751,8 @@ const SAFETY_MODULES = [
         html:'Your first lighting tools are hardware — and hardware has rules:<br><br>🔧 The <b>wrench fits the bolt snugly</b> — an adjustable wrench gets set tight; a loose fit rounds the bolt and skins knuckles.<br>🔩 Tighten the C-clamp <b>snug, not gorilla-tight</b> — over-torquing cracks clamps and pipes.<br>🪢 At height, the wrench is <b>tethered or in a closed pocket</b> — a dropped wrench from the grid is a missile with your name on the incident report.<br>🛟 The <b>safety cable</b> goes through the fixture’s yoke <b>and around the pipe</b>, clipped back on itself — so it catches the fixture even if the whole clamp lets go.' },
       { title:'The console & electricity', grades:[6,7],
         html:'The ETC Eos console is the <b>safe end</b> of the lighting system — but you still respect what it’s connected to:<br><br>🖥 Operate the console with <b>clean, dry hands</b>, drinks far away (yes, again — consoles die of thirst-quenching).<br>🚫 <b>Nothing gets poked into connectors, outlets, or dimmer racks.</b> Not pencils, not paper clips, not curiosity.<br>👃 <b>Report tingles, buzzing, or hot smells instantly.</b> Electrical faults announce themselves — believe the announcement.<br>🔌 If a breaker trips or a light dies, <b>you report it</b> — you don’t reset and retry.' },
+      { title:'Power, plugs & equipment care', grades:[6,12],
+        html:'The rules for anything with a plug — consoles, playback, monitors, practicals:<br><br>💧 <b>Dry hands only</b> on switches, plugs, and equipment — and never use electrical equipment near water or wet floors. Moisture conducts.<br>🔌 <b>Before moving any equipment, disconnect and clear its cables.</b> A dangling cord is a trip line and a broken connector.<br>🔱 <b>Never defeat grounding</b> — no forcing a three-prong plug into a two-prong outlet, ever. That third pin is what keeps a fault from going through you.<br>⚡ Connect gear only to the <b>power type marked on it</b>; route cords where they <b>can’t be walked on or pinched</b>.<br>🌬 Give equipment <b>ventilation</b> — racks and amps cook when boxed in — and keep liquids and stray objects out of the openings.<br>🔧 <b>Don’t service beyond the manual.</b> Anything deeper goes to qualified personnel.' },
       { type:'pick', title:'Something smells hot', grades:[6,7],
         prompt:'You’re near the dimmer rack and catch a whiff of hot plastic. What do you do?',
         options:['Normal — electronics get warm','Open a window and keep working','Tell the teacher immediately — hot smells are an electrical fault announcing itself','Unplug things one at a time until the smell stops'],
@@ -739,7 +776,7 @@ const SAFETY_MODULES = [
           'Report anything wrong to the teacher'
         ]},
       { title:'Gels, gobos & hot fronts', grades:[7,12],
-        html:'Handling the pretty parts safely:<br><br>🎨 <b>Gels ride in gel frames</b> — a loose gel stuffed in a fixture melts, smokes, and stinks up a performance.<br>🔘 <b>Gobos are thin sharp steel</b> — handle by the rim, like a razor-edged coin.<br>🔥 The <b>front end of a fixture that’s been on is the hot zone</b> — barrel, gel frame, and shutters will burn bare fingers.<br>🙋 <b>Ask before touching any hung fixture</b> — you don’t know how long it’s been running.' },
+        html:'Handling the pretty parts safely:<br><br>🎨 <b>Gels ride in gel frames</b> — a loose gel stuffed in a fixture melts, smokes, and stinks up a performance.<br>🔘 <b>Gobos are thin sharp steel</b> — handle by the rim, like a razor-edged coin.<br>📢 <b>Warn everyone before switching an instrument on</b> — nobody should be staring into a light that doesn’t announce itself.<br>🔥 <b>Assume any instrument is extremely hot — even switched off.</b> The front end (barrel, gel frame, shutters) holds burn heat long after the cue.<br>🧯 Keep instruments and <b>flammable items apart</b> — soft goods, paper, and scenery cook against a hot fixture.<br>🙋 <b>Ask before touching any hung fixture</b> — you don’t know how long it’s been running.' },
       { title:'Cable care & over-under', grades:[7,12],
         html:'Cable is equipment, not rope:<br><br>➿ Coil <b>over-under</b> so it pays out flat without kinks — a kinked cable is a damaged cable waiting to happen.<br>🚶 Out of <b>walkways</b>, always — tape it down or reroute it.<br>🔌 <b>Never yank a connector out by its cable</b> — grip the connector itself.<br>🚪 Never pinch cable in <b>doorways</b> or run it over <b>sharp edges</b>.<br>💧 Wet floors and cable <b>don’t mix</b> — dry first, then run power.' },
       { type:'order', title:'Hang a fixture — in order', grades:[8,12],
@@ -753,6 +790,8 @@ const SAFETY_MODULES = [
         ]},
       { title:'Inspect before you use', grades:[8,12],
         html:'You now work <b>safely at height and around circuits with general supervision</b>. That comes with a duty: <b>inspect cables and fixtures before use</b> — cracked connectors, frayed jacket, loose clamp, missing safety cable.<br><br>And when you find a fault, <b>report it without prompting</b>. A damaged cable that goes back in the bin unfixed is a trap for the next person.' },
+      { title:'Lock-out / tag-out', grades:[8,12],
+        html:'When equipment is unsafe, it comes <b>out of service — visibly</b>:<br><br>🏷 A <b>tag</b> (or lock) on a tool, cable, or machine means: <b>dead until the instructor clears it</b>. You don’t use it, you don’t “just test it,” and you never remove the tag.<br>🔒 That’s the student half of <b>lock-out/tag-out</b> — the industry system that keeps someone from powering up gear another person is working on.<br>🗓 The other half: your instructor <b>inspects equipment weekly</b> and documents it. Your <b>pre-use inspection</b> is the daily layer on top of that.' },
       { title:'Hot focus', grades:[8,12],
         html:'Refocusing fixtures that have been running is normal electrics work — done the right way:<br><br>🔥 <b>Gloves for a hot fixture</b> — or kill the channel and let it cool. A Source Four that’s been on all rehearsal blisters skin.<br>🔩 Loosen the <b>right bolt</b> — know your pan bolt from your tilt bolt so the unit moves where you expect instead of swinging free.<br>🪢 Wrench <b>tethered or pocketed</b>, same as every trip up the ladder.<br>📞 Call your moves: “going into channel 12” — so the board op doesn’t light you up mid-grab.' },
       { title:'Work like a professional', grades:[10,12],
@@ -811,6 +850,10 @@ const SAFETY_MODULES = [
           { label:'Ears still ringing on the bus home',               bucket:0, why:'Too late for prevention today — but a clear signal for tomorrow.' },
           { label:'Quiet brush painting',                             bucket:1, why:'The shop at its gentlest.' }
         ]},
+      { title:'Headsets & comms', grades:[8,12],
+        html:'The “no earbuds in the shop” rule has a show-business nuance:<br><br>🎧 <b>Personal earbuds and headphones never belong in the work environment</b> — they mask callouts, warnings, and the sound of trouble.<br>🎙 <b>Production intercom is the exception</b> — it exists so the crew can hear <i>each other</i>. Keep one ear open around moving scenery, keep chatter short and clean, and never let a joke on comms bury a “heads up.”<br>🔇 If you can’t hear the room, you’re not safe in the room.' },
+      { title:'Fog, haze & atmospherics', grades:[8,12],
+        html:'Atmosphere looks like magic and behaves like a chemical plus a slip hazard:<br><br>🌫 Use <b>only approved fluids</b> in fog and haze machines — the fluid’s <b>SDS</b> lives in the binder like every other chemical.<br>😮‍💨 Heavy fog is a <b>respiratory consideration</b> — ventilation matters, and anyone with asthma should say so before the effect runs.<br>🛢 Fluid residue makes decks <b>slick</b> — watch the floor near the machine and mop drips.<br>🚨 Fog and haze can <b>trip smoke alarms</b> — effects run only with the instructor, coordinated with the venue.<br>🔥 The machine’s output and nozzle get <b>hot</b>.' },
       { title:'Handling & rigging speakers', grades:[8,12],
         html:'Speakers are heavy, awkward, and often end up over people’s heads.<br><br>• <b>Lift and move them with help</b> — protect your back and the cabinet.<br>• Anything flown or mounted overhead uses <b>rated hardware and rigging points</b>, secured so it cannot fall.<br>• Never stack or perch a speaker where a bump or a cable snag could bring it down.' },
       { type:'sort', title:'Speakers: do — or never?', grades:[8,12],
@@ -859,10 +902,48 @@ const SAFETY_QUESTIONS = [
     q:'The fastest way to get sawdust off your clothes is the compressor hose. Do you use it?',
     options:['Yes — that’s what it’s for','Yes, but only on your back','Never — compressed air injects debris into skin and eyes and lofts fine dust into the air','Only with safety glasses on'],
     answer:2, why:'Compressed air is for tools, not people — brush off or vacuum instead.' },
+  { module:'shop', grades:[6,12],
+    q:'Before you are allowed to work on any equipment, safety instruction and permission must come from the…',
+    options:['Nearest classmate','Instructor','Custodian','Student who used it last'],
+    answer:1, why:'Equipment is never operated without instruction and permission from the instructor — not before, during, or after class.' },
+  { module:'shop', grades:[6,12],
+    q:'Earbuds or headphones during shop work are…',
+    options:['Fine at low volume','Fine in one ear','Never allowed — they mask warnings, callouts, and machine sounds','Required around loud tools'],
+    answer:2, why:'If you can’t hear the room, you’re not safe in the room. (Production intercom during shows is the one disciplined exception.)' },
+  { module:'shop', grades:[6,12],
+    q:'You should not lift any object heavier than…',
+    options:['50 pounds','What you can handle easily — over about 25 pounds, get help','Whatever the person next to you can lift','100 pounds'],
+    answer:1, why:'Never lift more than you can handle easily; for anything over about 25 pounds, get help and lift on a call.' },
+  { module:'shop', grades:[6,12],
+    q:'You’re not sure how to do a task safely. Who do you ask?',
+    options:['The student next to you','The instructor','Nobody — figure it out as you go','Whoever finishes their work first'],
+    answer:1, why:'When in doubt, ask the instructor — never rely on another student’s advice for safety.' },
+  { module:'shop', grades:[8,12],
+    q:'Where do you find the hazards and first-aid information for a paint, adhesive, or fog fluid?',
+    options:['The product’s Safety Data Sheet (SDS) in the binder','A quick internet search','The label’s brand name','Ask whoever used it last'],
+    answer:0, why:'Every chemical in the shop has an SDS in the binder — hazards, handling, and first aid. Know where it lives.' },
   { module:'shop', grades:[10,12],
     q:'A younger student is about to make a cut without safety glasses. What does the shop expect of you?',
     options:['Nothing — supervising is the teacher’s job','Say something and help them do it right — you help maintain the safety culture','Look away so you aren’t a witness','Finish your own task first, then maybe mention it'],
     answer:1, why:'At the Master level you model safe habits and help maintain the shop’s safety culture with peers — that means speaking up before something happens.' },
+
+  /* ── Fire Safety & Emergencies ── */
+  { module:'fire', grades:[6,12],
+    q:'You discover a fire in the scene shop. What do you do first?',
+    options:['Shout “Fire!” as loudly as possible','Immediately notify the closest adult with the exact location and what’s burning','Look for a bucket of water','Open the doors for ventilation'],
+    answer:1, why:'Exact location and the nature of the fire, to the nearest adult — and never a panic shout in a crowded space.' },
+  { module:'fire', grades:[6,12],
+    q:'A fire involving electrical equipment (Class C) gets put out with…',
+    options:['A water hose','A wet blanket','A non-conducting extinguisher — CO₂ or dry powder','A bucket of sand and water'],
+    answer:2, why:'Never water on an electrical fire — electricity travels up the stream. Non-conducting CO₂ or dry powder only.' },
+  { module:'fire', grades:[6,12],
+    q:'A classmate’s sleeve catches fire on a hot fixture. You…',
+    options:['Fan the flames away from their skin','Smother the flames — get them down and roll them in a blanket if possible','Run for water','Send them to the eyewash station'],
+    answer:1, why:'Smother it — flames need air. Get them down and roll them; running and fanning feed the fire.' },
+  { module:'fire', grades:[8,12],
+    q:'Rags soaked with stain or solvent go…',
+    options:['In the regular trash, spread flat','Over the edge of the sink to dry','In a covered metal container','On the window ledge to air out'],
+    answer:2, why:'Oily rags can self-ignite as they dry — the covered metal container is what stands between the shop and a 2 a.m. fire.' },
 
   /* ── Your Tools This Year (grade-specific by design) ── */
   { module:'tools', grades:[6,7],
@@ -1061,6 +1142,22 @@ const SAFETY_QUESTIONS = [
     q:'A fixture that’s been on all rehearsal needs refocusing. You…',
     options:['Grab it quickly — brief contact is fine','Use gloves, or kill it and let it cool first','Blow on it for a few seconds first','Hold it by the gel frame instead'],
     answer:1, why:'A fixture that’s been running is hot enough to blister skin — gloves for hot focus, or de-energize and wait.' },
+  { module:'electrics', grades:[6,12],
+    q:'Electrical switches, plugs, and equipment are handled with ______ hands only.',
+    options:['Gloved','Wet','Dry','Chalked'],
+    answer:2, why:'Moisture conducts electricity — dry hands only, and keep cords and equipment away from water.' },
+  { module:'electrics', grades:[6,12],
+    q:'Before moving any piece of equipment, you make sure its cables and cords are…',
+    options:['Coiled around the handle','Disconnected and cleared','Taped to the equipment','Held by a partner'],
+    answer:1, why:'Disconnect and clear all cables before anything moves — a live, dangling cord is a trip line and a broken connector.' },
+  { module:'electrics', grades:[8,12],
+    q:'Forcing a three-prong plug into a two-prong outlet…',
+    options:['Is fine if the equipment is off','Defeats the grounding that protects you — never do it','Works with enough force','Is okay for double-insulated tools only'],
+    answer:1, why:'That third pin is what keeps an electrical fault from going through you — grounding and polarization are never defeated.' },
+  { module:'electrics', grades:[8,12],
+    q:'A tool has a tag on it saying it’s out of service. You…',
+    options:['Test it briefly to see if it’s really broken','Remove the tag if the tool looks fine','Leave it alone — it’s dead until the instructor clears it','Use it gently'],
+    answer:2, why:'A tag or lock means out of service, period — that’s the point of lock-out/tag-out.' },
 
   /* ── Rigging ── */
   { module:'rigging', grades:[10,12],
