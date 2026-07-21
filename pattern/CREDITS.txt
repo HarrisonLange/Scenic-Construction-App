@@ -14,7 +14,7 @@ retained to comply with that license.
 The local PDF import feature uses Mozilla PDF.js under the Apache License 2.0.
 Its license is included at `vendor/pdfjs/LICENSE`.
 
-The four fixed-size publisher adaptations use the original cut-line sizes and
+The five fixed-size publisher adaptations use the original cut-line sizes and
 published measurement charts from their linked Mood Fabrics sources.
 The publisher PDFs are not bundled. If a user imports a locally obtained source
 PDF as a fixed reference pattern, its artwork remains in browser-local storage.

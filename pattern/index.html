@@ -297,6 +297,7 @@
 <script src="bluebell-generator.js"></script>
 <script src="edith-generator.js"></script>
 <script src="oleander-generator.js"></script>
+<script src="jarrah-generator.js"></script>
 <script src="vendor/pdfjs/pdf.min.js"></script>
 <script src="imported-patterns.js"></script>
 <script>
@@ -1164,7 +1165,7 @@ function setAdvancedMode(enabled){
   const fixed=isFixedSizePattern();
   button.disabled=fixed;
   button.setAttribute('aria-pressed',String(state.advanced));
-  button.textContent=state.advanced&&!fixed?'✓ Advanced mode':'⚙ Advanced mode';
+  button.textContent='⚙ Advanced mode';
   button.title=fixed?'This published-size pattern has no adjustable design options':(state.advanced?'Hide design options':'Show design options to fine-tune the fit');
   tab.hidden=!state.advanced||fixed;
   if((!state.advanced||fixed)&&tab.classList.contains('on')) document.querySelector('.tab[data-tab="meas"]').click();
@@ -1175,7 +1176,7 @@ $('btnAdvanced').onclick=()=>setAdvancedMode(!state.advanced);
 const CAL_MM = 100;   // calibration square = 100 mm (10 cm ≈ 3.94 in)
 function calibrationHTML(){
   return '<div style="border:1.5px solid #000;width:'+CAL_MM+'mm;height:'+CAL_MM+'mm;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;font:600 3.2mm/1.35 Arial;page-break-inside:avoid">'+
-    'Test square<br>should measure<br><b>10&nbsp;cm</b> / <b>3.94&nbsp;in</b><br><span style="font-weight:400;font-size:2.6mm;color:#444">If not, set your printer to<br>100% / “Actual size”.</span></div>';
+    '<div>Test square<br>should measure<br><b>10&nbsp;cm</b> / <b>3.94&nbsp;in</b><br><span style="font-weight:400;font-size:2.6mm;color:#444">If not, set your printer to<br>100% / “Actual size”.</span></div></div>';
 }
 function scaleBarHTML(){
   return '<div style="display:flex;align-items:center;gap:2mm;font:400 2.6mm Arial;color:#333"><div style="width:50mm;height:3mm;border:0.4mm solid #000;border-top:none"></div><span>50&nbsp;mm (5&nbsp;cm)</span></div>';
