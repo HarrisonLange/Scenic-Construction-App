@@ -320,6 +320,22 @@
       </span>
     </a>
 
+    <a class="card" data-lab="pattern" data-progress="off" href="pattern/" style="order:12;--card-accent:#EC008C;--card-tint:rgba(236,0,140,.16)">
+      <div class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 3h7l4 5v13H7z"/>
+          <path d="M14 3v5h4"/>
+          <path d="M10 11l4 4M10 15l2 2M12 11l2 2"/>
+        </svg>
+      </div>
+      <h2>Pattern Lab</h2>
+      <p>Turn body measurements into a real, made-to-measure sewing pattern. Pick from the full FreeSewing catalog, enter your measurements, fine-tune the fit, then print the pattern at true size on a 36&quot; roll or tape-together Letter pages.</p>
+      <div class="goal">I can take body measurements and draft a made-to-measure pattern I can cut and sew.</div>
+      <span class="go">Open lab
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
+      </span>
+    </a>
+
     <a class="card" data-lab="designlab" href="designlab/" style="order:32;--card-accent:#2E3192;--card-tint:rgba(46,49,146,.16)">
       <div class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -404,7 +420,7 @@
   var progress;
   try{ progress = JSON.parse(localStorage.getItem('sdscpa_progress') || '{}'); }
   catch(e){ progress = {}; }
-  var cards = document.querySelectorAll('.card[data-lab]');
+  var cards = document.querySelectorAll('.card[data-lab]:not([data-progress="off"])');
   var doneCount = 0;
   cards.forEach(function(card){
     var p = progress[card.getAttribute('data-lab')];
