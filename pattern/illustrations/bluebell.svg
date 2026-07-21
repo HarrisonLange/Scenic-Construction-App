@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 150" fill="none" stroke="#f1f5f9" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" class="line-drawing">
+  <!-- Front: puff sleeves, square neckline, laced opening, and full skirt -->
+  <g id="front">
+    <path d="M18 29c-7-1-12 5-12 14 0 10 4 16 12 17 4-4 5-10 3-18-1-7-1-10-3-13zm32 0c7-1 12 5 12 14 0 10-4 16-12 17-4-4-5-10-3-18 1-7 1-10 3-13z"/>
+    <path d="M16 59c3 2 6 2 9-1m23 0c3 3 6 3 9 1"/>
+    <path d="M20 30c4-4 8-5 13-5h5c5 0 9 1 13 5M24 29v29l10 17m13-46v29L37 75"/>
+    <path d="M24 29c4 3 7 5 10 5 4 0 8-2 13-5M24 58l10 17h3l10-17M28 61l14 0"/>
+    <path d="M30 51l10 0m-9 4 8 0m-7 4 6 0" opacity=".7"/>
+    <path d="M34 51l3 3-3 3 3 3-3 3" opacity=".8"/>
+    <path d="M30 73c-7 15-15 39-20 65 3 4 7 4 10 1 4 4 8 4 12 0 4 5 9 5 13 0 4 4 8 4 11-1-5-27-12-50-19-65z"/>
+    <path d="M34 74c-4 26-5 47-5 66m10-66c2 26 3 47 3 66" opacity=".62"/>
+    <path d="M25 75c-7 24-10 45-12 62m33-62c5 24 8 45 8 62" opacity=".38"/>
+  </g>
+
+  <!-- Back: closed square back bodice and matching puff sleeves -->
+  <g id="back">
+    <path d="M84 30c-7-1-12 5-12 14 0 10 4 16 12 17 4-4 5-10 3-18-1-7-1-10-3-13zm35 0c7-1 12 5 12 14 0 10-4 16-12 17-4-4-5-10-3-18 1-7 1-10 3-13z"/>
+    <path d="M82 60c3 2 6 2 9-1m26 0c3 3 6 3 9 1"/>
+    <path d="M86 31c5-4 9-5 14-5h5c5 0 10 1 15 5M90 30v39h26V30"/>
+    <path d="M90 31c6 5 20 5 26 0M90 61h26" opacity=".65"/>
+    <path d="M90 69c-8 16-15 41-20 69 3 4 7 4 10 1 4 4 8 4 12 0 4 5 9 5 13 0 4 4 8 4 11-1-5-28-12-52-20-69z"/>
+    <path d="M96 70c-4 27-5 48-5 69m10-69c2 27 3 48 3 69" opacity=".62"/>
+    <path d="M87 71c-7 25-11 47-14 65m34-65c5 25 8 47 8 65" opacity=".38"/>
+  </g>
+</svg>

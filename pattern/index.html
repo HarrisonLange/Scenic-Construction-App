@@ -33,6 +33,10 @@
   #studentName{width:142px;min-width:80px;background:transparent;color:var(--text-light);border:0;border-left:1px solid var(--ui-dark3);padding:3px 2px 3px 8px;font:inherit;font-size:12px;outline:none}
   .student-field:focus-within{border-color:var(--accent)}
   #studentName::placeholder{color:#686874}
+  .export-steps{height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:7px;color:#d7dbe4;font-size:11.5px;white-space:nowrap;cursor:pointer}
+  .export-steps:hover,.export-steps:focus-within{border-color:var(--accent)}
+  .export-steps input{width:14px;height:14px;accent-color:var(--pink);cursor:pointer}
+  .export-steps.off{opacity:.45;cursor:not-allowed}
   .tbtn{display:inline-flex;align-items:center;gap:6px;background:var(--ui-dark2);color:var(--text-light);border:1px solid var(--ui-dark3);border-radius:7px;padding:7px 11px;font-size:12.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
   .tbtn:hover{border-color:var(--accent)}
   .tbtn.primary{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:600}
@@ -45,8 +49,10 @@
 
   /* ── Left: design picker ── */
   #picker{flex:0 0 300px;background:var(--ui-dark);border-right:1px solid var(--ui-dark3);display:flex;flex-direction:column;min-height:0}
-  .pk-head{font-size:11px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;padding:11px 13px 8px;display:flex;justify-content:space-between;align-items:center}
+  .pk-head{font-size:11px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;padding:9px 11px 8px;display:flex;justify-content:space-between;align-items:center;gap:7px}
   .pk-head .count{color:var(--violet);font-family:var(--mono)}
+  .pk-import{background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:6px;color:#dfe3ea;padding:5px 7px;font:600 10px/1.1 inherit;letter-spacing:0;text-transform:none;cursor:pointer;white-space:nowrap}
+  .pk-import:hover{border-color:var(--pink);color:#fff}
   .pk-filters{display:flex;gap:7px;margin:0 11px 9px}
   #pkSearch{min-width:0;flex:1;background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:7px;color:var(--text-light);font-family:inherit;font-size:12.5px;padding:7px 9px;outline:none}
   #pkSearch:focus{border-color:var(--accent)}
@@ -62,6 +68,9 @@
   .pk-thumb img{display:block;width:100%;height:100%;object-fit:contain}
   .pk-meta{padding:6px 8px 8px}
   .pk-name{font-size:11.5px;font-weight:600;color:#e9ecf2;line-height:1.2;margin-bottom:4px}
+  .pk-stats{display:flex;align-items:center;gap:6px;min-height:12px}
+  .pk-yardage{font-size:9.5px;line-height:1;color:#b9c0cd;white-space:nowrap}
+  .pk-source{margin-left:auto;font-size:8px;line-height:1.35;color:#7dd3fc;border:1px solid #27566b;border-radius:4px;padding:0 4px;text-transform:uppercase;letter-spacing:.45px}
   .diff{display:inline-flex;gap:2px;flex:0 0 auto}
   .diff i{width:5px;height:5px;border-radius:50%;background:var(--ui-dark3)}
   .diff i.f{background:var(--amber)}
@@ -160,6 +169,30 @@
   #toast.show{display:block}
   #toast.warn{border-color:var(--amber);color:var(--amber)}
 
+  /* local PDF import dialog */
+  #importDialog{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 40px);margin:auto;padding:0;background:#151519;color:var(--text-light);border:1px solid #4a4a55;border-radius:12px;box-shadow:0 24px 80px rgba(0,0,0,.75)}
+  #importDialog::backdrop{background:rgba(0,0,0,.76);backdrop-filter:blur(2px)}
+  .import-head{padding:17px 19px 12px;border-bottom:1px solid var(--ui-dark3)}
+  .import-head h2{font-size:18px;margin-bottom:5px}.import-head p{font-size:11.5px;line-height:1.5;color:var(--text-dim)}
+  .import-body{padding:16px 19px;display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;overflow:auto}
+  .import-field{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#cdd1da}.import-field.full{grid-column:1/-1}
+  .import-field input,.import-field select{width:100%;background:#0c0c0f;color:var(--text-light);border:1px solid var(--ui-dark3);border-radius:7px;padding:8px 9px;font:12px var(--mono);outline:none}
+  .import-field input:focus,.import-field select:focus{border-color:var(--pink)}
+  .import-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .import-hint{grid-column:1/-1;background:#101017;border:1px solid #30303a;border-radius:8px;padding:9px 11px;color:#aeb3bd;font-size:11px;line-height:1.5}
+  #importStatus{grid-column:1/-1;min-height:18px;color:var(--accent);font:11px/1.45 var(--mono)}#importStatus.error{color:var(--amber)}
+  .import-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
+  .import-actions button{border:1px solid var(--ui-dark3);border-radius:7px;padding:8px 13px;background:var(--ui-dark2);color:#fff;font:600 12px inherit;cursor:pointer}.import-actions button.primary{background:var(--pink);border-color:var(--pink)}.import-actions button:disabled{opacity:.45;cursor:wait}
+  .import-summary{font-size:11.5px;line-height:1.55;color:#c6cad3}.import-summary strong{color:#fff}.import-summary a{color:#69b9ff}.import-summary .notice{margin-top:10px;padding:8px 9px;border-left:3px solid var(--violet);background:#14141d}
+  .fixed-size-note{font-size:11px;line-height:1.5;color:var(--text-dim);margin-top:9px}
+  .fixed-measurements{border:1px solid var(--ui-dark3);border-radius:9px;overflow:hidden;background:#101014;margin-bottom:14px}
+  .fixed-measurement{display:grid;grid-template-columns:1fr 74px 22px 64px;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px solid #292930}
+  .fixed-measurement:last-child{border-bottom:0}.fixed-measurement label{font-size:12px;color:#cfd3db}
+  .fixed-measurement input{width:74px;background:#17171c;color:#f1f3f7;border:1px solid #34343d;border-radius:6px;padding:6px 7px;text-align:right;font:12.5px var(--mono)}
+  .fixed-measurement input:focus{outline:none}.fixed-measurement .metric{font:10.5px var(--mono);color:#8d94a2;text-align:right;white-space:nowrap}
+  .fixed-pattern-notice{padding:10px 11px;border-left:3px solid var(--violet);border-radius:0 7px 7px 0;background:#14141d;color:#c8cbd3;font-size:11.5px;line-height:1.55}
+  .fixed-pattern-notice strong{color:#fff}.fixed-pattern-notice a{color:#69b9ff}
+
   @media (max-width:900px){
     #picker{flex-basis:200px} #panel{flex-basis:290px}
     .pk-filters{flex-direction:column} #pkDifficulty{width:100%}
@@ -184,6 +217,7 @@
   <label class="student-field" for="studentName">Student <input id="studentName" type="text" maxlength="60" autocomplete="name" placeholder="Enter name" aria-label="Student name for pattern watermark"></label>
   <button class="tbtn" id="btnAdvanced" title="Show design options to fine-tune the fit">⚙ Advanced mode</button>
   <button class="tbtn" id="btnShare" title="Copy a link that reopens this exact pattern + measurements">🔗 Share</button>
+  <label class="export-steps" id="includeStepsLabel" title="Append a printer-friendly sewing guide after the pattern pages"><input id="includeSteps" type="checkbox" checked> Include steps</label>
   <button class="tbtn" id="btnRoll" title="Print full-size on a 36-inch roll / plotter">🖨 36″ roll</button>
   <button class="tbtn" id="btnTiles" title="Print on tape-together US Letter pages">🖨 Letter tiles</button>
 </div>
@@ -191,7 +225,7 @@
 <div id="main">
   <!-- Left: design picker -->
   <aside id="picker">
-    <div class="pk-head">Patterns <span class="count" id="pkCount">0</span></div>
+    <div class="pk-head"><span>Patterns <span class="count" id="pkCount">0</span></span><button class="pk-import" id="btnImportPdf" type="button">+ Import PDF</button></div>
     <div class="pk-filters">
       <input id="pkSearch" type="search" placeholder="Search patterns…" aria-label="Search patterns" autocomplete="off">
       <select id="pkDifficulty" aria-label="Filter patterns by difficulty">
@@ -232,6 +266,26 @@
   </aside>
 </div>
 
+<input id="patternPdfFile" type="file" accept="application/pdf,.pdf" hidden>
+<dialog id="importDialog" aria-labelledby="importTitle">
+  <form id="importForm">
+    <div class="import-head"><h2 id="importTitle">Import an existing PDF pattern</h2><p>The PDF stays on this computer. Arrange its full-size pattern pages in the same left-to-right, top-to-bottom order shown by its assembly map.</p></div>
+    <div class="import-body">
+      <label class="import-field full">Pattern name<input id="importName" maxlength="80" required></label>
+      <div class="import-grid">
+        <label class="import-field">Columns<input id="importColumns" type="number" min="1" max="30" value="1" required></label>
+        <label class="import-field">Rows<input id="importRows" type="number" min="1" max="30" value="1" required></label>
+        <label class="import-field">Cover pages to skip<input id="importSkip" type="number" min="0" max="100" value="0" required></label>
+      </div>
+      <label class="import-field">Difficulty<select id="importDifficulty"><option value="1">Level 1</option><option value="2">Level 2</option><option value="3" selected>Level 3</option><option value="4">Level 4</option><option value="5">Level 5</option></select></label>
+      <label class="import-field">Category<select id="importCategory"><option value="costumes">Costumes</option><option value="dresses">Dresses</option><option value="tops">Tops</option><option value="bottoms">Bottoms</option><option value="coats">Coats &amp; jackets</option><option value="accessories">Accessories</option><option value="other">Other</option></select></label>
+      <div class="import-hint"><strong>How the grid works:</strong> a 30-page pattern arranged as six pages across and five pages down uses Columns 6, Rows 5. Skip instruction or calibration pages that come before the tiled pattern.</div>
+      <div id="importStatus" role="status"></div>
+      <div class="import-actions"><button id="importCancel" type="button">Cancel</button><button id="importSubmit" class="primary" type="submit">Import pattern</button></div>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast"></div>
 <div id="helpPopover" role="tooltip" hidden></div>
 
@@ -239,6 +293,12 @@
 <script src="../shared/learn.js"></script>
 <script src="freesewing.bundle.js"></script>
 <script src="patterns-data.js"></script>
+<script src="tulsi-generator.js"></script>
+<script src="bluebell-generator.js"></script>
+<script src="edith-generator.js"></script>
+<script src="oleander-generator.js"></script>
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="imported-patterns.js"></script>
 <script>
 "use strict";
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -261,6 +321,30 @@ const ABOUT = FS.about;
 const MEAS_LABELS = FS.strings.measurements;      // {chest:"Chest circumference",…}
 const GROUP_LABELS = FS.strings.optiongroups;     // {fit:"Fit", style:"Style",…}
 const DATA = window.PATTERN_DATA || { instructions:{}, measureHelp:{} };
+const GENERATORS = window.PatternGenerators || {};
+PatternImports.registerCatalog(ABOUT,DATA);
+Object.entries(GENERATORS).forEach(([key,generator])=>{
+  ABOUT[key]=generator.about;
+  if(generator.instructions) DATA.instructions[key]=generator.instructions;
+});
+const isGeneratedPattern = name => !!GENERATORS[name];
+const fixedSizeConfig = (name=state.design) => GENERATORS[name]&&GENERATORS[name].fixedSizes||null;
+const isFixedSizePattern = (name=state.design) => !!fixedSizeConfig(name);
+function selectedFixedSize(name=state.design){
+  const fixed=fixedSizeConfig(name);
+  if(!fixed) return '';
+  const saved=state.options[name]&&state.options[name].publishedSize;
+  return fixed.entries.some(entry=>entry.id===saved)?saved:fixed.default;
+}
+function normalizeFixedSizeState(name=state.design){
+  if(!isFixedSizePattern(name)) return '';
+  const size=selectedFixedSize(name);
+  state.options[name]={publishedSize:size};
+  return size;
+}
+const isImportedPattern = (name=state.design) => PatternImports.isImported(name);
+const importedPattern = (name=state.design) => PatternImports.get(name);
+const patternExists = name => !!DESIGNS[name] || isGeneratedPattern(name) || isImportedPattern(name);
 
 /* Category display order + friendly names (keyed off each design's tags). */
 const CAT_ORDER = ['tops','dresses','trousers','bottoms','skirts','coats','overalls',
@@ -286,6 +370,7 @@ const state = {
   saMM: 9.525,                       // 3/8"
   advanced: false,                   // reveals the Options tab
   diffFilter: 0,                     // picker difficulty filter (0 = all)
+  includeSteps: true,                // append sewing instructions to exported PDFs
 };
 
 /* ── DOM refs ── */
@@ -305,11 +390,16 @@ function mmToDisplay(mm){ return state.units==='imperial' ? mm/MM_PER_IN : mm/10
 function displayToMM(v){ return state.units==='imperial' ? v*MM_PER_IN : v*10; }
 function unitLabel(){ return state.units==='imperial' ? 'in' : 'cm'; }
 function fmt(n){ return (Math.round(n*100)/100).toString(); }
+function publishedSizeText(name=state.design){ return isFixedSizePattern(name)?'size '+selectedFixedSize(name):''; }
+function printPatternName(){
+  const size=publishedSizeText();
+  return ABOUT[state.design].name+(size?' — '+size:'');
+}
 
 function saveState(){
   try{
     localStorage.setItem(LS_MEAS, JSON.stringify({m:state.measurements, units:state.units, size:state.sampleSize}));
-    localStorage.setItem(LS_STATE, JSON.stringify({design:state.design, options:state.options, studentName:state.studentName, sa:state.sa, saMM:state.saMM}));
+    localStorage.setItem(LS_STATE, JSON.stringify({design:state.design, options:state.options, studentName:state.studentName, sa:state.sa, saMM:state.saMM, includeSteps:state.includeSteps}));
   }catch(e){}
 }
 function loadState(){
@@ -317,22 +407,22 @@ function loadState(){
     const m=JSON.parse(localStorage.getItem(LS_MEAS)||'null');
     if(m){ state.measurements=m.m||{}; state.units=m.units||'imperial'; state.sampleSize=m.size||state.sampleSize; }
     const s=JSON.parse(localStorage.getItem(LS_STATE)||'null');
-    if(s){ state.design=s.design||state.design; state.options=s.options||{}; state.studentName=String(s.studentName||'').slice(0,60); state.sa=s.sa!==false; state.saMM=s.saMM||state.saMM; }
+    if(s){ state.design=s.design||state.design; state.options=s.options||{}; state.studentName=String(s.studentName||'').slice(0,60); state.sa=s.sa!==false; state.saMM=s.saMM||state.saMM; state.includeSteps=s.includeSteps!==false; }
   }catch(e){}
 }
 
 /* Encode/decode the full setup in the URL hash (Share; no account needed). */
 function encodeShare(){
-  const payload={d:state.design,u:state.units,m:state.measurements,o:state.options[state.design]||{},sa:state.sa,sv:state.saMM};
+  const payload={d:state.design,u:state.units,m:state.measurements,o:state.options[state.design]||{},sa:state.sa,sv:state.saMM,is:state.includeSteps};
   return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
 }
 function tryLoadShare(){
   if(!location.hash || location.hash.length<4) return false;
   try{
     const p=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(1)))));
-    if(p.d && DESIGNS[p.d]){
+    if(p.d && patternExists(p.d)){
       state.design=p.d; state.units=p.u||state.units; state.measurements=p.m||state.measurements;
-      state.options[p.d]=p.o||{}; state.sa=p.sa!==false; state.saMM=p.sv||state.saMM;
+      state.options[p.d]=p.o||{}; state.sa=p.sa!==false; state.saMM=p.sv||state.saMM; state.includeSteps=p.is!==false;
       return true;
     }
   }catch(e){}
@@ -343,6 +433,8 @@ function tryLoadShare(){
 let configCache = {};
 function getConfig(name){
   if(configCache[name]) return configCache[name];
+  if(isGeneratedPattern(name)) return (configCache[name]=GENERATORS[name].config);
+  if(isImportedPattern(name)) return (configCache[name]={measurements:[],optionalMeasurements:[],options:{}});
   let cfg;
   try{ cfg = new DESIGNS[name]({measurements: state.measurements}).getConfig(); }
   catch(e){ cfg = {measurements:FS.requiredMeasurements[name]||[], optionalMeasurements:FS.optionalMeasurements[name]||[], options:{}}; }
@@ -370,6 +462,8 @@ function optionGroup(v){
   return m.indexOf('.')>=0 ? m.split('.')[0] : m;
 }
 function optLabel(name, key){
+  const custom=GENERATORS[name]&&GENERATORS[name].i18n&&GENERATORS[name].i18n[key];
+  if(custom) return custom;
   const o = (FS.i18n[name] && FS.i18n[name].en && FS.i18n[name].en.o) || {};
   const e = o[key];
   if(e && typeof e==='object' && e.t) return {t:e.t, d:e.d||''};
@@ -379,6 +473,8 @@ function optLabel(name, key){
 
 /* ═════════════ drafting ═════════════ */
 function curOptions(){
+  if(isImportedPattern()) return {};
+  if(isFixedSizePattern()) return {publishedSize:normalizeFixedSizeState()};
   const overrides=state.options[state.design]||{};
   const cfg=getConfig(state.design);
   // Some guides refer to lettered matching seams. Designs that provide a
@@ -390,22 +486,32 @@ function curOptions(){
 function settingsForDraft(extra){
   // Construction labels, grainlines, cut counts, notches, and seam references
   // are part of the plan, so the main draft is always rendered complete.
-  const s = { measurements: state.measurements, options: curOptions(), units: state.units, complete: true };
-  if(state.sa) s.sa = state.saMM;
+  const fixed=fixedSizeConfig();
+  const s = fixed
+    ? {options:curOptions(),units:'imperial',complete:true,sa:fixed.seamAllowanceMM}
+    : {measurements:state.measurements,options:curOptions(),units:state.units,complete:true};
+  if(!fixed&&state.sa) s.sa = state.saMM;
   return Object.assign(s, extra||{});
 }
 function missingMeasurements(name){
-  const req = FS.requiredMeasurements[name] || getConfig(name).measurements || [];
+  if(isImportedPattern(name)||isFixedSizePattern(name)) return [];
+  const req = (isGeneratedPattern(name)?getConfig(name).measurements:FS.requiredMeasurements[name]) || getConfig(name).measurements || [];
   return req.filter(k => !(state.measurements[k] > 0));
 }
 /* Draft + render → SVG string (mm), or throw.
    The theme plugin injects FreeSewing's default stylesheet (class="freesewing"
    + scoped CSS) so pieces render as proper outlines instead of solid-black fills. */
 function renderSVG(extra){
+  if(isImportedPattern()){
+    const imported=PatternImports.renderSvg(state.design,state.studentName);
+    if(!imported) throw new Error('Choose the source PDF to load this imported pattern.');
+    return imported;
+  }
   return addStudentWatermarks(renderDesign(state.design, settingsForDraft(extra)),state.studentName);
 }
 /* Low-level: draft any design with given settings → sanitized SVG string. */
 function renderDesign(name, settings){
+  if(isGeneratedPattern(name)) return GENERATORS[name].render(settings);
   const p = new DESIGNS[name](settings);
   if(FS.themePlugin) p.use(FS.themePlugin);
   p.draft();
@@ -509,15 +615,15 @@ function addStudentWatermarks(raw,name){
     const cx=box.x+box.width/2, cy=box.y+box.height/2;
     const diagonal=Math.hypot(box.width,box.height);
     const angle=-Math.atan2(box.height,box.width)*180/Math.PI;
-    const maxTextWidth=Math.max(4,diagonal*.62);
-    let fontSize=Math.max(3,Math.min(22,Math.min(box.width,box.height)*.11));
+    const maxTextWidth=Math.max(4,diagonal*.82);
+    let fontSize=Math.max(4,Math.min(34,Math.min(box.width,box.height)*.18));
     fontSize=Math.min(fontSize,maxTextWidth/Math.max(1,label.length*.56));
     const text=document.createElementNS('http://www.w3.org/2000/svg','text');
     text.setAttribute('x',cx); text.setAttribute('y',cy);
     text.setAttribute('text-anchor','middle'); text.setAttribute('dominant-baseline','middle');
     text.setAttribute('transform','rotate('+angle+' '+cx+' '+cy+')');
     text.setAttribute('font-family','Arial, sans-serif'); text.setAttribute('font-weight','700');
-    text.setAttribute('font-size',Math.max(1.8,fontSize)); text.setAttribute('letter-spacing',Math.max(.25,fontSize*.08));
+    text.setAttribute('font-size',Math.max(2.6,fontSize)); text.setAttribute('letter-spacing',Math.max(.3,fontSize*.075));
     text.setAttribute('fill','#4b5563'); text.setAttribute('fill-opacity','.26');
     text.setAttribute('data-student-watermark','true'); text.setAttribute('data-piece',String(index+1));
     text.textContent=label;
@@ -537,6 +643,10 @@ function parseDims(svg){
 function stripXml(svg){ const i=svg.indexOf('<svg'); return i>=0?svg.slice(i):svg; }
 
 function draft(){
+  if(isImportedPattern()&&!PatternImports.hasLoaded(state.design)){
+    showMsg('<b>'+esc(ABOUT[state.design].name)+' is ready to import.</b><div style="margin-top:7px;font-size:12px;line-height:1.55">Choose the source PDF from this computer. The file stays in this browser and is assembled into a full-size pattern.</div>');
+    curSVG=null; return;
+  }
   const miss = missingMeasurements(state.design);
   if(miss.length){
     showMsg('<b>Almost there.</b><div style="margin-top:6px">Enter these measurements to draft <b>'+esc(ABOUT[state.design].name)+'</b>:</div>'+
@@ -550,7 +660,7 @@ function draft(){
     dims = parseDims(svg);
     // Repack oversized designs into a narrow, longer layout. strictMax reserves
     // the roll width up front so the bin packer cannot grow sideways past it.
-    if(dims.W>ROLL_W_MM){
+    if(dims.W>ROLL_W_MM&&!isImportedPattern()){
       const packed=renderSVG({maxWidth:ROLL_CONTENT_W_MM,strictMax:true});
       const packedDims=parseDims(packed);
       // A stack wider than the roll cannot be repacked without splitting the
@@ -560,7 +670,8 @@ function draft(){
   }
   catch(e){
     console.warn('draft error', state.design, e);
-    showMsg('<b>This pattern couldn\'t be drafted with the current numbers.</b><div style="margin-top:6px;font-size:12px">Try a different sample size or adjust a measurement.</div><div class="missing" style="margin-top:8px;font-size:11px">'+esc(String(e.message||e).split('\n')[0])+'</div>');
+    const retry=isFixedSizePattern()?'Try another published size.':'Try a different sample size or adjust a measurement.';
+    showMsg('<b>This pattern couldn\'t be drafted with the current settings.</b><div style="margin-top:6px;font-size:12px">'+retry+'</div><div class="missing" style="margin-top:8px;font-size:11px">'+esc(String(e.message||e).split('\n')[0])+'</div>');
     curSVG=null; return;
   }
   const {W,H}=dims;
@@ -572,6 +683,7 @@ function draft(){
     el.style.width=(W*PX_PER_MM)+'px'; el.style.height=(H*PX_PER_MM)+'px'; el.style.display='block'; }
   svgPan.style.width=(W*PX_PER_MM)+'px'; svgPan.style.height=(H*PX_PER_MM)+'px';
   sizeTag.textContent = 'Pattern ≈ '+fmt(W/MM_PER_IN)+'″ × '+fmt(H/MM_PER_IN)+'″   ('+Math.round(W)+' × '+Math.round(H)+' mm)'+
+    (publishedSizeText()?' · '+publishedSizeText():'')+
     (curRollReflowed?' · 36″ roll-ready':(W>ROLL_W_MM?' · roll panels required':''));
   applyView();
 }
@@ -607,13 +719,46 @@ function designCategory(name){
   for(const c of CAT_ORDER) if(tags.includes(c)) return c;
   return tags[0] || 'other';
 }
+/* Main-fabric estimates assume a mid-range adult size and 60-inch-wide goods.
+   Designs can supply a more specific `yardage` string; otherwise the range is
+   derived from garment type so imported patterns receive an estimate too. */
+const YARDAGE_BY_DESIGN={
+  aaron:'¾–1¼ yd',albert:'1½–2 yd',bee:'½–¾ yd',benjamin:'¼ yd',bob:'½ yd',
+  bruce:'¾–1 yd',cathrin:'1–1½ yd',florence:'¼ yd',florent:'½ yd',gozer:'2–3 yd',
+  hi:'¾–1 yd',holmes:'½–¾ yd',hortensia:'¾–1 yd',jane:'3–4 yd',lucy:'½ yd',
+  lunetius:'4–5 yd',octoplushy:'¾–1 yd',otis:'2–3 yd',polly:'¾–1 yd',
+  sabrina:'¾–1¼ yd',sandy:'2½–3½ yd',shale:'1¼–1¾ yd',shin:'1–1½ yd',
+  skully:'¾–1 yd',sophie:'2½–3½ yd',trayvon:'¼–½ yd',uma:'½–¾ yd',
+  umbra:'½–¾ yd',walburga:'3–4 yd'
+};
+function estimatedYardage(name){
+  const about=ABOUT[name]||{};
+  if(about.yardage) return String(about.yardage);
+  if(YARDAGE_BY_DESIGN[name]) return YARDAGE_BY_DESIGN[name];
+  const tags=about.tags||[], title=String(about.name||name).toLowerCase();
+  const has=tag=>tags.includes(tag);
+  if(has('blocks')) return '1½–2 yd';
+  if(has('toys')) return '½–1 yd';
+  if(has('bags')||has('hats')) return '½–1 yd';
+  if(has('accessories')) return '½–1½ yd';
+  if(has('underwear')||has('swimwear')) return has('onePiece')?'1½–2 yd':'¾–1½ yd';
+  if(has('coats')) return /coat|lacerna/.test(title)?'3½–5 yd':'2½–3½ yd';
+  if(has('dresses')) return '3–4 yd';
+  if(has('overalls')||has('onePiece')) return '2½–3½ yd';
+  if(has('historical')) return '3–4 yd';
+  if(has('skirts')) return '2–3 yd';
+  if(has('trousers')) return /short|breech/.test(title)?'1½–2½ yd':'2½–3 yd';
+  if(has('bottoms')) return /legging/.test(title)?'1½–2 yd':'1¾–2½ yd';
+  if(has('tops')) return /hood|sweater|sweatshirt/.test(title)?'2–3 yd':'1½–2½ yd';
+  return '2–3 yd';
+}
 /* The picker uses each design's technical line drawing. Keeping these SVGs in
    <img> elements also isolates their internal IDs from the drafted pattern. */
 function buildPicker(filter){
   const list=$('pkList'); list.innerHTML='';
   const q=(filter===undefined ? $('pkSearch').value : filter||'').trim().toLowerCase();
   const difficulty=Number(state.diffFilter)||0;
-  const names=Object.keys(DESIGNS).filter(n=>n!=='library').sort((a,b)=>ABOUT[a].name.localeCompare(ABOUT[b].name));
+  const names=PatternImports.names(Object.assign({},DESIGNS,GENERATORS)).sort((a,b)=>ABOUT[a].name.localeCompare(ABOUT[b].name));
   const byCat={};
   names.forEach(n=>{
     const a=ABOUT[n];
@@ -635,9 +780,15 @@ function buildPicker(filter){
       const a=ABOUT[n];
       const card=document.createElement('div'); card.className='pk-card'+(n===state.design?' on':''); card.dataset.name=n; card.title=scrubBrand(a.description);
       let dots=''; for(let i=1;i<=5;i++) dots+='<i class="'+(i<=(a.difficulty||0)?'f':'')+'"></i>';
-      card.innerHTML='<div class="pk-thumb"><img loading="lazy" src="illustrations/'+encodeURIComponent(n)+'.svg" alt="'+esc(a.name)+' technical line drawing"></div>'+
-        '<div class="pk-meta"><div class="pk-name">'+esc(a.name)+'</div><span class="diff">'+dots+'</span></div>';
-      card.onclick=()=>selectDesign(n);
+      const yardage=estimatedYardage(n);
+      const yardageNote=a.yardageNote||'Approximate main-fabric range using 60-inch-wide fabric. Size, layout, nap, print matching, and options can change it.';
+      const illustration=a.illustration||'illustrations/'+encodeURIComponent(n)+'.svg';
+      card.innerHTML='<div class="pk-thumb"><img loading="lazy" src="'+esc(illustration)+'" alt="'+esc(a.name)+' technical line drawing"></div>'+
+        '<div class="pk-meta"><div class="pk-name">'+esc(a.name)+'</div><div class="pk-stats">'+
+          '<span class="diff" role="img" aria-label="Difficulty '+esc(a.difficulty||0)+' of 5">'+dots+'</span>'+
+          '<span class="pk-yardage" title="'+esc(yardageNote)+'" aria-label="Estimated fabric: '+esc(yardage.replace('yd','yards'))+'">≈ '+esc(yardage)+'</span>'+
+          (a.imported?'<span class="pk-source">PDF</span>':'')+'</div></div>';
+      card.onclick=()=>{ selectDesign(n); if(isImportedPattern(n)&&!PatternImports.hasLoaded(n)) PatternImports.requestImport(n); };
       grid.appendChild(card);
       const image=card.querySelector('.pk-thumb img');
       image.onerror=()=>{ image.remove(); card.querySelector('.pk-thumb').textContent='No line drawing'; };
@@ -648,10 +799,12 @@ function buildPicker(filter){
   if(!shown){ list.innerHTML='<div style="padding:20px;color:var(--text-dim);font-size:12px;text-align:center">No patterns match the current search and difficulty filters.</div>'; }
 }
 function selectDesign(name){
+  if(!patternExists(name)) return;
   state.design=name;
+  normalizeFixedSizeState(name);
   document.querySelectorAll('.pk-card').forEach(el=>el.classList.toggle('on',el.dataset.name===name));
-  $('curName').innerHTML=esc(ABOUT[name].name)+' <small>'+esc(name)+'</small>';
-  buildOptions(); buildGuide(); buildMeas();
+  $('curName').innerHTML=esc(ABOUT[name].name)+(isFixedSizePattern(name)?'':' <small>'+esc(name)+'</small>');
+  buildOptions(); buildGuide(); buildMeas(); setAdvancedMode(state.advanced);
   draft(); fitView(); saveState();
 }
 
@@ -659,19 +812,62 @@ function selectDesign(name){
 function sampleSizeOptions(){
   const keys=Object.keys(FS.models).filter(k=>/^cis(Female|Male)Adult\d+$/.test(k));
   const fem=keys.filter(k=>k.indexOf('Female')>=0), mal=keys.filter(k=>k.indexOf('Male')>=0&&k.indexOf('Female')<0);
-  const opt=(k)=>{ const n=k.match(/(\d+)$/)[1]; const who=k.indexOf('Female')>=0?"Women's":"Men's"; return '<option value="'+k+'"'+(k===state.sampleSize?' selected':'')+'>'+who+' size '+n+'</option>'; };
+  const opt=(k)=>{ const n=k.match(/(\d+)$/)[1]; const who=k.indexOf('Female')>=0?"Women's":"Men's"; return '<option value="'+k+'"'+(k===state.sampleSize?' selected':'')+'>'+who+' sample — '+n+' cm neck</option>'; };
   return '<optgroup label="Women\'s sizes">'+fem.map(opt).join('')+'</optgroup>'+
          '<optgroup label="Men\'s sizes">'+mal.map(opt).join('')+'</optgroup>';
 }
 function buildMeas(){
   closeMeasurementHelp();
+  if(isImportedPattern()){
+    const p=$('page-meas'), a=ABOUT[state.design], record=importedPattern();
+    let html='<div class="fieldset-title">Imported PDF pattern</div><div class="import-summary">';
+    if(record){
+      html+='<strong>'+esc(record.originalFileName)+'</strong><br>'+record.columns+' columns × '+record.rows+' rows · '+record.pageCount+' source pages<br>'+fmt(record.widthMM/MM_PER_IN)+'″ × '+fmt(record.heightMM/MM_PER_IN)+'″ assembled at '+record.dpi+' dpi';
+      if(a.sizeRange) html+='<br>Included sizes: '+esc(a.sizeRange);
+      if(a.seamAllowanceMM) html+='<br>Seam allowance included: '+fmt(a.seamAllowanceMM/MM_PER_IN)+'″';
+      html+='<div class="notice">This is a fixed multi-size pattern. Body measurements and drafting options do not alter its original size lines.</div>';
+    }else{
+      html+='Choose the PDF you obtained from the pattern publisher. The artwork is stored locally in this browser and is not added to the app files.';
+    }
+    if(a.sourceUrl) html+='<div style="margin-top:10px"><a href="'+esc(a.sourceUrl)+'" target="_blank" rel="noopener">Open the pattern source and instructions ↗</a></div>';
+    html+='</div><button class="tbtn primary" id="importSource" style="margin-top:14px">'+(record?'Replace source PDF':'Choose source PDF')+'</button>';
+    p.innerHTML=html;
+    $('importSource').onclick=()=>PatternImports.requestImport(state.design);
+    updateBadges(); return;
+  }
+  if(isFixedSizePattern()){
+    const p=$('page-meas'), fixed=fixedSizeConfig(), size=normalizeFixedSizeState();
+    const entry=fixed.entries.find(item=>item.id===size)||fixed.entries[0];
+    const labels=fixed.measurementLabels||{};
+    const measurementHeading=Object.keys(entry.measurements||{}).some(key=>/^finished/i.test(key))?'Published measurements':'Published body measurements';
+    const choices=fixed.entries.map(item=>'<option value="'+esc(item.id)+'"'+(item.id===size?' selected':'')+'>'+esc(item.id)+'</option>').join('');
+    const sizeNote=fixed.combinedSizes
+      ? 'This PDF combines adjacent sizes into one cut line. The read-only values below use published size '+esc(entry.chartSize)+' — the upper size represented by cut line '+esc(entry.id)+'.'
+      : 'The read-only values below come from the publisher\'s measurement table for size '+esc(entry.chartSize)+'.';
+    let html='<div class="fieldset-title">Published pattern size</div><div class="settings-box">'+
+      '<div class="row"><label for="publishedSize">Size</label><select class="sel" id="publishedSize" style="flex:1.4">'+choices+'</select></div>'+
+      '<div class="fixed-size-note">'+sizeNote+(fixed.fitNote?' '+esc(fixed.fitNote):'')+'</div></div>'+
+      '<div class="fieldset-title">'+measurementHeading+'</div><div class="fixed-measurements">';
+    Object.entries(entry.measurements||{}).forEach(([key,value])=>{
+      html+='<div class="fixed-measurement"><label>'+esc(labels[key]||prettify(key))+'</label><input type="text" readonly aria-readonly="true" value="'+fmt(value)+'"><span class="unit">in</span><span class="metric">'+fmt(value*2.54)+' cm</span></div>';
+    });
+    html+='</div><div class="fixed-pattern-notice"><strong>Fixed publisher sizing:</strong> only the size dropdown changes this pattern. Sample bodies, custom measurements, design options, and seam allowance do not redraft it. '+esc(fixed.seamAllowanceText||'The publisher-provided seam allowance is included.')+
+      (ABOUT[state.design].sourceUrl?' <a href="'+esc(ABOUT[state.design].sourceUrl)+'" target="_blank" rel="noopener">View source chart ↗</a>':'')+'</div>';
+    p.innerHTML=html;
+    $('publishedSize').onchange=event=>{
+      state.options[state.design]={publishedSize:event.target.value};
+      buildMeas(); draft(); fitView(); saveState(); updateBadges();
+    };
+    updateBadges(); return;
+  }
   const cfg=getConfig(state.design);
   const req=cfg.measurements||[], opt=cfg.optionalMeasurements||[];
   const p=$('page-meas');
   let html='';
   // Core settings
   html+='<div class="settings-box">';
-  html+='<div class="row"><label>Sample body</label><select class="sel" id="mSample" style="flex:1.4">'+sampleSizeOptions()+'</select></div>';
+  const sampleHelp='The number is the sample model’s neck circumference in centimeters (for example, 36 means 36 cm around the neck). Choosing a sample loads a complete set of estimated body measurements. Replace those estimates with the student’s actual measurements before printing.';
+  html+='<div class="row"><label>Sample body <button type="button" class="info" aria-label="What does the sample body number mean?" aria-expanded="false" data-help="'+esc(sampleHelp)+'">?</button></label><select class="sel" id="mSample" style="flex:1.4">'+sampleSizeOptions()+'</select></div>';
   html+='<div class="row"><label>Units</label><div class="seg" id="mUnits"><button data-u="imperial" class="'+(state.units==='imperial'?'on':'')+'">Inches</button><button data-u="metric" class="'+(state.units==='metric'?'on':'')+'">cm</button></div></div>';
   html+='<div class="row"><label>Seam allowance</label><label class="switch" style="flex:0 0 auto"><input type="checkbox" id="mSa"'+(state.sa?' checked':'')+'><span class="sl"></span></label>'+
         '<input class="num" id="mSaV" type="number" step="0.125" value="'+fmt(mmToDisplay(state.saMM))+'"'+(state.sa?'':' disabled')+'><span class="unit">'+unitLabel()+'</span></div>';
@@ -748,6 +944,14 @@ document.addEventListener('keydown',event=>{ if(event.key==='Escape') closeMeasu
 
 /* ═════════════ options tab ═════════════ */
 function buildOptions(){
+  if(isImportedPattern()){
+    $('page-opts').innerHTML='<div style="padding:20px;color:var(--text-dim);font-size:12px;text-align:center;line-height:1.6">Imported PDF patterns keep their publisher-provided sizing and design options. Import a different source PDF to replace this pattern.</div>';
+    updateBadges(); return;
+  }
+  if(isFixedSizePattern()){
+    $('page-opts').innerHTML='<div style="padding:20px;color:var(--text-dim);font-size:12px;text-align:center;line-height:1.6">This publisher-graded pattern has no adjustable design options. Choose one of its original cut-line sizes in Measurements.</div>';
+    updateBadges(); return;
+  }
   const cfg=getConfig(state.design);
   const p=$('page-opts');
   const groups={};
@@ -830,7 +1034,7 @@ function updateOptionReadout(key,kind,el){
 
 /* ═════════════ guide tab ═════════════ */
 function normalizeGuideMarkdown(md){
-  return String(md||'').replace(/\r\n?/g,'\n').split('\n').map(raw=>{
+  const cleaned=String(md||'').replace(/\r\n?/g,'\n').split('\n').map(raw=>{
     let line=raw.replace(/\u00a0/g,' ').replace(/[ \t]+$/,'');
     if(/^\s*:::\s*$/.test(line)) return '';
     let malformedList=line.match(/^\s*\*\*-\s+\*\*(.*?)\*{4}\s*$/);
@@ -846,9 +1050,16 @@ function normalizeGuideMarkdown(md){
     if(/^\s*\*{3,}\s*$/.test(line)) return '';
     // Empty Markdown tables are remnants of removed documentation images.
     if(/^\s*\|[\s|:=-]*\|\s*$/.test(line)) return '';
+    // Repair a few sentence openings whose linked lead-in was lost when the
+    // source documentation images and links were removed.
+    line=line.replace(/^\s*\*\*are going to finish\b/i,'**We are going to finish');
+    line=line.replace(/^\s*\*\*,\s*we are not starting at our start point, but we skip the first 3cm\./i,'**Do not start stitching at the starting point; skip the first 3 cm.');
+    line=line.replace(/^\s*\*\*['’]ll have to\b/i,'**You’ll have to');
     if(/^\s*\*\*(?=[,.;'’])/.test(line)) line=line.replace(/^\s*\*\*/,'').replace(/\*\*\s*$/,'');
     return line;
   }).join('\n').replace(/\n{3,}/g,'\n\n');
+  // Do not print an empty Note/Tip box left at the end of a source guide.
+  return cleaned.replace(/\n?:::(note|tip|warning|important|caution)\s*$/i,'').trim();
 }
 function mdToHtml(md){
   const lines=normalizeGuideMarkdown(md).split('\n');
@@ -910,17 +1121,33 @@ function buildGuide(){
   html+='<span class="chip diff">Difficulty <span class="diff" style="margin-left:3px">'+dots+'</span></span>';
   (a.techniques||[]).forEach(t=>html+='<span class="chip">'+esc(prettify(t))+'</span>');
   html+='</div>';
+  if(a.sourceUrl){
+    html+='<a href="'+esc(a.sourceUrl)+'" target="_blank" rel="noopener" style="display:inline-block;color:#69b9ff;font-size:11.5px;margin:-4px 0 13px">Pattern source and illustrated instructions ↗</a>';
+  }
+  if(a.imported&&!PatternImports.hasLoaded(state.design)){
+    html+='<div class="md"><blockquote>Choose the locally downloaded source PDF before drafting or exporting this pattern.</blockquote></div>';
+  }
   const instr=DATA.instructions[state.design];
   if(instr){ html+='<div class="fieldset-title">Sewing instructions</div><div class="md">'+mdToHtml(scrubBrand(instr))+'</div>'; }
   else { html+='<div style="font-size:12px;color:var(--text-dim);line-height:1.6">Draft &amp; print this pattern, then cut it out and pin it to your fabric. Written step-by-step instructions aren\'t included for this design.</div>'; }
   p.innerHTML=html;
+  updateIncludeStepsControl();
+}
+
+function updateIncludeStepsControl(){
+  const available=!!DATA.instructions[state.design];
+  const input=$('includeSteps'), label=$('includeStepsLabel');
+  if(!input||!label) return;
+  input.disabled=!available;
+  label.classList.toggle('off',!available);
+  label.title=available?'Append a printer-friendly sewing guide after the pattern pages':'Written sewing steps are not available for this pattern';
 }
 
 function updateBadges(){
   const miss=missingMeasurements(state.design).length;
   $('measBadge').textContent = miss? '·'+miss+' left' : '';
   $('measBadge').style.color = miss? 'var(--amber)':'';
-  const nOpt=Object.keys((state.options[state.design]||{})).length;
+  const nOpt=isFixedSizePattern()?0:Object.keys((state.options[state.design]||{})).length;
   $('optBadge').textContent = nOpt? nOpt+'✎' : '';
 }
 
@@ -934,11 +1161,13 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 function setAdvancedMode(enabled){
   state.advanced=!!enabled;
   const button=$('btnAdvanced'), tab=$('tabOpts');
+  const fixed=isFixedSizePattern();
+  button.disabled=fixed;
   button.setAttribute('aria-pressed',String(state.advanced));
-  button.textContent=state.advanced?'✓ Advanced mode':'⚙ Advanced mode';
-  button.title=state.advanced?'Hide design options':'Show design options to fine-tune the fit';
-  tab.hidden=!state.advanced;
-  if(!state.advanced && tab.classList.contains('on')) document.querySelector('.tab[data-tab="meas"]').click();
+  button.textContent=state.advanced&&!fixed?'✓ Advanced mode':'⚙ Advanced mode';
+  button.title=fixed?'This published-size pattern has no adjustable design options':(state.advanced?'Hide design options':'Show design options to fine-tune the fit');
+  tab.hidden=!state.advanced||fixed;
+  if((!state.advanced||fixed)&&tab.classList.contains('on')) document.querySelector('.tab[data-tab="meas"]').click();
 }
 $('btnAdvanced').onclick=()=>setAdvancedMode(!state.advanced);
 
@@ -970,19 +1199,56 @@ function currentPrintSVG(){
   if(!curSVG){ toast('Draft a pattern first.', true); return null; }
   return {svg:stripXml(curSVG), W:curW, H:curH};
 }
+function printableStepsHTML(){
+  const instructions=DATA.instructions[state.design];
+  if(!state.includeSteps||!instructions) return '';
+  return '<section class="print-guide">'+
+    '<div class="guide-eyebrow">SEWING GUIDE</div><h1>'+esc(printPatternName())+'</h1>'+
+    (state.studentName.trim()?'<div class="guide-student">Prepared for: '+esc(state.studentName.trim())+'</div>':'')+
+    '<div class="guide-note">These instructions follow the full-size pattern pages. Keep them with the cut pieces while you sew.</div>'+
+    '<div class="guide-body">'+mdToHtml(scrubBrand(instructions))+'</div></section>';
+}
+function printableStepsCSS(){
+  return '.print-guide{font:400 10pt/1.42 Arial,sans-serif;color:#111}'+
+    '.print-guide .guide-eyebrow{font:700 8.5pt Arial;letter-spacing:1.5pt;color:#555;margin-bottom:4pt}'+
+    '.print-guide h1{font:700 22pt/1.15 Arial;margin:0 0 5pt}'+
+    '.print-guide .guide-student{font:600 11pt Arial;margin-bottom:7pt}'+
+    '.print-guide .guide-note{border:1px solid #aaa;background:#f4f4f4;padding:8pt 10pt;margin:0 0 14pt;font-size:9.5pt}'+
+    '.print-guide h2{font:700 15pt/1.25 Arial;margin:16pt 0 6pt;border-bottom:1px solid #aaa;padding-bottom:3pt;break-after:avoid}'+
+    '.print-guide h3{font:700 12.5pt/1.3 Arial;margin:12pt 0 4pt;break-after:avoid}'+
+    '.print-guide h4{font:700 11pt/1.3 Arial;margin:10pt 0 3pt;break-after:avoid}'+
+    '.print-guide p{margin:0 0 7pt}.print-guide ul,.print-guide ol{margin:0 0 8pt;padding-left:22pt}'+
+    '.print-guide li{margin:0 0 4pt}.print-guide blockquote{margin:8pt 0;padding:7pt 10pt;border-left:3pt solid #666;background:#f3f3f3}'+
+    '.print-guide .callout{margin:10pt 0 5pt;padding:6pt 8pt;border-left:3pt solid #333;background:#eee;font-weight:700;text-transform:uppercase;letter-spacing:.4pt;break-after:avoid}'+
+    '.print-guide code{font:9.5pt Consolas,monospace;background:#eee;padding:0 2pt}'+
+    '.print-guide p,.print-guide li,.print-guide blockquote{orphans:3;widows:3}';
+}
 function svgDataUri(svg){
-  const bytes=new TextEncoder().encode(svg);
+  // Inline HTML SVG accepts entities such as &nbsp;, but a standalone SVG
+  // loaded by <img> is XML and only accepts five predefined entities. Convert
+  // the others to numeric references so the pattern image survives printing.
+  const decoder=document.createElement('textarea');
+  const xmlSafe=svg.replace(/&([a-z][a-z0-9]+);/gi,(entity,name)=>{
+    if(/^(amp|lt|gt|quot|apos)$/i.test(name)) return entity;
+    decoder.innerHTML=entity;
+    const value=decoder.value;
+    if(!value||value===entity) return '&amp;'+name+';';
+    return [...value].map(char=>'&#'+char.codePointAt(0)+';').join('');
+  });
+  const bytes=new TextEncoder().encode(xmlSafe);
   let binary='';
   for(let i=0;i<bytes.length;i+=32768) binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
   return 'data:image/svg+xml;base64,'+btoa(binary);
 }
 function rollHeaderHTML(panel,total,pageH,totalRollH){
   const calibration=panel===0?calibrationHTML():'<div style="width:100mm;height:100mm;display:flex;align-items:center;justify-content:center;border:0.4mm dashed #aaa;color:#555;font:700 12mm Arial">'+(panel+1)+'</div>';
+  const guideIncluded=state.includeSteps&&!!DATA.instructions[state.design];
   return '<div class="roll-header">'+calibration+
-    '<div style="font:400 3.2mm/1.55 Arial;color:#222"><b style="font-size:5mm">'+esc(ABOUT[state.design].name)+'</b><br>'+[
+    '<div style="font:400 3.2mm/1.55 Arial;color:#222"><b style="font-size:5mm">'+esc(printPatternName())+'</b><br>'+[
       '36″ roll · panel '+(panel+1)+' of '+total,
       'PDF page: '+fmt(ROLL_W_MM/MM_PER_IN)+'″ × '+fmt(pageH/MM_PER_IN)+'″',
-      'Total PDF: '+fmt(ROLL_W_MM/MM_PER_IN)+'″ × '+fmt(totalRollH/MM_PER_IN)+'″'+(total>1?' across '+total+' pages':''),
+      'Total roll pattern: '+fmt(ROLL_W_MM/MM_PER_IN)+'″ × '+fmt(totalRollH/MM_PER_IN)+'″'+(total>1?' across '+total+' pages':''),
+      guideIncluded?'Sewing guide follows on US Letter pages.':'',
       state.studentName.trim()?'Prepared for: '+esc(state.studentName.trim()):'',
       'Print at 100% / Actual size',
       total>1?'Adjacent panels overlap by '+ROLL_OVERLAP_MM+' mm. Match the repeated artwork before taping.':'The pattern has been arranged to fit the roll width.'
@@ -998,7 +1264,7 @@ function printRoll(){
   const pageH=headerH+P.H+footerH;
   const totalRollH=pageH*panels;
   const studentFile=state.studentName.trim()?state.studentName.trim().replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim()+' — ':'';
-  const pdfName=studentFile+ABOUT[state.design].name+' — '+fmt(ROLL_W_MM/MM_PER_IN)+'in × '+fmt(totalRollH/MM_PER_IN)+'in'+(panels>1?' total ('+panels+' panels)':'')+' — 36in roll';
+  const pdfName=studentFile+printPatternName()+' — '+fmt(ROLL_W_MM/MM_PER_IN)+'in × '+fmt(totalRollH/MM_PER_IN)+'in'+(panels>1?' total ('+panels+' panels)':'')+' — 36in roll';
   const source=svgDataUri(P.svg);
   let body='';
   for(let panel=0;panel<panels;panel++){
@@ -1013,30 +1279,38 @@ function printRoll(){
         (panels>1&&panel<panels-1?'<div class="overlap right">MATCH '+ROLL_OVERLAP_MM+' mm OVERLAP</div>':'')+
       '</div></section>';
   }
+  body+=printableStepsHTML();
   openPrint(pdfName, body,
-    '@page{size:'+ROLL_W_MM+'mm '+pageH+'mm;margin:0}'+
-    '.roll-sheet{width:'+ROLL_W_MM+'mm;height:'+pageH+'mm;position:relative;overflow:hidden;page-break-after:always;background:#fff}'+
+    '@page rollPattern{size:'+ROLL_W_MM+'mm '+pageH+'mm;margin:0}@page stepsGuide{size:letter;margin:12mm}'+
+    '.roll-sheet{page:rollPattern;width:'+ROLL_W_MM+'mm;height:'+pageH+'mm;position:relative;overflow:hidden;page-break-after:always;background:#fff}'+
     '.roll-header{height:'+headerH+'mm;padding:6mm;display:flex;gap:8mm;align-items:flex-start;border-bottom:0.4mm solid #999}'+
     '.roll-panel-label{height:7mm;padding-top:1.8mm;text-align:center;font:700 3mm Arial;letter-spacing:.4mm}'+
     '.roll-window{position:absolute;top:'+(headerH+7)+'mm;overflow:hidden;border:0.35mm solid #000;background:#fff}'+
     '.roll-window img{display:block;position:absolute;top:0;max-width:none}'+
     '.overlap{position:absolute;z-index:2;top:0;bottom:0;width:'+ROLL_OVERLAP_MM+'mm;border-color:#EC008C;border-style:dashed;color:#EC008C;font:700 2.3mm Arial;writing-mode:vertical-rl;text-align:center;padding:3mm 2mm;background:rgba(236,0,140,.035)}'+
-    '.overlap.left{left:0;border-width:0 .35mm 0 0}.overlap.right{right:0;border-width:0 0 0 .35mm}');
+    '.overlap.left{left:0;border-width:0 .35mm 0 0}.overlap.right{right:0;border-width:0 0 0 .35mm}'+
+    '.print-guide{page:stepsGuide;break-before:page}'+printableStepsCSS());
 }
 /* US Letter tiles: window the true-scale SVG across pages with overlap + marks. */
 function printTiles(){
   const P=currentPrintSVG(); if(!P) return;
   const {svg,W,H}=P;
-  const MARGIN=8, OVER=10;                    // mm: page margin + tile overlap
-  const tileW=LETTER_W-MARGIN*2, tileH=LETTER_H-MARGIN*2;
+  const imported=importedPattern();
+  const sourceTiles=!!imported&&imported.pageWidthMM<LETTER_W&&imported.pageHeightMM<LETTER_H;
+  const MARGIN_X=sourceTiles?(LETTER_W-imported.pageWidthMM)/2:8;
+  const MARGIN_Y=sourceTiles?(LETTER_H-imported.pageHeightMM)/2:8;
+  const OVER=sourceTiles?0:10;                 // imported PDFs retain their original tile grid
+  const tileW=sourceTiles?imported.pageWidthMM:LETTER_W-MARGIN_X*2;
+  const tileH=sourceTiles?imported.pageHeightMM:LETTER_H-MARGIN_Y*2;
   const stepX=tileW-OVER, stepY=tileH-OVER;
-  const cols=Math.max(1,Math.ceil((W-OVER)/stepX)), rows=Math.max(1,Math.ceil((H-OVER)/stepY));
+  const cols=sourceTiles?imported.columns:Math.max(1,Math.ceil((W-OVER)/stepX));
+  const rows=sourceTiles?imported.rows:Math.max(1,Math.ceil((H-OVER)/stepY));
   const svgSource=svgDataUri(svg);
   // assembly / cover page
   let body='<div class="page cover">'+
-    '<h1 style="font:700 7mm Arial;margin:0 0 2mm">'+esc(ABOUT[state.design].name)+'</h1>'+
+    '<h1 style="font:700 7mm Arial;margin:0 0 2mm">'+esc(printPatternName())+'</h1>'+
     (state.studentName.trim()?'<div style="font:600 4mm Arial;margin-bottom:3mm">Prepared for: '+esc(state.studentName.trim())+'</div>':'')+
-    '<div style="font:400 3.4mm Arial;color:#333;margin-bottom:5mm">Made-to-measure · '+rows+' × '+cols+' pages ('+(rows*cols)+' total). Print at 100% / “Actual size”, then trim on the dashed line and tape columns left-to-right, rows top-to-bottom.</div>'+
+    '<div style="font:400 3.4mm Arial;color:#333;margin-bottom:5mm">'+(sourceTiles?'Imported source layout':(isFixedSizePattern()?'Publisher-graded '+publishedSizeText():'Made-to-measure'))+' · '+rows+' × '+cols+' pages ('+(rows*cols)+' total). Print at 100% / “Actual size”, then '+(sourceTiles?'match the source page marks':'trim on the dashed line')+' and tape columns left-to-right, rows top-to-bottom.</div>'+
     '<div style="display:flex;gap:8mm;align-items:flex-start;flex-wrap:wrap">'+calibrationHTML()+
       '<div><div style="font:600 3.2mm Arial;margin-bottom:2mm">Assembly map</div>'+assemblyMap(rows,cols)+'<div style="margin-top:3mm">'+scaleBarHTML()+'</div></div>'+
     '</div></div>';
@@ -1044,26 +1318,28 @@ function printTiles(){
   for(let r=0;r<rows;r++){ for(let c=0;c<cols;c++){
     const offX=c*stepX, offY=r*stepY;
     body+='<div class="page tile">'+
-      '<div class="win" style="width:'+tileW+'mm;height:'+tileH+'mm">'+
+      '<div class="win" style="left:'+MARGIN_X+'mm;top:'+MARGIN_Y+'mm;width:'+tileW+'mm;height:'+tileH+'mm">'+
         '<div class="mv" style="left:'+(-offX)+'mm;top:'+(-offY)+'mm;width:'+W+'mm;height:'+H+'mm"><img alt="" src="'+svgSource+'" style="width:'+W+'mm;height:'+H+'mm"></div>'+
-        cropMarks()+
+        (sourceTiles?'':cropMarks())+
       '</div>'+
-      '<div class="lbl">'+esc(ABOUT[state.design].name)+' · row '+(r+1)+' / col '+(c+1)+'  ('+(r*cols+c+1)+' of '+(rows*cols)+')</div>'+
+      '<div class="lbl">'+esc(printPatternName())+' · row '+(r+1)+' / col '+(c+1)+'  ('+(r*cols+c+1)+' of '+(rows*cols)+')</div>'+
     '</div>';
   }}
-  const css='@page{size:letter;margin:0}'+
-    '.page{width:'+LETTER_W+'mm;height:'+LETTER_H+'mm;padding:'+MARGIN+'mm;position:relative;overflow:hidden;page-break-after:always}'+
+  body+=printableStepsHTML();
+  const css='@page tilePage{size:letter;margin:0}@page stepsGuide{size:letter;margin:12mm}'+
+    '.page{page:tilePage;width:'+LETTER_W+'mm;height:'+LETTER_H+'mm;padding:0;position:relative;overflow:hidden;page-break-after:always}'+
     '.page.cover{padding:14mm}'+
-    '.win{position:relative;overflow:hidden;outline:0.3mm dashed #999}'+
+    '.win{position:absolute;overflow:hidden;outline:0.3mm dashed #999}'+
     '.mv{position:absolute}.mv img{position:absolute;left:0;top:0;display:block;max-width:none}'+
-    '.lbl{position:absolute;left:'+MARGIN+'mm;bottom:2mm;font:400 2.7mm Arial;color:#555}'+
+    '.lbl{position:absolute;left:'+MARGIN_X+'mm;bottom:2mm;font:400 2.7mm Arial;color:#555}'+
     '.cm{position:absolute;width:4mm;height:4mm;border:0.3mm solid #000}'+
     '.cm.tl{left:-0.15mm;top:-0.15mm;border-right:none;border-bottom:none}'+
     '.cm.tr{right:-0.15mm;top:-0.15mm;border-left:none;border-bottom:none}'+
     '.cm.bl{left:-0.15mm;bottom:-0.15mm;border-right:none;border-top:none}'+
-    '.cm.br{right:-0.15mm;bottom:-0.15mm;border-left:none;border-top:none}';
+    '.cm.br{right:-0.15mm;bottom:-0.15mm;border-left:none;border-top:none}'+
+    '.print-guide{page:stepsGuide;break-before:page}'+printableStepsCSS();
   const studentFile=state.studentName.trim()?state.studentName.trim().replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim()+' — ':'';
-  openPrint(studentFile+ABOUT[state.design].name+' — Letter tiles', body, css);
+  openPrint(studentFile+printPatternName()+' — Letter tiles', body, css);
 }
 function cropMarks(){ return '<div class="cm tl"></div><div class="cm tr"></div><div class="cm bl"></div><div class="cm br"></div>'; }
 function assemblyMap(rows,cols){
@@ -1073,11 +1349,12 @@ function assemblyMap(rows,cols){
 }
 $('btnRoll').onclick=printRoll;
 $('btnTiles').onclick=printTiles;
+$('includeSteps').onchange=(event)=>{ state.includeSteps=event.target.checked; saveState(); };
 
 /* ═════════════ sharing ═════════════ */
 $('btnShare').onclick=()=>{
   const url=location.origin+location.pathname+'#'+encodeShare();
-  navigator.clipboard.writeText(url).then(()=>toast('Link copied — it reopens this pattern with these measurements.'),
+  navigator.clipboard.writeText(url).then(()=>toast('Link copied — it reopens this pattern with these settings.'),
     ()=>{ prompt('Copy this link:', url); });
 };
 
@@ -1101,17 +1378,19 @@ SDSCPA.attachGlossary({ labName:'Pattern Lab', goal:'I can take body measurement
   ]});
 
 /* ═════════════ init ═════════════ */
-function init(){
+async function init(){
   if(!window.FS || !FS.designs){ document.body.innerHTML='<div style="padding:40px;font-family:sans-serif;color:#f0f0f0">Pattern engine failed to load. Make sure <code>freesewing.bundle.js</code> is present.</div>'; return; }
   loadState();
+  await PatternImports.restore();
   tryLoadShare();
-  if(!DESIGNS[state.design]) state.design='teagan';
-  if(!DESIGNS[state.design]) state.design=Object.keys(DESIGNS)[0];
+  if(!patternExists(state.design)) state.design='teagan';
+  if(!patternExists(state.design)) state.design=Object.keys(DESIGNS)[0];
   // seed measurements from the sample body if none saved
   if(!state.measurements || !Object.keys(state.measurements).length){
     state.measurements = Object.assign({}, FS.models[state.sampleSize] || FS.models.cisFemaleAdult36);
   }
   $('studentName').value=state.studentName;
+  $('includeSteps').checked=state.includeSteps;
   let watermarkTimer=null;
   const updateStudentName=()=>{
     state.studentName=$('studentName').value.slice(0,60);
@@ -1121,6 +1400,10 @@ function init(){
   };
   $('studentName').oninput=updateStudentName;
   $('studentName').onchange=()=>{ clearTimeout(watermarkTimer); state.studentName=$('studentName').value.slice(0,60); saveState(); draft(); };
+  PatternImports.initUI({
+    toast,
+    onImported:key=>{ configCache={}; buildPicker(); selectDesign(key); fitView(); saveState(); }
+  });
   buildPicker('');
   $('pkSearch').oninput=()=>buildPicker();
   $('pkDifficulty').value=String(state.diffFilter);
@@ -1129,7 +1412,7 @@ function init(){
   selectDesign(state.design);
   window.addEventListener('resize', ()=>{ if(curW) applyView(); });
 }
-init();
+init().catch(error=>{ console.error(error); toast('Pattern Lab could not finish loading: '+String(error.message||error),true); });
 </script>
 </body>
 </html>

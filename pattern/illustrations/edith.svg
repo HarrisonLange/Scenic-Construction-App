@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 150" fill="none" stroke="#f1f5f9" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" class="line-drawing">
+  <!-- Front: gathered open bodice, wrapped waist and full skirt -->
+  <g id="front">
+    <path d="M18 21c4-2 8-2 11 0l6 22M51 21c-4-2-8-2-11 0l-6 22"/>
+    <path d="M19 21c-2 13-2 24 3 34m28-34c2 13 2 24-3 34"/>
+    <path d="M19 21c4 11 7 19 15 29 8-10 12-18 17-29M22 55c5-3 19-3 25 0"/>
+    <path d="M21 54c-2 4-2 13 1 17 7 2 19 2 26 0 3-4 3-13-1-17"/>
+    <path opacity=".55" d="M21 58c7 2 20 2 27 0m-28 4c8 2 21 2 29 0m-28 4c7 2 20 2 27 0"/>
+    <path d="M22 71C16 88 13 113 9 141c3 4 7 4 10 1 4 4 8 4 12 0 4 5 9 5 13 0 4 4 8 4 11-1-4-28-6-53-7-70z"/>
+    <path d="M29 71c-2 27-3 50-4 71m10-71v74m8-74 4 71"/>
+    <path opacity=".45" d="M25 71c-5 27-6 50-6 71m12-71-1 71m9-71 2 71m4-71 7 70"/>
+    <!-- detachable cape falling from both shoulders -->
+    <path d="M18 22C14 52 9 89 2 138c3 4 7 4 10 1 5-35 9-76 10-116m29-1c4 31 8 71 14 117 3 3 7 3 10-1-7-48-14-86-19-116"/>
+  </g>
+
+  <!-- Back: crossed elastic straps, gathered back waist, cape attachment -->
+  <g id="back">
+    <path d="M75 31c3-2 7-2 10 0m18 0c3-2 7-2 10 0"/>
+    <path d="M79 31l27 30m3-30L82 61M78 31c-2 12-1 23 5 31m27-31c2 12 1 23-5 31"/>
+    <path d="M82 61h24c3 4 3 11 0 15-8 3-17 3-24 0-3-4-3-11 0-15z"/>
+    <path opacity=".62" d="M83 64c7 3 16 3 22 0m-23 4c8 3 17 3 25 0m-25 4c8 3 17 3 24 0"/>
+    <path d="M82 76c-6 18-9 41-13 66 3 4 7 4 10 1 4 4 8 4 12 0 4 5 9 5 13 0 4 4 8 4 11-1-4-25-7-48-9-66z"/>
+    <path d="M89 76c-2 25-3 46-4 67m10-67v69m7-69 5 67"/>
+    <!-- one cape panel detached/turned aside to reveal the adaptive back -->
+    <path d="M75 32c-4 31-11 69-18 108 3 4 7 4 10 1 8-35 13-72 13-108m33-1c4 29 8 67 13 107 3 4 7 4 10 0-6-45-12-82-18-107"/>
+    <path opacity=".55" d="M76 35c-2 31-8 66-15 102m53-102c4 31 9 66 17 101"/>
+  </g>
+</svg>
