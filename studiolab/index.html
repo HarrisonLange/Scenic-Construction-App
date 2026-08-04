@@ -8,8 +8,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+    "three": "../shared/vendor/three/three.module.js",
+    "three/addons/": "../shared/vendor/three/addons/"
   }
 }
 </script>
@@ -53,7 +53,7 @@
   .back:hover{color:#fff;border-color:var(--accent)}
   .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;line-height:1;margin-right:8px}
   .brand-logo{height:22px;width:auto;display:block}
-  .brand-tag{font-size:8.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .brand-tag{margin:0;font-size:8.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   .spacer{flex:1}
   .tbtn{
     display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -227,7 +227,7 @@
       <defs><linearGradient id="sdscpaGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7AC143"/><stop offset=".17" stop-color="#F7941E"/><stop offset=".34" stop-color="#ED1C45"/><stop offset=".50" stop-color="#EC008C"/><stop offset=".66" stop-color="#92278F"/><stop offset=".83" stop-color="#2E3192"/><stop offset="1" stop-color="#00AEEF"/></linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Studio Lighting Lab</div>
+    <h1 class="brand-tag">Studio Lighting Lab</h1>
   </div>
   <button class="tbtn" id="addLightBtn" title="Add studio light">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -573,8 +573,12 @@
     $('saveStatus').innerHTML = 'Saving <b>local</b>';
     clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      $('saveStatus').innerHTML = 'Saved <b>local</b>';
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        $('saveStatus').innerHTML = 'Saved <b>local</b>';
+      }catch(err){
+        $('saveStatus').textContent = 'Local save unavailable';
+      }
     }, 180);
   }
   function selectedLight(){
@@ -2070,10 +2074,10 @@
       ['Back / rim light', 'A light from behind that outlines the subject so they stand out from the background.'],
       ['Practical', 'A light that appears in the shot itself, like a lamp on a table.'],
       ['Softbox', 'A fabric box over a light that makes it big and soft — soft light means soft shadow edges.'],
-      ['Fresnel', 'A focusable hard light — small source, crisp shadows.'],
-      ['Gel', 'A colored filter placed on a light to change its color.'],
-      ['Gobo', 'A pattern (window, blinds, branches) a light shines through to project texture.'],
-      ['Exposure', 'Overall brightness of the image, measured in EV. 0 is “just right.”'],
+      ['Fresnel', 'A focusable spotlight with a Fresnel lens that produces a soft-edged beam, adjustable from spot to flood.'],
+      ['Gel', 'A colored transparent sheet placed in front of a light.'],
+      ['Gobo', 'A patterned template that projects a shape or texture.'],
+      ['Exposure', 'The overall brightness of an image. In this lab, 0 EV is the target exposure.'],
       ['Lighting ratio', 'Contrast between the bright side and shadow side of the face. 2:1 is gentle; 8:1 is dramatic.'],
       ['Three-point lighting', 'The classic recipe: key + fill + back light.'],
       ['Low key', 'A dark, moody image with lots of shadow. (Not the same as the key light!)']

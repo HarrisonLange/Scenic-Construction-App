@@ -37,7 +37,7 @@
   }
   .back-hub:hover{color:var(--text-light);border-color:#555}
   .brand-logo{height:22px;width:auto;display:block;flex:0 0 auto}
-  .brand-tag{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;border-left:1px solid var(--ui-dark3);padding-left:12px}
+  .brand-tag{margin:0;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;border-left:1px solid var(--ui-dark3);padding-left:12px}
   #showName{
     background:var(--ui-dark);border:1px solid var(--ui-dark3);color:var(--text-light);
     border-radius:7px;padding:6px 10px;font-size:13px;font-weight:600;min-width:200px;
@@ -233,6 +233,26 @@
   ::-webkit-scrollbar{width:11px;height:11px}
   ::-webkit-scrollbar-thumb{background:#2e2e2e;border-radius:6px;border:2px solid var(--panel)}
   ::-webkit-scrollbar-thumb:hover{background:#3a3a3a}
+
+  @media (max-width:700px){
+    html,body{height:auto;min-height:100%;overflow:auto}
+    #topbar{flex-wrap:wrap;gap:8px;padding:8px}
+    #topbar .brand-logo{height:18px}
+    #topbar .brand-tag{font-size:9px;letter-spacing:1px;padding-left:8px}
+    #showName{order:2;min-width:0;flex:1 1 180px}
+    #topbar .spacer{display:none}
+    #main{display:flex;flex-direction:column;overflow:visible}
+    #library,#inspector{width:100%;min-width:0;flex:0 0 auto;border-left:0;border-right:0}
+    #library{height:240px;border-bottom:1px solid var(--line)}
+    #center{width:100%;height:520px;min-width:0;flex:0 0 auto}
+    #cueScroll{overflow:auto}
+    table.cues{min-width:720px}
+    #inspector{min-height:300px;border-top:1px solid var(--line)}
+    #transport{height:auto;min-height:108px;flex-wrap:wrap}
+    #goWrap{width:100%;padding:12px;justify-content:center;border-right:0;border-bottom:1px solid #000}
+    #activePanel{min-height:140px;border-left:0}
+    #toast{bottom:16px;max-width:calc(100vw - 24px);text-align:center}
+  }
 </style>
 <script src="../shared/learn.js"></script>
 </head>
@@ -247,8 +267,8 @@
     </linearGradient></defs>
     <text x="0" y="40" font-family="'Arial Black',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
   </svg>
-  <span class="brand-tag">Sound Cue Lab</span>
-  <input id="showName" type="text" value="Untitled Show" spellcheck="false" title="Show name">
+  <h1 class="brand-tag">Sound Cue Lab</h1>
+  <input id="showName" type="text" value="Untitled Show" spellcheck="false" title="Show name" aria-label="Show name">
   <div class="spacer"></div>
   <span class="saved-tag" id="savedTag">Saved</span>
   <button class="tbtn" id="newBtn" title="Start a new empty show"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>New</button>
@@ -265,7 +285,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         Sound Library
       </div>
-      <input id="libSearch" type="text" placeholder="Search effects…" spellcheck="false">
+      <input id="libSearch" type="text" placeholder="Search effects…" spellcheck="false" aria-label="Search sound effects">
       <div class="lib-actions">
         <button class="tbtn" id="addFileBtn" title="Add an audio file from this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add file</button>
         <button class="tbtn" id="practiceSndBtn" title="Generate four practice sounds so you can hear fades and loops without any files">✨ Practice sounds</button>
@@ -750,7 +770,7 @@ function inlineRename(id, span){
 }
 
 /* ════════════════ Toolbar buttons ════════════════ */
-document.querySelectorAll('.add-btn').forEach(b=>b.addEventListener('click',()=>{
+document.querySelectorAll('.add-btn[data-add]').forEach(b=>b.addEventListener('click',()=>{
   const type=b.dataset.add;
   if(type==='audio'){ document.getElementById('audioFile').click(); replaceTargetCue=null; }
   else addCue(type);
@@ -1275,7 +1295,7 @@ render();
       ['Loop', 'A sound that repeats until something stops it — good for rain or crowd noise.'],
       ['Memo', 'A note in the stack for the operator to read — it makes no sound.'],
       ['Trim', 'Cutting time off the start or end of an audio file without editing the file.'],
-      ['A2 / sound operator', 'The crew member who runs the cue stack during the show.']
+      ['Sound cue operator', 'The crew member who runs the cue stack and fires each cue during the show.']
     ]
   });
 })();

@@ -38,7 +38,7 @@
   }
   .back-hub:hover{color:var(--text-light);border-color:#555}
   .brand-logo{height:22px;width:auto;display:block;flex:0 0 auto}
-  .brand-tag{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;border-left:1px solid var(--ui-dark3);padding-left:12px}
+  .brand-tag{margin:0;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;border-left:1px solid var(--ui-dark3);padding-left:12px}
   .spacer{flex:1}
   select,.tbtn{
     background:var(--panel2);border:1px solid var(--ui-dark3);color:var(--text-light);
@@ -141,7 +141,7 @@
     flex-direction:column;gap:18px;z-index:20;text-align:center;padding:24px;
     background:rgba(8,8,10,.78);backdrop-filter:blur(3px)}
   .overlay.hidden{display:none}
-  .overlay h1{font-size:30px;font-weight:800;letter-spacing:.5px}
+  .overlay h2{font-size:30px;font-weight:800;letter-spacing:.5px}
   .overlay .sub{font-size:14px;color:#b9bcc2;max-width:560px;line-height:1.6}
   .overlay .big-btn{
     background:var(--go-dark);border:1px solid var(--go);color:#eafff0;border-radius:12px;
@@ -264,16 +264,16 @@
     </linearGradient></defs>
     <text x="0" y="40" font-family="'Arial Black',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
   </svg>
-  <span class="brand-tag">Line Mixing Lab</span>
+  <h1 class="brand-tag">Line Mixing Lab</h1>
 
   <span class="spacer"></span>
 
-  <select id="scriptSel" title="Choose a script"></select>
+  <select id="scriptSel" title="Choose a script" aria-label="Choose a script"></select>
   <button class="tbtn" id="addScriptBtn" title="Add your own script">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
     Script
   </button>
-  <select id="paceSel" title="Dialogue pacing">
+  <select id="paceSel" title="Dialogue pacing" aria-label="Dialogue pacing">
     <option value="0.8">Pace: Relaxed</option>
     <option value="1">Pace: Normal</option>
     <option value="1.1" selected>Pace: Brisk</option>
@@ -312,7 +312,7 @@
 
     <!-- start / idle overlay -->
     <div class="overlay" id="startOverlay">
-      <h1 id="ovTitle">🎚️ Line Mixing Lab</h1>
+      <h2 id="ovTitle">🎚️ Line Mixing Lab</h2>
       <div class="sub" id="ovSub">
         Each character is on a DCA bound to a key on the bottom row of your keyboard
         (<span class="keycap">Z</span>–<span class="keycap">M</span>). As each line falls toward the
@@ -332,7 +332,7 @@
 
   <!-- pause (covers the whole stage so it shows in advanced mode too) -->
   <div class="overlay hidden" id="pauseOverlay">
-    <h1>⏸ Paused</h1>
+    <h2>⏸ Paused</h2>
     <div class="sub">Press <span class="keycap">Space</span> to resume.</div>
   </div>
 </div>
@@ -610,7 +610,8 @@ function loadScripts(){
 }
 function saveCustom(){
   const custom = scripts.filter(s=>!s.builtin).map(({builtin,...rest})=>rest);
-  localStorage.setItem('line-mixing-scripts', JSON.stringify(custom));
+  try{ localStorage.setItem('line-mixing-scripts', JSON.stringify(custom)); }
+  catch(e){ toast('This browser blocked local saving. Keep a copy of your script elsewhere.', 'bad', 4200); }
 }
 function populateSelect(){
   const sel = $('scriptSel');
@@ -1408,13 +1409,13 @@ if(window.SDSCPA) SDSCPA.attachGlossary({
   goal:'I can open the right performer’s channel exactly while they speak — and only then.',
   terms:[
     ['A1','The head audio person mixing the show live at the console.'],
-    ['DCA','A master fader controlling a group of channels — here, one per character.'],
+    ['DCA','A control fader that changes the levels of an assigned group of channels without combining their audio — here, one per character.'],
     ['Line mixing','Riding the DCAs so each performer’s mic is open only while they speak.'],
     ['Open / close a channel','Push the fader up so the mic is live; pull it down so it’s not.'],
     ['Lead-in zone','The moment just before the line — open the channel here so the first word isn’t clipped.'],
     ['Trail zone','The moment just after the line — close here so the room noise doesn’t linger.'],
     ['Clipping a line','Opening late and cutting off the first word. The most common rookie mistake.'],
-    ['Feedback','The squeal when too many open mics hear the speakers. Fewer open mics = safer mix.'],
+    ['Feedback','A self-reinforcing loop between microphones and speakers that causes ringing or squealing. More open mics reduce the available gain before feedback.'],
     ['Combo','Consecutive well-mixed lines. Real A1s chase consistency, not luck.'],
     ['Pace','How fast the scene plays. Slower pace = more time to read ahead.'],
     ['Teleprompter','The scrolling script above the highway — read ahead to know who speaks next.'],

@@ -46,7 +46,7 @@
   .back:hover{color:#fff;border-color:var(--accent)}
   .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;line-height:1;margin-right:8px}
   .brand-logo{height:22px;width:auto;display:block}
-  .brand-tag{font-size:8.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .brand-tag{margin:0;font-size:8.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   .spacer{flex:1}
   .scene-fields{display:flex;align-items:center;gap:7px}
   .scene-fields input{
@@ -230,11 +230,11 @@
       </linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="0" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Scenic Design Lab</div>
+    <h1 class="brand-tag">Scenic Design Lab</h1>
   </div>
   <div class="scene-fields">
-    <input id="sceneTitle" type="text" placeholder="Production / Scene" maxlength="48">
-    <input id="designerName" type="text" placeholder="Designer" maxlength="40">
+    <input id="sceneTitle" type="text" placeholder="Production / Scene" maxlength="48" aria-label="Production or scene title">
+    <input id="designerName" type="text" placeholder="Designer" maxlength="40" aria-label="Designer name">
   </div>
   <div class="spacer"></div>
   <button class="tbtn" id="resetBtn" title="Clear the stage">
@@ -1645,12 +1645,12 @@ init();
     labName: 'Scenic Design Lab',
     goal: 'I can stage a scene with clear focus and keep every actor visible to the audience.',
     terms: [
-      ['Ground plan', 'The top-down map of the set, drawn to scale — the second view in this lab.'],
-      ['Sightline', 'An imaginary line from an audience seat to an actor. If scenery crosses it, that seat sees nothing.'],
+      ['Ground plan', 'A scaled overhead drawing of the set on the stage.'],
+      ['Sightline', 'The line of view from an audience seat; determines what can be seen.'],
       ['Upstage / downstage', 'Upstage is away from the audience; downstage is toward them. Stages used to be tilted!'],
       ['Stage left / right', 'From the ACTOR’s point of view facing the audience — so it’s flipped for you.'],
       ['Stage areas', 'The 9 zones (DR, DC, DL, R, C, L, UR, UC, UL) directors use to call positions.'],
-      ['Composition', 'How everything on stage is arranged into a picture the audience reads.'],
+      ['Composition', 'The arrangement of visual elements within a frame.'],
       ['Focus', 'What the audience looks at first. Height, light, and space all create focus.'],
       ['Diagonal', 'An arrangement running corner-to-corner. It feels dynamic and shows everyone.'],
       ['Level', 'Any raised surface — platforms, risers, stairs. Height signals importance.'],

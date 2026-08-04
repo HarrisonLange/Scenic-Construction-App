@@ -1,0 +1,16 @@
+{
+  "name": "sdscpa-virtual-labs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Release checks for the SDSCPA Design & Production Virtual Labs",
+  "scripts": {
+    "test": "node qa/run-all.cjs",
+    "test:pages": "node qa/release-audit.cjs",
+    "test:interactions": "node qa/interaction-smoke.cjs",
+    "test:storage": "node qa/storage-resilience.cjs",
+    "test:vocabulary": "node qa/vocabulary-consistency.cjs --summary"
+  },
+  "devDependencies": {
+    "playwright": "1.62.0"
+  }
+}

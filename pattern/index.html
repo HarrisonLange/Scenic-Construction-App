@@ -23,7 +23,7 @@
   #topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--rainbow);opacity:.9}
   .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:6px;line-height:1}
   .brand-logo{height:22px;width:auto;display:block}
-  .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .brand-tag{margin:0;font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   .back{font-size:11px;color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 9px;white-space:nowrap}
   .back:hover{color:#fff;border-color:var(--accent)}
   .spacer{flex:1}
@@ -210,7 +210,7 @@
       </linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Pattern Lab</div>
+    <h1 class="brand-tag">Pattern Lab</h1>
   </div>
   <div id="curName">—</div>
   <div class="spacer"></div>
@@ -868,10 +868,10 @@ function buildMeas(){
   // Core settings
   html+='<div class="settings-box">';
   const sampleHelp='The number is the sample model’s neck circumference in centimeters (for example, 36 means 36 cm around the neck). Choosing a sample loads a complete set of estimated body measurements. Replace those estimates with the student’s actual measurements before printing.';
-  html+='<div class="row"><label>Sample body <button type="button" class="info" aria-label="What does the sample body number mean?" aria-expanded="false" data-help="'+esc(sampleHelp)+'">?</button></label><select class="sel" id="mSample" style="flex:1.4">'+sampleSizeOptions()+'</select></div>';
+  html+='<div class="row"><label>Sample body <button type="button" class="info" aria-label="What does the sample body number mean?" aria-expanded="false" data-help="'+esc(sampleHelp)+'">?</button></label><select class="sel" id="mSample" style="flex:1.4" aria-label="Sample body">'+sampleSizeOptions()+'</select></div>';
   html+='<div class="row"><label>Units</label><div class="seg" id="mUnits"><button data-u="imperial" class="'+(state.units==='imperial'?'on':'')+'">Inches</button><button data-u="metric" class="'+(state.units==='metric'?'on':'')+'">cm</button></div></div>';
   html+='<div class="row"><label>Seam allowance</label><label class="switch" style="flex:0 0 auto"><input type="checkbox" id="mSa"'+(state.sa?' checked':'')+'><span class="sl"></span></label>'+
-        '<input class="num" id="mSaV" type="number" step="0.125" value="'+fmt(mmToDisplay(state.saMM))+'"'+(state.sa?'':' disabled')+'><span class="unit">'+unitLabel()+'</span></div>';
+        '<input class="num" id="mSaV" type="number" step="0.125" aria-label="Seam allowance" value="'+fmt(mmToDisplay(state.saMM))+'"'+(state.sa?'':' disabled')+'><span class="unit">'+unitLabel()+'</span></div>';
   html+='</div>';
   // Required measurements
   html+='<div class="fieldset-title">Measurements for this pattern</div>';
@@ -909,7 +909,7 @@ function measRow(k, optional){
   const help=helpText?' <button type="button" class="info" aria-label="How to measure '+esc(lbl)+'" aria-expanded="false" data-help="'+esc(helpText.replace(/\s+/g,' ').slice(0,300))+'">?</button>':'';
   const val=state.measurements[k]>0?fmt(mmToDisplay(state.measurements[k])):'';
   return '<div class="row"><label>'+esc(lbl)+help+'</label>'+
-    '<input class="num'+(optional?' opt':'')+'" data-meas="'+k+'" type="number" step="0.125" value="'+val+'" placeholder="'+(optional?'—':'0')+'"><span class="unit">'+unitLabel()+'</span></div>';
+    '<input class="num'+(optional?' opt':'')+'" data-meas="'+k+'" type="number" step="0.125" aria-label="'+esc(lbl)+'" value="'+val+'" placeholder="'+(optional?'—':'0')+'"><span class="unit">'+unitLabel()+'</span></div>';
 }
 
 let pinnedHelp=null;
@@ -1365,16 +1365,16 @@ SDSCPA.attachGlossary({ labName:'Pattern Lab', goal:'I can take body measurement
     ['Made-to-measure','A pattern drafted to one person\'s exact body measurements, instead of a fixed standard size.'],
     ['Block / Sloper','A basic fitted pattern with no style details, used as the starting point for other designs.'],
     ['Ease','Extra room added beyond the body measurement so the garment fits and moves. “Positive ease” is looser; negative ease (in stretch fabric) is tighter.'],
-    ['Seam allowance','The strip of fabric between the stitching line and the cut edge — here you set it on/off and how wide.'],
-    ['Grainline','The arrow on a pattern piece that you line up with the fabric\'s lengthwise grain before cutting.'],
-    ['Notch','A small mark on the edge of a pattern piece used to match one piece to another when sewing.'],
+    ['Seam allowance','The margin of fabric between the stitch line and the edge.'],
+    ['Grainline','The direction of the fabric’s threads; patterns align to it.'],
+    ['Notch','A small mark on a pattern showing where pieces match up.'],
     ['Dart','A folded, stitched wedge that shapes flat fabric around a curve of the body (bust, waist, hip).'],
     ['Muslin / Toile','A test garment sewn in cheap fabric to check the fit before cutting the real cloth.'],
     ['HPS','“High point shoulder” — the top of the shoulder at the neck, a reference point many measurements start from.'],
     ['Bust span','The distance between the two bust points; used to place bust darts.'],
-    ['Sleevecap','The curved top of a sleeve that eases into the armhole.'],
-    ['Hem','The finished bottom edge of a garment, usually folded up and stitched.'],
-    ['Selvedge','The tightly-woven finished edge running down each side of the fabric, parallel to the grain.'],
+    ['Sleeve cap','The curved top of a sleeve that eases into the armhole.'],
+    ['Hem','A finished, folded edge of fabric.'],
+    ['Selvage','The finished, non-fraying edge of woven fabric.'],
     ['1:1 / Actual size','Printing with no scaling so the pattern comes out at true body size — check the test square.']
   ]});
 

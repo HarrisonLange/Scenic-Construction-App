@@ -48,7 +48,7 @@
   }
   #topbar .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:16px;line-height:1}
   #topbar .brand-logo{height:22px;width:auto;display:block}
-  #topbar .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  #topbar .brand-tag{margin:0;font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   #topbar .back{font-size:11px;color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 9px;white-space:nowrap}
   #topbar .back:hover{color:#fff;border-color:var(--accent)}
   #topbar .scale-badge{
@@ -592,7 +592,7 @@
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif"
             font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Scenic Construction Lab</div>
+    <h1 class="brand-tag">Scenic Construction Lab</h1>
   </div>
   <label class="scale-badge" for="scaleSel" title="Drawing scale">SCALE
     <select id="scaleSel">
@@ -4363,20 +4363,20 @@ if (window.SDSCPA) SDSCPA.attachGlossary({
   labName: 'Scenic Construction Lab',
   goal: 'I can measure with a tape, lay out lumber to scale, and build a cut list for a flat or platform.',
   terms: [
-    ['Flat', 'A lightweight scenery wall: a lumber frame skinned with luan.'],
-    ['Platform', 'A stage deck you can stand on: a 2×4 frame with a plywood lid.'],
-    ['Rail', 'The horizontal top and bottom pieces of a flat frame.'],
-    ['Stile', 'The vertical side pieces of a flat frame, running between the rails.'],
-    ['Toggle', 'A middle support piece across a flat or platform frame.'],
-    ['Corner block', 'A triangular plywood plate that reinforces a flat’s corner joint.'],
-    ['Keystone', 'A small plywood plate that ties a toggle to a stile.'],
-    ['Luan', 'Thin (1/4″) plywood used as the skin of a Hollywood flat.'],
+    ['Flat', 'A lightweight framed scenery panel used to make walls and backgrounds.'],
+    ['Platform', 'A raised, load-bearing deck that performers stand or act on.'],
+    ['Rail', 'A horizontal framing member of a flat.'],
+    ['Stile', 'A vertical framing member of a flat.'],
+    ['Toggle', 'An internal cross-brace in a flat’s frame.'],
+    ['Corner block', 'A triangular plywood gusset reinforcing a flat’s corners.'],
+    ['Keystone', 'A plywood plate reinforcing the toggle joint of a flat.'],
+    ['Luan', 'Thin plywood used as a hard flat covering.'],
     ['On edge vs. flat', 'How a board is turned: “on edge” shows its narrow face (stronger); “flat” lies face-down.'],
     ['Cut list', 'The shop’s shopping list: every piece, its stock, and its exact length.'],
-    ['Scale', 'The drawing-to-real-world ratio, like 1″ = 1′-0″.'],
+    ['Scale', 'A fixed ratio used to represent real sizes in a smaller drawing or model.'],
     ['Jamb, header & sill', 'The framing around an opening: sides (jambs), top (header), bottom of a window (sill).'],
     ['Cripple', 'A short stud above or below an opening that carries the skin.'],
-    ['1×3 / 2×4', 'Stock lumber names. A 1×3 actually measures 3/4″ × 2-1/2″ — wood shrinks at the mill!']
+    ['1×3 / 2×4', 'Nominal stock-lumber names; actual dimensions are smaller after the wood is dried and surfaced. A 1×3 typically measures 3/4″ × 2-1/2″.']
   ]
 });
 </script>

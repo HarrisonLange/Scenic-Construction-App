@@ -44,7 +44,7 @@
   .back:hover{color:#fff;border-color:var(--accent)}
   .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;line-height:1;margin-right:8px}
   .brand-logo{height:22px;width:auto;display:block}
-  .brand-tag{font-size:8.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .brand-tag{margin:0;font-size:8.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   .spacer{flex:1}
   .tbtn{
     display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -364,7 +364,7 @@
       </linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="0" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Lighting Design Lab</div>
+    <h1 class="brand-tag">Lighting Design Lab</h1>
   </div>
   <div class="transport">
     <button class="tbtn icon" id="prevBtn" title="Previous cue">
@@ -469,7 +469,7 @@
       </div>
       <div class="field full">
         <strong>Channel</strong>
-        <select id="fixtureSelect"></select>
+        <select id="fixtureSelect" aria-label="Lighting fixture channel"></select>
       </div>
       <div class="section-row">
         <label class="field full">Intensity <strong id="intensityValue">45%</strong>
@@ -3716,7 +3716,7 @@ async function initStudioPerformerModel(){
   if (studioModel.ready || studioModel.loading) return;
   studioModel.loading = true;
   try {
-    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js');
+    const THREE = await import('../shared/vendor/three/three.module.js');
     studioModel.THREE = THREE;
     studioModel.canvas = document.createElement('canvas');
     studioModel.canvas.width = STUDIO_MODEL_W;
@@ -5345,13 +5345,13 @@ init();
     labName:'Lighting Design Lab',
     goal:'I can build a lighting look with color and angle, record it as a cue, and run the show.',
     terms:[
-      ['Channel','One controllable light (or group of lights) with its own number on the console.'],
-      ['Cue','A saved stage picture. Press GO and the stage becomes that picture.'],
+      ['Channel','A control number on the console assigned to a fixture or group.'],
+      ['Cue','A recorded lighting look triggered at a specific moment.'],
       ['Cue stack','The ordered list of cues that makes up the whole show.'],
-      ['Fade time','How many seconds the change takes. 0 = snap, 3 = smooth.'],
+      ['Fade time','How long a light takes to transition between levels.'],
       ['Hold','How long an auto-follow cue waits before firing the next one.'],
-      ['Gel','A colored filter on a light. On real fixtures it’s a sheet of plastic.'],
-      ['Gobo','A stencil in the light that projects a pattern — windows, leaves, stars.'],
+      ['Gel','A colored transparent sheet placed in front of a light.'],
+      ['Gobo','A patterned template that projects a shape or texture.'],
       ['Cyc (cyclorama)','The big back wall you wash with color for skies and moods.'],
       ['Special','One light with one job, like picking out a single actor.'],
       ['Wash','Even light over a whole area, usually for visibility.'],

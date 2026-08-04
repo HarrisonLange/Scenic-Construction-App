@@ -21,7 +21,7 @@
   #topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--rainbow);opacity:.9}
   .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:10px;line-height:1}
   .brand-logo{height:22px;width:auto;display:block}
-  .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .brand-tag{margin:0;font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   .back{font-size:11px;color:var(--text-dim);text-decoration:none;border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 9px;white-space:nowrap}
   .back:hover{color:#fff;border-color:var(--accent)}
   .spacer{flex:1}
@@ -153,7 +153,7 @@
       </linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Costume Design Lab</div>
+    <h1 class="brand-tag">Costume Design Lab</h1>
   </div>
   <button class="tbtn primary" id="addBtn">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="5" r="3"/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M13 2v4M11 4h4"/></svg>
@@ -926,7 +926,7 @@ if(window.SDSCPA) SDSCPA.attachGlossary({
     ['Reads from the house','Visible and clear even from the back row of the audience.'],
     ['Trim','Decorative details — braid, buttons, lace — added to a garment.'],
     ['Rendering','The drawing a designer makes of a costume before it is built.'],
-    ['Fitting','A session where the actor tries the costume on so it can be adjusted.'],
+    ['Fitting','Trying a garment on a performer to adjust it.'],
     ['Quick change','A costume swap done in seconds in the wings — designers must plan for it.']
   ]
 });

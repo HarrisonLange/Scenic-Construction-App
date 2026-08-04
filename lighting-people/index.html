@@ -8,8 +8,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+    "three": "../shared/vendor/three/three.module.js",
+    "three/addons/": "../shared/vendor/three/addons/"
   }
 }
 </script>
@@ -51,7 +51,7 @@
   .back:hover{color:#fff;border-color:var(--accent)}
   .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;line-height:1;margin-right:6px}
   .brand-logo{height:22px;width:auto;display:block}
-  .brand-tag{font-size:8.5px;font-weight:700;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .brand-tag{margin:0;font-size:8.5px;font-weight:700;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   .spacer{flex:1}
   .project-name{
     width:174px;background:var(--ui-dark2);border:1px solid var(--ui-dark3);border-radius:6px;color:#fff;
@@ -319,7 +319,7 @@
       </linearGradient></defs>
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif" font-weight="900" font-size="46" letter-spacing="0" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Portrait Lighting Lab</div>
+    <h1 class="brand-tag">Portrait Lighting Lab</h1>
   </div>
   <input id="projectName" class="project-name" type="text" maxlength="50" aria-label="Project name">
   <button class="tbtn" id="saveProjectBtn" title="Save project in this browser">
@@ -467,14 +467,14 @@
     <section class="panel-section advanced-only">
       <h2>Share Current Setup</h2>
       <div class="url-field">
-        <input id="setupUrl" type="text" readonly>
+        <input id="setupUrl" type="text" readonly aria-label="Share current setup URL">
         <button class="tiny-btn" id="copySetupBtn">COPY</button>
       </div>
     </section>
     <section class="panel-section advanced-only">
       <h2>Share URL</h2>
       <div class="url-field">
-        <input id="toolUrl" type="text" readonly>
+        <input id="toolUrl" type="text" readonly aria-label="Share tool URL">
         <button class="tiny-btn" id="copyToolBtn">COPY</button>
       </div>
     </section>
@@ -887,7 +887,7 @@ function renderLights(){
           ${rangeControl(meta.id,'softness','Softness',0,100,1,l.softness,'%')}
           <div class="color-row">
             <label>Gel</label>
-            <input type="color" value="${l.gel}" data-light="${meta.id}" data-prop="gel" title="${meta.name} gel">
+            <input type="color" value="${l.gel}" data-light="${meta.id}" data-prop="gel" title="${meta.name} gel" aria-label="${meta.name} gel color">
             <button class="tiny-btn" data-clear-gel="${meta.id}">CLEAR</button>
           </div>
         </div>
@@ -2060,9 +2060,13 @@ function exportProjectPayload(){
   });
 }
 function saveProject(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(exportProjectPayload()));
-  setDirty(false);
-  toast('Project saved in this browser.', 'good');
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(exportProjectPayload()));
+    setDirty(false);
+    toast('Project saved in this browser.', 'good');
+  } catch (err) {
+    toast('This browser blocked local saving. Use Save As to download your project.', 'bad');
+  }
 }
 function saveProjectAs(){
   const blob = new Blob([JSON.stringify(exportProjectPayload(), null, 2)], {type:'application/json'});
@@ -3179,7 +3183,7 @@ function downloadWarmupScore(){
     terms: [
       ['Key light', 'The main light on the face. Everything else supports it.'],
       ['Fill light', 'Softens the shadows the key makes. Less fill = more drama.'],
-      ['Back light', 'Comes from behind to outline the shoulders and separate the person from the background.'],
+      ['Back light', 'Light from behind that separates subject from background.'],
       ['Hair light', 'A small light just for the hair, adding shine and shape from above.'],
       ['Rembrandt lighting', 'Key at ~45°: makes a little triangle of light on the shadow cheek. Named after the painter.'],
       ['Butterfly lighting', 'Key straight ahead and high: a butterfly-shaped nose shadow. Classic Hollywood glamour.'],

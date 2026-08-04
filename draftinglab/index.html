@@ -44,7 +44,7 @@
   .back:hover{color:#fff;border-color:var(--accent)}
   .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;margin-right:14px;line-height:1}
   .brand-logo{height:22px;width:auto;display:block}
-  .brand-tag{font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
+  .brand-tag{margin:0;font-size:8.5px;font-weight:600;letter-spacing:1.6px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap}
   .scale-badge{
     font-family:var(--mono);font-size:11px;color:var(--text-dim);
     border:1px solid var(--ui-dark3);border-radius:4px;padding:3px 6px 3px 8px;white-space:nowrap;
@@ -201,7 +201,7 @@
       <text x="0" y="40" font-family="'Arial Black','Arial Narrow Bold',Arial,sans-serif"
             font-weight="900" font-size="46" letter-spacing="-1.5" fill="url(#sdscpaGrad)">SDSCPA</text>
     </svg>
-    <div class="brand-tag">Drafting Lab</div>
+    <h1 class="brand-tag">Drafting Lab</h1>
   </div>
   <label class="scale-badge" for="scaleSel" title="Drawing scale">SCALE
     <select id="scaleSel">
@@ -1341,17 +1341,17 @@ if (window.SDSCPA) SDSCPA.attachGlossary({
   labName: 'Drafting Lab',
   goal: 'I can draft a scaled drawing whose dimensions match the plan.',
   terms: [
-    ['Scale', 'How much the drawing is shrunk. At 1/2\" = 1\'-0\", every half inch on paper equals one real foot.'],
-    ['Ground plan', 'A drawing of the stage seen from straight above, like a map of the set.'],
+    ['Scale', 'A fixed ratio used to represent real sizes in a smaller drawing or model.'],
+    ['Ground plan', 'A scaled overhead drawing of the set on the stage.'],
     ['Dimension line', 'The thin line with numbers that tells the real size of something in the drawing.'],
     ['Plan view', 'Looking straight down at an object from above.'],
-    ['Elevation', 'Looking at an object straight from the front or side, showing its height.'],
+    ['Elevation', 'A scaled straight-on drawing showing a unit’s height and detail.'],
     ['Line weight', 'How thick a line is. Important edges get heavy lines; construction marks get thin ones.'],
     ['Hidden line', 'A dashed line that shows an edge you can’t actually see from this view.'],
     ['Grid snap', 'The cursor jumps to the nearest grid square so measurements come out even.'],
     ['Object snap', 'The cursor jumps to corners and midpoints of shapes you already drew.'],
-    ['Platform', 'A stock stage deck, usually built 4\'-0\" × 8\'-0\".'],
-    ['Flat', 'A lightweight wall piece for scenery, often 4\'-0\" wide and 8\' or taller.'],
+    ['Platform', 'A raised, load-bearing deck that performers stand or act on.'],
+    ['Flat', 'A lightweight framed scenery panel used to make walls and backgrounds.'],
     ['Tolerance', 'How far off a measurement is allowed to be and still count as correct.']
   ]
 });

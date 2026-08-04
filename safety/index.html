@@ -1197,7 +1197,10 @@ try{ state = Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY)) || {}
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 
 /* ── Grade selection (shared key with the Vocab Lab) ── */
-function grade(){ const g = parseInt(localStorage.getItem(GRADE_KEY)); return (g>=6 && g<=12) ? g : null; }
+function grade(){
+  try{ const g = parseInt(localStorage.getItem(GRADE_KEY)); return (g>=6 && g<=12) ? g : null; }
+  catch(e){ return null; }
+}
 function forGrade(items){ const g = grade() || 6; return items.filter(it => !it.grades || (g >= it.grades[0] && g <= it.grades[1])); }
 function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + grade() : 'Grade —'; }
 (function buildGradeGrid(){
