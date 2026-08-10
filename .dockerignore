@@ -1,0 +1,15 @@
+.DS_Store
+.claude
+.git
+.github
+node_modules
+qa
+teacher-guide-src
+
+.dockerignore
+.gitattributes
+.gitignore
+Dockerfile
+package-lock.json
+package.json
+railway.json

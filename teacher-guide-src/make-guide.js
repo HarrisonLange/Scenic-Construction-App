@@ -18,7 +18,7 @@ const SOUND  = "0284C7";   // cyan (darkened for print vs #00AEEF)
 const COSTUME= "4D8F1F";   // green (darkened for print vs #7AC143)
 const PINK   = "EC008C";
 
-const BASE = "https://harrisonlange.github.io/Scenic-Construction-App/";
+const BASE = "https://sdscpaproduction.com/";
 
 /* ── helpers ────────────────────────────────────────── */
 const p = (text, opts = {}) => new Paragraph({
@@ -553,7 +553,7 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then(buf => {
-  const out = "C:\\Users\\harri\\Scenic Construction App\\SDSCPA-Virtual-Labs-Teacher-Guide.docx";
+  const out = path.join(__dirname, "..", "SDSCPA-Virtual-Labs-Teacher-Guide.docx");
   fs.writeFileSync(out, buf);
   console.log("Wrote", out, buf.length, "bytes");
 });

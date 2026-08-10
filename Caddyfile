@@ -1,0 +1,31 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+
+	log {
+		format json
+	}
+
+	servers {
+		trusted_proxies static private_ranges 100.0.0.0/8
+	}
+}
+
+:{$PORT:8080} {
+	log {
+		format json
+	}
+
+	root * /srv
+	encode zstd gzip
+
+	header {
+		-Server
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Content-Type-Options "nosniff"
+	}
+
+	file_server
+}
+
