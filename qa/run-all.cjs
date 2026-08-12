@@ -9,6 +9,7 @@ const checks = [
   ['release-audit.cjs'],
   ['interaction-smoke.cjs'],
   ['storage-resilience.cjs'],
+  ['safety-quiz.cjs'],
 ];
 const mime = {
   '.css': 'text/css; charset=utf-8',

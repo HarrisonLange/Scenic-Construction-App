@@ -27,6 +27,7 @@
   .spacer{flex:1}
   #gradeBadge{font-size:11px;font-weight:700;color:var(--amber);border:1px solid var(--ui-dark3);border-radius:6px;padding:6px 10px;background:none;cursor:pointer;white-space:nowrap}
   #gradeBadge:hover{border-color:var(--amber)}
+  #gradeBadge:disabled{opacity:.45;cursor:not-allowed;border-color:var(--ui-dark3)}
 
   main{flex:1;overflow-y:auto;padding:26px 18px 40px}
   .wrap{max-width:680px;margin:0 auto}
@@ -111,10 +112,16 @@
   .q-opt{display:block;width:100%;text-align:left;background:#101014;border:1px solid var(--ui-dark3);border-radius:9px;color:var(--text-light);font-size:13.5px;font-weight:600;padding:11px 13px;margin-bottom:8px;cursor:pointer}
   .q-opt:hover{border-color:var(--accent)}
   .q-opt.picked{border-color:var(--accent);background:rgba(59,130,246,.14)}
+  .q-letter{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-right:9px;border:1px solid #555;border-radius:6px;color:var(--amber);font:800 11px var(--mono);vertical-align:middle}
+  .quiz-response{min-height:20px;margin-top:12px;color:var(--amber);font-size:12.5px;line-height:1.5}
+  .quiz-actions{display:flex;justify-content:flex-end;margin-top:10px}
+  .quiz-next{background:var(--accent);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:800;padding:10px 18px;cursor:pointer}
+  .quiz-next:disabled{filter:grayscale(.7) brightness(.55);cursor:not-allowed}
   .result-ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.45);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7}
   .result-bad{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);border-radius:12px;padding:18px;font-size:13px;line-height:1.7}
   .result-bad b{color:var(--amber)}
   .result-bad ul{margin:8px 0 12px 20px}
+  .missed-detail{display:block;margin:3px 0 10px;color:#d6d6de}
   .primary-btn{background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;padding:10px 18px;cursor:pointer;margin-top:14px}
 
   /* Grade modal */
@@ -1190,17 +1197,44 @@ const SAFETY_QUESTIONS = [
 /* ═══════════════ end of content — framework below ═══════════════ */
 
 const $ = id => document.getElementById(id);
-const LS_KEY = 'sdscpa-safety-v1';
+const LS_KEY = 'sdscpa-safety-v2';
+const LEGACY_LS_KEY = 'sdscpa-safety-v1';
 const GRADE_KEY = 'sdscpa_grade';
-let state = { trained:{}, retrain:{}, passed:false };
-try{ state = Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY)) || {}); }catch(e){}
-function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
 
 /* ── Grade selection (shared key with the Vocab Lab) ── */
 function grade(){
   try{ const g = parseInt(localStorage.getItem(GRADE_KEY)); return (g>=6 && g<=12) ? g : null; }
   catch(e){ return null; }
 }
+function cleanState(value){
+  const object = value && typeof value === 'object' ? value : {};
+  return {
+    trained: object.trained && typeof object.trained === 'object' ? object.trained : {},
+    retrain: object.retrain && typeof object.retrain === 'object' ? object.retrain : {},
+    passed: !!object.passed
+  };
+}
+let progress = { byGrade:{} };
+try{
+  const stored = JSON.parse(localStorage.getItem(LS_KEY));
+  if(stored && stored.byGrade && typeof stored.byGrade === 'object'){
+    progress = stored;
+  } else {
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_LS_KEY));
+    if(legacy) progress.byGrade[String(grade() || 6)] = cleanState(legacy);
+  }
+}catch(e){}
+function stateForGrade(g){
+  const key = String(g || 6);
+  progress.byGrade[key] = cleanState(progress.byGrade[key]);
+  return progress.byGrade[key];
+}
+let state = stateForGrade(grade());
+function save(targetGrade){
+  progress.byGrade[String(targetGrade || grade() || 6)] = state;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(progress)); }catch(e){}
+}
+save(); // Persist legacy progress under its original grade before the student can switch grades.
 function forGrade(items){ const g = grade() || 6; return items.filter(it => !it.grades || (g >= it.grades[0] && g <= it.grades[1])); }
 function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + grade() : 'Grade —'; }
 (function buildGradeGrid(){
@@ -1209,6 +1243,7 @@ function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + 
     b.textContent = g;
     b.addEventListener('click', ()=>{
       try{ localStorage.setItem(GRADE_KEY, String(g)); }catch(e){}
+      state = stateForGrade(g);
       $('gradeWrap').classList.remove('open');
       renderGradeBadge(); renderHome();
     });
@@ -1222,6 +1257,7 @@ renderGradeBadge();
 function show(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   $(view).classList.add('active');
+  $('gradeBadge').disabled = view !== 'viewHome';
 }
 
 /* ── Home: module list + quiz gate ── */
@@ -1287,7 +1323,7 @@ function renderHome(){
   });
   const ready = allTrained() && questions().length > 0;
   $('quizStartBtn').disabled = !ready;
-  $('gateNote').textContent = state.passed
+  $('gateNote').textContent = state.passed && ready
     ? '✓ Passed! You can retake the quiz any time to re-download your certificate.'
     : ready ? '' :
       Object.keys(state.retrain).length ? 'Retrain the ⚠ modules above to unlock the quiz again.'
@@ -1485,49 +1521,70 @@ $('trNext').addEventListener('click', ()=>{
 /* ── Quiz: 100% or retrain the missed modules ── */
 let quiz = null;
 $('quizStartBtn').addEventListener('click', ()=>{
-  quiz = { qs: questions().sort(()=>Math.random()-.5), at:0, wrong:[] };
-  renderQuestion();
+  quiz = { grade:grade() || 6, qs:shuffle(questions()), at:0, responses:[] };
   show('viewQuiz');
+  renderQuestion();
 });
 function renderQuestion(){
   const card = $('qCard');
   if(quiz.at >= quiz.qs.length){ return finishQuiz(); }
   const q = quiz.qs[quiz.at];
+  let selectedIndex = null;
+  let advanced = false;
   card.innerHTML = '<div class="q-n">Question ' + (quiz.at+1) + ' of ' + quiz.qs.length + '</div>' +
     '<h2>' + q.q + '</h2>' +
-    q.options.map((o,i)=>'<button class="q-opt" data-i="'+i+'">'+o+'</button>').join('');
+    q.options.map((o,i)=>'<button class="q-opt" data-i="'+i+'"><span class="q-letter">'+String.fromCharCode(65+i)+'</span>'+o+'</button>').join('') +
+    '<div class="quiz-response" id="quizResponse" aria-live="polite">Choose one answer.</div>' +
+    '<div class="quiz-actions"><button class="quiz-next" id="quizNextBtn" disabled>' +
+      (quiz.at === quiz.qs.length-1 ? 'Submit quiz' : 'Next question') + '</button></div>';
+  const next = card.querySelector('#quizNextBtn');
   card.querySelectorAll('.q-opt').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      if(Number(btn.dataset.i) !== q.answer) quiz.wrong.push(q);
-      quiz.at++; renderQuestion();
+      if(advanced) return;
+      selectedIndex = Number(btn.dataset.i);
+      card.querySelectorAll('.q-opt').forEach(option=>option.classList.toggle('picked', option === btn));
+      card.querySelector('#quizResponse').textContent = 'Selected: ' + q.options[selectedIndex];
+      next.disabled = false;
     });
+  });
+  next.addEventListener('click', ()=>{
+    if(advanced || selectedIndex === null) return;
+    advanced = true;
+    quiz.responses.push({ q, selectedIndex, correct:selectedIndex === q.answer });
+    quiz.at++;
+    renderQuestion();
   });
 }
 function finishQuiz(){
   const card = $('qCard');
-  if(quiz.wrong.length === 0){
-    state.passed = true; save();
+  const wrong = quiz.responses.filter(response=>!response.correct);
+  if(wrong.length === 0){
+    state.passed = true; save(quiz.grade);
     card.innerHTML = '<div class="result-ok"><b>💯 100% — that\'s the only passing grade in safety.</b><br><br>' +
       'Download your certificate and submit it to your teacher.</div>' +
       '<button class="primary-btn" id="backHomeBtn">Back to modules</button>';
     if(window.SDSCPA){
-      SDSCPA.markDone('safety', { score:100, grade: grade() });
+      SDSCPA.markDone('safety', { score:100, grade: quiz.grade });
       SDSCPA.certificateDialog({
         heading:'Safety training complete!',
         lab:'Safety Lab',
-        line:'passed the full theatre safety quiz with a perfect score (grade ' + grade() + ' level)',
-        stats:[['SCORE','100%','#22c55e'], ['QUESTIONS', quiz.qs.length, '#3b82f6'], ['GRADE', grade(), '#fbbf24']],
+        line:'passed the full theatre safety quiz with a perfect score (grade ' + quiz.grade + ' level)',
+        stats:[['SCORE','100%','#22c55e'], ['QUESTIONS', quiz.qs.length, '#3b82f6'], ['GRADE', quiz.grade, '#fbbf24']],
         file:'SDSCPA-Safety-Certificate'
       });
     }
   } else {
-    const mods = [...new Set(quiz.wrong.map(q=>q.module))];
+    const mods = [...new Set(wrong.map(response=>response.q.module))];
     mods.forEach(id=>{ state.retrain[id] = true; });
-    save();
+    save(quiz.grade);
     const modTitle = id => (SAFETY_MODULES.find(m=>m.id===id)||{}).title || id;
-    card.innerHTML = '<div class="result-bad"><b>' + (quiz.qs.length - quiz.wrong.length) + ' / ' + quiz.qs.length +
+    card.innerHTML = '<div class="result-bad"><b>' + (quiz.qs.length - wrong.length) + ' / ' + quiz.qs.length +
       ' — close, but safety needs 100%.</b><br>You missed questions on:' +
-      '<ul>' + quiz.wrong.map(q=>'<li><b>' + modTitle(q.module) + '</b>' + (q.why ? ' — ' + q.why : '') + '</li>').join('') + '</ul>' +
+      '<ul>' + wrong.map(response=>'<li><b>' + modTitle(response.q.module) + '</b><span class="missed-detail">' +
+        '<b>Question:</b> ' + response.q.q + '<br>' +
+        '<b>Your answer:</b> ' + response.q.options[response.selectedIndex] + '<br>' +
+        '<b>Correct answer:</b> ' + response.q.options[response.q.answer] +
+        (response.q.why ? '<br>' + response.q.why : '') + '</span></li>').join('') + '</ul>' +
       'Those modules are now marked <b>⚠ Retrain</b>. Go through them again, then retake the quiz.</div>' +
       '<button class="primary-btn" id="backHomeBtn">Retrain now</button>';
   }
