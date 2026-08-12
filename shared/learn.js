@@ -3,6 +3,191 @@
    Keep dependency-free; labs are otherwise standalone. */
 (function(){
 'use strict';
+/* ── Local student profiles ───────────────────────────────────────
+   There is deliberately no roster or remembered-ID list. The ID is
+   normalized, converted to a one-way namespace token, and retained only in
+   sessionStorage for the life of the current tab. All app localStorage and
+   IndexedDB calls are transparently scoped to that token. */
+const ACTIVE_PROFILE_KEY='sdscpa_active_profile_v1';
+const PROFILE_PREFIX='sdscpa_profile_v1:';
+const PROFILE_DB_PREFIX='sdscpa-profile-v1-';
+const MIGRATION_KEY='sdscpa_profiles_migrated_v1';
+let rawLocalStorage=null, rawSessionStorage=null, rawIndexedDB=null;
+try{ rawLocalStorage=window.localStorage; }catch(e){}
+try{ rawSessionStorage=window.sessionStorage; }catch(e){}
+try{ rawIndexedDB=window.indexedDB; }catch(e){}
+
+function normalizeStudentId(value){
+  return String(value==null?'':value).trim().toUpperCase();
+}
+function validStudentId(value){ return /^[A-Z0-9][A-Z0-9-]{2,31}$/.test(normalizeStudentId(value)); }
+function profileToken(value){
+  const text=normalizeStudentId(value);
+  // Two independent 32-bit FNV-1a passes make a stable, non-reversible key.
+  let a=0x811c9dc5, b=0x9e3779b9;
+  for(let i=0;i<text.length;i++){
+    const code=text.charCodeAt(i);
+    a=Math.imul(a^code,0x01000193);
+    b=Math.imul(b^(code+i),0x85ebca6b);
+  }
+  return (a>>>0).toString(16).padStart(8,'0')+(b>>>0).toString(16).padStart(8,'0');
+}
+function activeProfile(){
+  try{ return rawSessionStorage && rawSessionStorage.getItem(ACTIVE_PROFILE_KEY) || ''; }
+  catch(e){ return ''; }
+}
+function scopedKey(key){ const token=activeProfile(); return token ? PROFILE_PREFIX+token+':'+String(key) : ''; }
+function scopedKeys(){
+  const token=activeProfile();
+  if(!rawLocalStorage || !token) return [];
+  const prefix=PROFILE_PREFIX+token+':', keys=[];
+  try{
+    for(let i=0;i<rawLocalStorage.length;i++){
+      const key=rawLocalStorage.key(i);
+      if(key && key.indexOf(prefix)===0) keys.push(key.slice(prefix.length));
+    }
+  }catch(e){}
+  return keys;
+}
+const profileStorage={
+  get length(){ return scopedKeys().length; },
+  key(index){ return scopedKeys()[Number(index)] || null; },
+  getItem(key){
+    const scoped=scopedKey(key);
+    if(!rawLocalStorage || !scoped) return null;
+    try{ return rawLocalStorage.getItem(scoped); }catch(e){ return null; }
+  },
+  setItem(key,value){
+    const scoped=scopedKey(key);
+    if(!rawLocalStorage || !scoped) return;
+    try{ rawLocalStorage.setItem(scoped,String(value)); }catch(e){}
+  },
+  removeItem(key){
+    const scoped=scopedKey(key);
+    if(!rawLocalStorage || !scoped) return;
+    try{ rawLocalStorage.removeItem(scoped); }catch(e){}
+  },
+  clear(){
+    if(!rawLocalStorage) return;
+    scopedKeys().forEach(key=>{ try{ rawLocalStorage.removeItem(scopedKey(key)); }catch(e){} });
+  }
+};
+try{ Object.defineProperty(window,'localStorage',{configurable:true,value:profileStorage}); }catch(e){}
+
+function scopedDbName(name){
+  const token=activeProfile();
+  return token ? PROFILE_DB_PREFIX+token+'-'+String(name) : PROFILE_DB_PREFIX+'signed-out-'+String(name);
+}
+if(rawIndexedDB){
+  const profileIndexedDB={
+    open(name,version){ return version===undefined ? rawIndexedDB.open(scopedDbName(name)) : rawIndexedDB.open(scopedDbName(name),version); },
+    deleteDatabase(name){ return rawIndexedDB.deleteDatabase(scopedDbName(name)); },
+    cmp(first,second){ return rawIndexedDB.cmp(first,second); },
+    async databases(){
+      if(typeof rawIndexedDB.databases!=='function') return [];
+      const token=activeProfile(), prefix=PROFILE_DB_PREFIX+token+'-';
+      const databases=await rawIndexedDB.databases();
+      return databases.filter(db=>db.name && db.name.indexOf(prefix)===0)
+        .map(db=>Object.assign({},db,{name:db.name.slice(prefix.length)}));
+    }
+  };
+  try{ Object.defineProperty(window,'indexedDB',{configurable:true,value:profileIndexedDB}); }catch(e){}
+}
+
+function migrateLegacyLocalStorage(token){
+  if(!rawLocalStorage) return;
+  try{
+    if(rawLocalStorage.getItem(MIGRATION_KEY)) return;
+    const keys=[];
+    for(let i=0;i<rawLocalStorage.length;i++){
+      const key=rawLocalStorage.key(i);
+      if(key && key!==MIGRATION_KEY && key.indexOf(PROFILE_PREFIX)!==0) keys.push(key);
+    }
+    keys.forEach(key=>{
+      rawLocalStorage.setItem(PROFILE_PREFIX+token+':'+key,rawLocalStorage.getItem(key));
+    });
+    keys.forEach(key=>rawLocalStorage.removeItem(key));
+    rawLocalStorage.setItem(MIGRATION_KEY,'1');
+  }catch(e){}
+}
+async function openExistingDatabase(name){
+  if(!rawIndexedDB) return null;
+  if(typeof rawIndexedDB.databases==='function'){
+    try{
+      const databases=await rawIndexedDB.databases();
+      if(!databases.some(db=>db.name===name)) return null;
+    }catch(e){}
+  }
+  return new Promise(resolve=>{
+    const request=rawIndexedDB.open(name);
+    let created=false;
+    request.onupgradeneeded=()=>{ created=true; };
+    request.onsuccess=()=>{
+      const db=request.result;
+      if(created){ db.close(); rawIndexedDB.deleteDatabase(name); resolve(null); }
+      else resolve(db);
+    };
+    request.onerror=()=>resolve(null);
+  });
+}
+async function migrateLegacyDatabase(token,name){
+  const source=await openExistingDatabase(name);
+  if(!source) return;
+  try{
+    const stores=Array.from(source.objectStoreNames);
+    if(!stores.length){ source.close(); return; }
+    const schemas=stores.map(storeName=>{
+      const tx=source.transaction(storeName,'readonly'), store=tx.objectStore(storeName);
+      return { name:storeName, keyPath:store.keyPath, autoIncrement:store.autoIncrement };
+    });
+    const records={};
+    await Promise.all(stores.map(storeName=>new Promise((resolve,reject)=>{
+      const request=source.transaction(storeName,'readonly').objectStore(storeName).getAll();
+      request.onsuccess=()=>{ records[storeName]=request.result||[]; resolve(); };
+      request.onerror=()=>reject(request.error);
+    })));
+    source.close();
+    const targetName=PROFILE_DB_PREFIX+token+'-'+name;
+    await new Promise((resolve,reject)=>{
+      const request=rawIndexedDB.open(targetName,1);
+      request.onupgradeneeded=()=>schemas.forEach(schema=>{
+        if(!request.result.objectStoreNames.contains(schema.name))
+          request.result.createObjectStore(schema.name,{keyPath:schema.keyPath,autoIncrement:schema.autoIncrement});
+      });
+      request.onsuccess=()=>{
+        const db=request.result;
+        if(!stores.length){ db.close(); resolve(); return; }
+        const tx=db.transaction(stores,'readwrite');
+        stores.forEach(storeName=>records[storeName].forEach(record=>tx.objectStore(storeName).put(record)));
+        tx.oncomplete=()=>{ db.close(); resolve(); };
+        tx.onerror=()=>{ db.close(); reject(tx.error); };
+      };
+      request.onerror=()=>reject(request.error);
+    });
+    rawIndexedDB.deleteDatabase(name);
+  }catch(e){ try{ source.close(); }catch(_){} }
+}
+async function activateProfile(studentId){
+  const normalized=normalizeStudentId(studentId);
+  if(!validStudentId(normalized)) throw new Error('Enter at least 3 letters or numbers. Hyphens are okay.');
+  if(!rawLocalStorage) throw new Error('This browser is blocking local storage. Enable site storage to save student work.');
+  const token=profileToken(normalized);
+  migrateLegacyLocalStorage(token);
+  const needsDbMigration=rawLocalStorage && rawLocalStorage.getItem(MIGRATION_KEY)==='1'
+    && !rawLocalStorage.getItem(MIGRATION_KEY+':db');
+  if(needsDbMigration){
+    await migrateLegacyDatabase(token,'soundCueLab');
+    await migrateLegacyDatabase(token,'sdscpa-pattern-imports');
+    try{ rawLocalStorage.setItem(MIGRATION_KEY+':db','1'); }catch(e){}
+  }
+  if(!rawSessionStorage) throw new Error('This browser is blocking local session storage.');
+  rawSessionStorage.setItem(ACTIVE_PROFILE_KEY,token);
+}
+function switchProfile(){
+  try{ if(rawSessionStorage) rawSessionStorage.removeItem(ACTIVE_PROFILE_KEY); }catch(e){}
+  location.reload();
+}
+
 const KEY = 'sdscpa_progress';
 
 function getProgress(){
@@ -21,6 +206,13 @@ function markDone(labId, detail){
       next.score = Math.max(prev.score, next.score);
     p[labId] = next;
     localStorage.setItem(KEY, JSON.stringify(p));
+  }catch(e){}
+}
+function markIncomplete(labId){
+  try{
+    const p=getProgress();
+    delete p[labId];
+    localStorage.setItem(KEY,JSON.stringify(p));
   }catch(e){}
 }
 
@@ -241,6 +433,58 @@ function startFlash(cfg, wrap){
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+function mountProfileUi(){
+  ensureCss();
+  if(activeProfile()){
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='sdscpa-profile-switch';
+    button.innerHTML='⇄ <span class="sdscpa-profile-switch-full">Switch profile</span><span class="sdscpa-profile-switch-short">Switch</span>';
+    button.setAttribute('aria-label','Switch student profile');
+    button.addEventListener('click',switchProfile);
+    const topbar=document.getElementById('topbar') || document.querySelector('.topbar');
+    if(topbar){ button.classList.add('sdscpa-profile-switch-inline'); topbar.appendChild(button); }
+    else document.body.appendChild(button);
+    return;
+  }
+  const wrap=document.createElement('div');
+  wrap.className='sdscpa-profile-gate';
+  wrap.innerHTML=
+    '<form class="sdscpa-profile-card" aria-labelledby="sdscpa-profile-title">'+
+      '<div class="sdscpa-profile-mark">S</div>'+
+      '<h2 id="sdscpa-profile-title">Student sign in</h2>'+
+      '<p>Enter your student ID to open your work saved on this computer.</p>'+
+      '<label for="sdscpa-student-id">Student ID</label>'+
+      '<input id="sdscpa-student-id" name="student-id" type="text" inputmode="text" minlength="3" maxlength="32" '+
+        'pattern="[A-Za-z0-9](?:[A-Za-z0-9]|-){2,31}" autocomplete="off" autocapitalize="characters" spellcheck="false" required '+
+        'aria-describedby="sdscpa-profile-note sdscpa-profile-error">'+
+      '<div class="sdscpa-profile-error" id="sdscpa-profile-error" aria-live="polite"></div>'+
+      '<button type="submit" class="sdscpa-profile-go">Open my profile</button>'+
+      '<p class="sdscpa-profile-note" id="sdscpa-profile-note">Your ID stays local and is never added to a list. It will not be shown as a saved choice later.</p>'+
+    '</form>';
+  document.body.appendChild(wrap);
+  document.documentElement.classList.add('sdscpa-profile-locked');
+  const form=wrap.querySelector('form'), input=wrap.querySelector('input');
+  const error=wrap.querySelector('.sdscpa-profile-error'), button=wrap.querySelector('button');
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    error.textContent='';
+    button.disabled=true;
+    button.textContent='Opening…';
+    try{
+      await activateProfile(input.value);
+      location.reload();
+    }catch(e){
+      error.textContent=e && e.message ? e.message : 'That profile could not be opened.';
+      button.disabled=false;
+      button.textContent='Open my profile';
+      input.focus();
+      input.select();
+    }
+  });
+  setTimeout(()=>input.focus(),0);
+}
+
 let cssDone=false;
 function ensureCss(){
   if(cssDone) return; cssDone=true;
@@ -273,9 +517,33 @@ function ensureCss(){
 '.sdscpa-flash-opt.good{border-color:#22c55e;background:rgba(34,197,94,.14)}'+
 '.sdscpa-flash-opt.bad{border-color:#ef4444;background:rgba(239,68,68,.12)}'+
 '.sdscpa-flash-fb{font-size:12px;color:#aab;min-height:16px;margin-top:4px}'+
-'.sdscpa-flash-end{font-size:14px;line-height:1.6;color:#e8e8f0;text-align:center;padding:16px 0}';
+'.sdscpa-flash-end{font-size:14px;line-height:1.6;color:#e8e8f0;text-align:center;padding:16px 0}'+
+'.sdscpa-profile-locked{overflow:hidden}'+
+'.sdscpa-profile-gate{position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;padding:18px;background:#0a0a0a;background-image:radial-gradient(700px 420px at 50% 15%,rgba(59,130,246,.15),transparent 72%)}'+
+'.sdscpa-profile-card{width:100%;max-width:410px;padding:28px;background:#16161c;border:1px solid #34343d;border-radius:16px;color:#f0f0f0;font-family:system-ui,Segoe UI,sans-serif;box-shadow:0 24px 80px rgba(0,0,0,.7)}'+
+'.sdscpa-profile-mark{display:flex;width:46px;height:46px;align-items:center;justify-content:center;margin-bottom:18px;border-radius:11px;background:linear-gradient(135deg,#ED1C45,#92278F,#00AEEF);color:white;font:900 25px Arial,sans-serif}'+
+'.sdscpa-profile-card h2{margin:0 0 7px;font-size:22px}'+
+'.sdscpa-profile-card p{margin:0 0 18px;color:#aab;font-size:13.5px;line-height:1.55}'+
+'.sdscpa-profile-card label{display:block;margin-bottom:6px;color:#fbbf24;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase}'+
+'.sdscpa-profile-card input{width:100%;box-sizing:border-box;margin:0;background:#0a0a0a;border:1px solid #3d3d48;border-radius:9px;color:#fff;font:700 17px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1px;padding:12px 13px}'+
+'.sdscpa-profile-card input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.16)}'+
+'.sdscpa-profile-error{min-height:20px;padding-top:5px;color:#f87171;font-size:12px}'+
+'.sdscpa-profile-go{width:100%;margin-top:5px;padding:11px 16px;background:#3b82f6;border:0;border-radius:9px;color:#fff;font-size:14px;font-weight:800;cursor:pointer}'+
+'.sdscpa-profile-go:hover{background:#2f6fdb}'+
+'.sdscpa-profile-go:disabled{opacity:.6;cursor:wait}'+
+'.sdscpa-profile-card .sdscpa-profile-note{margin:15px 0 0;color:#777;font-size:11.5px}'+
+'.sdscpa-profile-switch{position:fixed;top:10px;right:12px;z-index:9985;padding:7px 11px;background:#1a1a1a;border:1px solid #444;border-radius:7px;color:#ddd;font:700 11px system-ui,Segoe UI,sans-serif;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.45)}'+
+'.sdscpa-profile-switch.sdscpa-profile-switch-inline{position:static;flex:0 0 auto;margin-left:8px;box-shadow:none}'+
+'.sdscpa-profile-switch-short{display:none}'+
+'.sdscpa-profile-switch:hover{border-color:#fbbf24;color:#fff}'+
+'@media(max-width:600px){.sdscpa-profile-switch{top:8px;right:8px;padding:6px 8px;font-size:10px}.sdscpa-profile-switch.sdscpa-profile-switch-inline{margin-left:2px}.sdscpa-profile-switch-full{display:none}.sdscpa-profile-switch-short{display:inline}.sdscpa-profile-card{padding:23px}}'+
+'@media(max-width:340px){#topbar{gap:6px!important;padding-left:7px!important;padding-right:7px!important}.sdscpa-profile-switch.sdscpa-profile-switch-inline{margin-left:0!important}}'+
+'@media(max-width:440px){#topbar .brand{display:none}}';
   document.head.appendChild(st);
 }
 
-window.SDSCPA = { getProgress, markDone, certificate, certificateDialog, attachGlossary, openGlossary };
+window.SDSCPA = { getProgress, markDone, markIncomplete, certificate, certificateDialog, attachGlossary, openGlossary,
+  activeProfile, activateProfile, switchProfile, profileToken };
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',mountProfileUi,{once:true});
+else mountProfileUi();
 })();

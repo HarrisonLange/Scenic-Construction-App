@@ -5,7 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SDSCPA — Safety Lab</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23ED1C45'/><text x='16' y='24' font-family='Arial' font-weight='900' font-size='21' fill='white' text-anchor='middle'>S</text></svg>">
-<script src="../shared/learn.js"></script>
+<script>
+function sdscpaSharedFailed(){
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('body > *').forEach(element=>{
+      if(element.id!=='sdscpa-shared-failure'){
+        element.inert=true;
+        element.setAttribute('aria-hidden','true');
+      }
+    });
+    const gate=document.createElement('div');
+    gate.id='sdscpa-shared-failure';
+    gate.tabIndex=-1;
+    gate.style.cssText='position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;padding:20px;background:#0a0a0a;color:#f0f0f0;font-family:system-ui,sans-serif';
+    gate.innerHTML='<div role="alert" style="max-width:430px;padding:24px;background:#16161c;border:1px solid #ef4444;border-radius:14px"><h2 style="margin:0 0 8px;font-size:19px">Safety Lab unavailable</h2><p style="margin:0;color:#bbc;line-height:1.55;font-size:13px">The student-profile system did not load, so the Safety Lab has been locked to protect saved work. Reload the page or ask your teacher for help.</p></div>';
+    document.body.appendChild(gate);
+    gate.focus();
+  },{once:true});
+}
+</script>
+<script src="../shared/learn.js" onerror="sdscpaSharedFailed()"></script>
 <style>
   :root{
     --ui-dark:#0a0a0a; --ui-dark2:#1a1a1a; --ui-dark3:#333333;
@@ -186,9 +205,9 @@
 
 </div></main>
 
-<div id="gradeWrap">
+<div id="gradeWrap" role="dialog" aria-modal="true" aria-labelledby="gradeTitle">
   <div id="gradeCard">
-    <h3>What grade are you in?</h3>
+    <h3 id="gradeTitle">What grade are you in?</h3>
     <p>Your training and quiz questions are matched to your grade level. You can change this any time from the badge in the top bar.</p>
     <div class="grade-grid" id="gradeGrid"></div>
   </div>
@@ -1237,6 +1256,16 @@ function save(targetGrade){
 save(); // Persist legacy progress under its original grade before the student can switch grades.
 function forGrade(items){ const g = grade() || 6; return items.filter(it => !it.grades || (g >= it.grades[0] && g <= it.grades[1])); }
 function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + grade() : 'Grade —'; }
+let gradeReturnFocus = null;
+function openGradeDialog(){
+  gradeReturnFocus = document.activeElement;
+  $('gradeWrap').classList.add('open');
+  setTimeout(()=>$('gradeGrid').querySelector('button')?.focus(), 0);
+}
+function closeGradeDialog(){
+  $('gradeWrap').classList.remove('open');
+  if(gradeReturnFocus && gradeReturnFocus.focus) gradeReturnFocus.focus();
+}
 (function buildGradeGrid(){
   for(let g=6; g<=12; g++){
     const b = document.createElement('button');
@@ -1244,14 +1273,23 @@ function renderGradeBadge(){ $('gradeBadge').textContent = grade() ? 'Grade ' + 
     b.addEventListener('click', ()=>{
       try{ localStorage.setItem(GRADE_KEY, String(g)); }catch(e){}
       state = stateForGrade(g);
-      $('gradeWrap').classList.remove('open');
+      closeGradeDialog();
       renderGradeBadge(); renderHome();
     });
     $('gradeGrid').appendChild(b);
   }
 })();
-$('gradeBadge').addEventListener('click', ()=>$('gradeWrap').classList.add('open'));
-if(!grade()) $('gradeWrap').classList.add('open');
+$('gradeBadge').addEventListener('click', openGradeDialog);
+$('gradeWrap').addEventListener('keydown', event=>{
+  if(event.key === 'Escape' && grade()){ event.preventDefault(); closeGradeDialog(); return; }
+  if(event.key !== 'Tab') return;
+  const buttons = [...$('gradeGrid').querySelectorAll('button')];
+  if(!buttons.length) return;
+  const first=buttons[0], last=buttons[buttons.length-1];
+  if(event.shiftKey && document.activeElement===first){ event.preventDefault(); last.focus(); }
+  else if(!event.shiftKey && document.activeElement===last){ event.preventDefault(); first.focus(); }
+});
+if(!grade()) openGradeDialog();
 renderGradeBadge();
 
 function show(view){
@@ -1520,8 +1558,45 @@ $('trNext').addEventListener('click', ()=>{
 
 /* ── Quiz: 100% or retrain the missed modules ── */
 let quiz = null;
+function quizSessionKey(){
+  const profile = window.SDSCPA && SDSCPA.activeProfile ? SDSCPA.activeProfile() : 'local';
+  return 'sdscpa-safety-active-quiz-v1:' + profile;
+}
+function saveQuizSession(){
+  if(!quiz) return;
+  try{
+    sessionStorage.setItem(quizSessionKey(), JSON.stringify({
+      grade:quiz.grade,
+      questionIndexes:quiz.qs.map(q=>SAFETY_QUESTIONS.indexOf(q)),
+      at:quiz.at,
+      responses:quiz.responses.map(response=>({
+        questionIndex:SAFETY_QUESTIONS.indexOf(response.q),
+        selectedIndex:response.selectedIndex
+      }))
+    }));
+  }catch(e){}
+}
+function clearQuizSession(){ try{ sessionStorage.removeItem(quizSessionKey()); }catch(e){} }
+function restoreQuizSession(){
+  let saved;
+  try{ saved=JSON.parse(sessionStorage.getItem(quizSessionKey())); }catch(e){ return false; }
+  if(!saved || saved.grade !== (grade() || 6) || !Array.isArray(saved.questionIndexes) || !Array.isArray(saved.responses)) return false;
+  const qs=saved.questionIndexes.map(index=>SAFETY_QUESTIONS[index]);
+  if(!qs.length || qs.some(q=>!q) || saved.at < 0 || saved.at >= qs.length) return false;
+  const responses=saved.responses.map(response=>{
+    const q=SAFETY_QUESTIONS[response.questionIndex];
+    if(!q || !Number.isInteger(response.selectedIndex) || response.selectedIndex < 0 || response.selectedIndex >= q.options.length) return null;
+    return {q,selectedIndex:response.selectedIndex,correct:response.selectedIndex===q.answer};
+  });
+  if(responses.some(response=>!response) || responses.length !== saved.at) return false;
+  quiz={grade:saved.grade,qs,at:saved.at,responses};
+  show('viewQuiz');
+  renderQuestion();
+  return true;
+}
 $('quizStartBtn').addEventListener('click', ()=>{
   quiz = { grade:grade() || 6, qs:shuffle(questions()), at:0, responses:[] };
+  saveQuizSession();
   show('viewQuiz');
   renderQuestion();
 });
@@ -1552,11 +1627,13 @@ function renderQuestion(){
     advanced = true;
     quiz.responses.push({ q, selectedIndex, correct:selectedIndex === q.answer });
     quiz.at++;
+    saveQuizSession();
     renderQuestion();
   });
 }
 function finishQuiz(){
   const card = $('qCard');
+  clearQuizSession();
   const wrong = quiz.responses.filter(response=>!response.correct);
   if(wrong.length === 0){
     state.passed = true; save(quiz.grade);
@@ -1575,8 +1652,10 @@ function finishQuiz(){
     }
   } else {
     const mods = [...new Set(wrong.map(response=>response.q.module))];
+    state.passed = false;
     mods.forEach(id=>{ state.retrain[id] = true; });
     save(quiz.grade);
+    if(window.SDSCPA && SDSCPA.markIncomplete) SDSCPA.markIncomplete('safety');
     const modTitle = id => (SAFETY_MODULES.find(m=>m.id===id)||{}).title || id;
     card.innerHTML = '<div class="result-bad"><b>' + (quiz.qs.length - wrong.length) + ' / ' + quiz.qs.length +
       ' — close, but safety needs 100%.</b><br>You missed questions on:' +
@@ -1592,6 +1671,7 @@ function finishQuiz(){
 }
 
 renderHome();
+restoreQuizSession();
 </script>
 </body>
 </html>

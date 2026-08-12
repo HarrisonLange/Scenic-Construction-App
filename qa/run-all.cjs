@@ -9,6 +9,7 @@ const checks = [
   ['release-audit.cjs'],
   ['interaction-smoke.cjs'],
   ['storage-resilience.cjs'],
+  ['profile-isolation.cjs'],
   ['safety-quiz.cjs'],
 ];
 const mime = {

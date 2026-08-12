@@ -81,7 +81,9 @@ function validateQuestionBank({ modules, questions }) {
 
   try {
     await page.goto('http://127.0.0.1:8099/safety/', { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await page.evaluate(() => { window.SDSCPA = null; });
+    await page.evaluate(async () => { await SDSCPA.activateProfile('QA-SAFETY'); });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.evaluate(() => { SDSCPA.certificateDialog = () => {}; });
 
     const outcomes = await page.evaluate(() => {
       const results = [];
@@ -198,6 +200,67 @@ function validateQuestionBank({ modules, questions }) {
     assert(failure.text.includes(failure.selected), 'Failure review does not show the student answer.');
     assert(failure.text.includes(failure.correct), 'Failure review does not show the correct answer.');
     assert(failure.quizLocked && /Retrain/.test(failure.gateNote), 'A failed retake did not require retraining or showed contradictory pass status.');
+
+    const afterRetraining = await page.evaluate(() => {
+      const missedModule = SAFETY_QUESTIONS[0].module;
+      delete state.retrain[missedModule];
+      state.trained[missedModule] = true;
+      save();
+      renderHome();
+      return {
+        passed: state.passed,
+        quizUnlocked: !document.querySelector('#quizStartBtn').disabled,
+        gateNote: document.querySelector('#gateNote').textContent,
+      };
+    });
+    assert(!afterRetraining.passed, 'A failed retake kept the previous passing state.');
+    assert(afterRetraining.quizUnlocked, 'Quiz did not unlock after completing required retraining.');
+    assert(!/Passed/.test(afterRetraining.gateNote), 'Retraining alone incorrectly restored the passing message without a perfect retake.');
+    assert.strictEqual(await page.evaluate(() => SDSCPA.getProgress().safety), undefined, 'Dashboard completion remained after a failed retake.');
+
+    await page.evaluate(() => {
+      localStorage.setItem(GRADE_KEY, '10');
+      state = stateForGrade(10);
+      state.trained = Object.fromEntries(
+        SAFETY_MODULES
+          .filter((module) => !module.grades || (10 >= module.grades[0] && 10 <= module.grades[1]))
+          .map((module) => [module.id, true]),
+      );
+      state.retrain = {};
+      save();
+      renderHome();
+      document.querySelector('#quizStartBtn').click();
+      for (let answered = 0; answered < 2; answered += 1) {
+        const question = quiz.qs[quiz.at];
+        document.querySelectorAll('#qCard .q-opt')[question.answer].click();
+        document.querySelector('#quizNextBtn').click();
+      }
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const resumed = await page.evaluate(() => ({
+      activeView: document.querySelector('#viewQuiz').classList.contains('active'),
+      at: quiz && quiz.at,
+      responses: quiz && quiz.responses.length,
+      grade: quiz && quiz.grade,
+    }));
+    assert.deepStrictEqual(resumed, { activeView: true, at: 2, responses: 2, grade: 10 }, 'Reload did not restore the active Grade 10 attempt.');
+    await page.evaluate(() => { clearQuizSession(); show('viewHome'); renderHome(); });
+
+    for (const width of [320, 360, 390, 412, 430, 440]) {
+      await page.setViewportSize({ width, height: 800 });
+      const layout = await page.evaluate(() => {
+        const button = document.querySelector('.sdscpa-profile-switch');
+        const rect = button.getBoundingClientRect();
+        return {
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: document.documentElement.clientWidth,
+          buttonLeft: rect.left,
+          buttonRight: rect.right,
+        };
+      });
+      assert(layout.documentWidth <= layout.viewportWidth + 2, `Safety top bar overflowed at ${width}px.`);
+      assert(layout.buttonLeft >= 0 && layout.buttonRight <= width + 1, `Safety Switch profile was clipped at ${width}px.`);
+    }
 
     await page.evaluate(({ gradeSixModules }) => {
       localStorage.clear();
