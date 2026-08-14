@@ -460,9 +460,14 @@
   }
 
   document.getElementById('psReset').addEventListener('click', function(){
-    if(!confirm('Clear ALL lab progress saved on this computer? Certificates already downloaded are not affected.')) return;
-    try{ localStorage.removeItem('sdscpa_progress'); }catch(e){}
-    location.reload();
+    if(!confirm('Clear ALL lab progress for this profile on every device? Certificates already downloaded are not affected.')) return;
+    var removals = [];
+    cards.forEach(function(card){
+      removals.push(SDSCPA.markIncomplete(card.getAttribute('data-lab')));
+    });
+    Promise.all(removals).then(function(results){
+      if(results.every(function(result){ return result && result.synced; })) location.reload();
+    });
   });
 
   document.getElementById('psPrint').addEventListener('click', function(){

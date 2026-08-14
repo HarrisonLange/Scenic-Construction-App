@@ -3,15 +3,18 @@
    Keep dependency-free; labs are otherwise standalone. */
 (function(){
 'use strict';
-/* ── Local student profiles ───────────────────────────────────────
-   There is deliberately no roster or remembered-ID list. The ID is
-   normalized, converted to a one-way namespace token, and retained only in
-   sessionStorage for the life of the current tab. All app localStorage and
-   IndexedDB calls are transparently scoped to that token. */
+/* ── Student profiles ─────────────────────────────────────────────
+   A normalized ID maps to the same browser-storage namespace and server
+   record on every visit. The raw ID is sent only when opening the profile;
+   subsequent progress updates use its one-way namespace token. All app
+   localStorage and IndexedDB calls are transparently scoped to that token. */
 const ACTIVE_PROFILE_KEY='sdscpa_active_profile_v1';
 const PROFILE_PREFIX='sdscpa_profile_v1:';
 const PROFILE_DB_PREFIX='sdscpa-profile-v1-';
 const MIGRATION_KEY='sdscpa_profiles_migrated_v1';
+const PROFILE_MODE_KEY='sdscpa_profile_mode_v1';
+const PROFILE_MODE_REMOTE='remote';
+const PROFILE_MODE_LOCAL='local';
 let rawLocalStorage=null, rawSessionStorage=null, rawIndexedDB=null;
 try{ rawLocalStorage=window.localStorage; }catch(e){}
 try{ rawSessionStorage=window.sessionStorage; }catch(e){}
@@ -35,6 +38,10 @@ function profileToken(value){
 function activeProfile(){
   try{ return rawSessionStorage && rawSessionStorage.getItem(ACTIVE_PROFILE_KEY) || ''; }
   catch(e){ return ''; }
+}
+function activeProfileMode(){
+  try{ return rawSessionStorage && rawSessionStorage.getItem(PROFILE_MODE_KEY) || PROFILE_MODE_LOCAL; }
+  catch(e){ return PROFILE_MODE_LOCAL; }
 }
 function scopedKey(key){ const token=activeProfile(); return token ? PROFILE_PREFIX+token+':'+String(key) : ''; }
 function scopedKeys(){
@@ -182,13 +189,88 @@ async function activateProfile(studentId){
   }
   if(!rawSessionStorage) throw new Error('This browser is blocking local session storage.');
   rawSessionStorage.setItem(ACTIVE_PROFILE_KEY,token);
+  rawSessionStorage.setItem(PROFILE_MODE_KEY,PROFILE_MODE_REMOTE);
+  try{
+    const localProgress=JSON.parse(profileStorage.getItem(KEY) || '{}');
+    const result=await requestJson('/api/profiles/open',{studentId:normalized,progress:localProgress});
+    if(result.profileToken!==token) throw new Error('The progress server returned the wrong student profile.');
+    profileStorage.setItem(KEY,JSON.stringify(result.progress || {}));
+  }catch(error){
+    rawSessionStorage.removeItem(ACTIVE_PROFILE_KEY);
+    rawSessionStorage.removeItem(PROFILE_MODE_KEY);
+    throw error;
+  }
+}
+function activateLocalOnly(){
+  if(!rawLocalStorage) throw new Error('This browser is blocking local storage. Enable site storage to save student work.');
+  if(!rawSessionStorage) throw new Error('This browser is blocking local session storage.');
+  const token=profileToken('LOCAL-ONLY');
+  migrateLegacyLocalStorage(token);
+  rawSessionStorage.setItem(ACTIVE_PROFILE_KEY,token);
+  rawSessionStorage.setItem(PROFILE_MODE_KEY,PROFILE_MODE_LOCAL);
 }
 function switchProfile(){
   try{ if(rawSessionStorage) rawSessionStorage.removeItem(ACTIVE_PROFILE_KEY); }catch(e){}
+  try{ if(rawSessionStorage) rawSessionStorage.removeItem(PROFILE_MODE_KEY); }catch(e){}
   location.reload();
 }
 
 const KEY = 'sdscpa_progress';
+
+function wait(milliseconds){ return new Promise(resolve=>setTimeout(resolve,milliseconds)); }
+async function requestJson(url,body){
+  let lastError=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      const response=await fetch(url,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok){
+        const error=new Error(result.error || 'The progress server returned status '+response.status+'.');
+        error.status=response.status;
+        throw error;
+      }
+      return result;
+    }catch(error){
+      lastError=error;
+      if(attempt<3){
+        console.warn('Progress sync attempt failed',{url,attempt,error:error && error.message});
+        await wait(attempt*250);
+      }
+    }
+  }
+  const message=lastError && lastError.message ? lastError.message : 'Unknown connection error.';
+  throw new Error('Could not reach saved progress after 3 attempts. '+message+' You can try again or use Local only.');
+}
+
+function showSyncWarning(error){
+  ensureCss();
+  let warning=document.querySelector('.sdscpa-sync-warning');
+  if(!warning){
+    warning=document.createElement('div');
+    warning.className='sdscpa-sync-warning';
+    warning.setAttribute('role','alert');
+    document.body.appendChild(warning);
+  }
+  warning.textContent='This device was updated, but progress could not sync to /data. '+
+    (error && error.message ? error.message : 'Try signing in again when the connection is restored.');
+}
+
+function syncCompletion(labId,detail){
+  if(activeProfileMode()!==PROFILE_MODE_REMOTE) return Promise.resolve();
+  return requestJson('/api/progress/complete',{profileToken:activeProfile(),labId,detail})
+    .catch(showSyncWarning);
+}
+
+function syncRemoval(labId){
+  if(activeProfileMode()!==PROFILE_MODE_REMOTE) return Promise.resolve({synced:true});
+  return requestJson('/api/progress/remove',{profileToken:activeProfile(),labId})
+    .then(()=>({synced:true}))
+    .catch(error=>{ showSyncWarning(error); return {synced:false}; });
+}
 
 function getProgress(){
   try{ return JSON.parse(localStorage.getItem(KEY) || '{}'); }catch(e){ return {}; }
@@ -206,14 +288,16 @@ function markDone(labId, detail){
       next.score = Math.max(prev.score, next.score);
     p[labId] = next;
     localStorage.setItem(KEY, JSON.stringify(p));
-  }catch(e){}
+    return syncCompletion(labId,next);
+  }catch(e){ showSyncWarning(e); return Promise.resolve({synced:false}); }
 }
 function markIncomplete(labId){
   try{
     const p=getProgress();
     delete p[labId];
     localStorage.setItem(KEY,JSON.stringify(p));
-  }catch(e){}
+    return syncRemoval(labId);
+  }catch(e){ showSyncWarning(e); return Promise.resolve(); }
 }
 
 /* ── Certificate (canvas PNG download), generalized from Line Mixing Lab ── */
@@ -453,23 +537,27 @@ function mountProfileUi(){
     '<form class="sdscpa-profile-card" aria-labelledby="sdscpa-profile-title">'+
       '<div class="sdscpa-profile-mark">S</div>'+
       '<h2 id="sdscpa-profile-title">Student sign in</h2>'+
-      '<p>Enter your student ID to open your work saved on this computer.</p>'+
+      '<p>Enter your student ID to load your lab progress on any device. A new ID is added to progress tracking automatically.</p>'+
       '<label for="sdscpa-student-id">Student ID</label>'+
       '<input id="sdscpa-student-id" name="student-id" type="text" inputmode="text" minlength="3" maxlength="32" '+
         'pattern="[A-Za-z0-9](?:[A-Za-z0-9]|-){2,31}" autocomplete="off" autocapitalize="characters" spellcheck="false" required '+
         'aria-describedby="sdscpa-profile-note sdscpa-profile-error">'+
       '<div class="sdscpa-profile-error" id="sdscpa-profile-error" aria-live="polite"></div>'+
       '<button type="submit" class="sdscpa-profile-go">Open my profile</button>'+
-      '<p class="sdscpa-profile-note" id="sdscpa-profile-note">Your ID stays local and is never added to a list. It will not be shown as a saved choice later.</p>'+
+      '<div class="sdscpa-profile-divider"><span>or</span></div>'+
+      '<button type="button" class="sdscpa-profile-local">Local only</button>'+
+      '<p class="sdscpa-profile-warning" id="sdscpa-profile-note"><strong>Warning:</strong> Local-only work stays in this browser. It will not transfer with an ID and may be lost if site data is cleared or this device is reset.</p>'+
     '</form>';
   document.body.appendChild(wrap);
   document.documentElement.classList.add('sdscpa-profile-locked');
   const form=wrap.querySelector('form'), input=wrap.querySelector('input');
-  const error=wrap.querySelector('.sdscpa-profile-error'), button=wrap.querySelector('button');
+  const error=wrap.querySelector('.sdscpa-profile-error'), button=wrap.querySelector('.sdscpa-profile-go');
+  const localButton=wrap.querySelector('.sdscpa-profile-local');
   form.addEventListener('submit',async event=>{
     event.preventDefault();
     error.textContent='';
     button.disabled=true;
+    localButton.disabled=true;
     button.textContent='Opening…';
     try{
       await activateProfile(input.value);
@@ -477,9 +565,19 @@ function mountProfileUi(){
     }catch(e){
       error.textContent=e && e.message ? e.message : 'That profile could not be opened.';
       button.disabled=false;
+      localButton.disabled=false;
       button.textContent='Open my profile';
       input.focus();
       input.select();
+    }
+  });
+  localButton.addEventListener('click',()=>{
+    error.textContent='';
+    try{
+      activateLocalOnly();
+      location.reload();
+    }catch(e){
+      error.textContent=e && e.message ? e.message : 'Local-only mode could not be opened.';
     }
   });
   setTimeout(()=>input.focus(),0);
@@ -531,7 +629,14 @@ function ensureCss(){
 '.sdscpa-profile-go{width:100%;margin-top:5px;padding:11px 16px;background:#3b82f6;border:0;border-radius:9px;color:#fff;font-size:14px;font-weight:800;cursor:pointer}'+
 '.sdscpa-profile-go:hover{background:#2f6fdb}'+
 '.sdscpa-profile-go:disabled{opacity:.6;cursor:wait}'+
-'.sdscpa-profile-card .sdscpa-profile-note{margin:15px 0 0;color:#777;font-size:11.5px}'+
+'.sdscpa-profile-divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:#666;font-size:11px;text-transform:uppercase}'+
+'.sdscpa-profile-divider:before,.sdscpa-profile-divider:after{content:"";height:1px;flex:1;background:#333}'+
+'.sdscpa-profile-local{width:100%;padding:10px 16px;background:transparent;border:1px solid #555;border-radius:9px;color:#ddd;font-size:13px;font-weight:750;cursor:pointer}'+
+'.sdscpa-profile-local:hover{border-color:#fbbf24;color:#fff}'+
+'.sdscpa-profile-local:disabled{opacity:.6;cursor:wait}'+
+'.sdscpa-profile-card .sdscpa-profile-warning{margin:11px 0 0;padding:9px 10px;border:1px solid rgba(251,191,36,.32);border-radius:8px;background:rgba(251,191,36,.07);color:#c6b98e;font-size:11.5px}'+
+'.sdscpa-profile-card .sdscpa-profile-warning strong{color:#fbbf24}'+
+'.sdscpa-sync-warning{position:fixed;left:12px;right:12px;bottom:12px;z-index:10020;max-width:680px;margin:auto;padding:10px 13px;border:1px solid #f59e0b;border-radius:8px;background:#291d08;color:#fde68a;font:600 12px/1.45 system-ui,Segoe UI,sans-serif;box-shadow:0 5px 24px rgba(0,0,0,.5)}'+
 '.sdscpa-profile-switch{position:fixed;top:10px;right:12px;z-index:9985;padding:7px 11px;background:#1a1a1a;border:1px solid #444;border-radius:7px;color:#ddd;font:700 11px system-ui,Segoe UI,sans-serif;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.45)}'+
 '.sdscpa-profile-switch.sdscpa-profile-switch-inline{position:static;flex:0 0 auto;margin-left:8px;box-shadow:none}'+
 '.sdscpa-profile-switch-short{display:none}'+
@@ -543,7 +648,7 @@ function ensureCss(){
 }
 
 window.SDSCPA = { getProgress, markDone, markIncomplete, certificate, certificateDialog, attachGlossary, openGlossary,
-  activeProfile, activateProfile, switchProfile, profileToken };
+  activeProfile, activeProfileMode, activateProfile, activateLocalOnly, switchProfile, profileToken };
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',mountProfileUi,{once:true});
 else mountProfileUi();
 })();

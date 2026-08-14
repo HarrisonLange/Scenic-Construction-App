@@ -80,6 +80,8 @@ async function readDbRecord(page) {
     assert(await page.locator('.sdscpa-profile-gate').isVisible(), 'The login gate was not shown without an active profile.');
     assert.strictEqual(await page.locator('.sdscpa-profile-gate select, .sdscpa-profile-gate datalist').count(), 0, 'The login exposes a remembered-ID list.');
     assert.strictEqual(await page.locator('#sdscpa-student-id').getAttribute('autocomplete'), 'off');
+    assert(await page.locator('.sdscpa-profile-local').isVisible(), 'The Local only option was not shown.');
+    assert.match(await page.locator('.sdscpa-profile-warning').innerText(), /may be lost/i, 'Local-only mode does not warn that work may be lost.');
 
     await page.evaluate(async () => {
       __rawLocalStorageForTest.setItem('legacy-project', 'existing student work');
@@ -115,10 +117,12 @@ async function readDbRecord(page) {
     });
     assert.deepStrictEqual(migrated, { local: 'existing student work', audio: true }, 'Existing browser data was not assigned to the first profile.');
 
+    const completionSync = page.waitForResponse((response) => response.url().endsWith('/api/progress/complete'));
     await page.evaluate(() => {
       localStorage.setItem('student-project', 'Student A project');
       SDSCPA.markDone('safety', { score: 100 });
     });
+    assert.strictEqual((await completionSync).status(), 200, 'Student A progress did not sync to the server.');
     await writeDbRecord(page, 'Student A audio');
 
     await switchProfile(page, 'STUDENT-2002');
@@ -136,6 +140,13 @@ async function readDbRecord(page) {
     assert.strictEqual(await page.evaluate(() => localStorage.getItem('student-project')), 'Student A project');
     assert.strictEqual(await readDbRecord(page), 'Student A audio');
     assert.strictEqual((await page.evaluate(() => SDSCPA.getProgress())).safety.score, 100);
+
+    const transferContext = await browser.newContext();
+    const transferPage = await transferContext.newPage();
+    await transferPage.goto('http://127.0.0.1:8099/', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await signIn(transferPage, 'STUDENT-1001');
+    assert.strictEqual((await transferPage.evaluate(() => SDSCPA.getProgress())).safety.score, 100, 'Progress did not transfer to a new browser context with the same ID.');
+    await transferContext.close();
 
     for (const width of [320, 360, 390, 412, 430, 440]) {
       await page.setViewportSize({ width, height: 800 });
@@ -174,7 +185,8 @@ async function readDbRecord(page) {
       localStorageIsolation: 'verified',
       indexedDbIsolation: 'verified',
       legacyDataMigration: 'verified',
-      studentIdsPersisted: false,
+      crossDeviceProgressTransfer: 'verified',
+      studentIdsPersistedInBrowser: false,
     }, null, 2));
   } finally {
     await context.close();

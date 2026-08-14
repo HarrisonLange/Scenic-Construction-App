@@ -4,6 +4,7 @@
   "private": true,
   "description": "Release checks for the SDSCPA Design & Production Virtual Labs",
   "scripts": {
+    "start": "node server.js",
     "build:canvas-safety": "node canvas/build-safety-modules.mjs",
     "test": "node qa/run-all.cjs",
     "test:pages": "node qa/release-audit.cjs",
