@@ -27,6 +27,7 @@ const MATERIALS = Object.freeze({
     fan: 255,
     flow: 0.98,
     maxFlow: 12,
+    density: 1.24,
     vitrification: 45,
   }),
   petg: Object.freeze({
@@ -38,6 +39,7 @@ const MATERIALS = Object.freeze({
     fan: 190,
     flow: 0.95,
     maxFlow: 12,
+    density: 1.27,
     vitrification: 70,
   }),
 });
