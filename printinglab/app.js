@@ -41,6 +41,8 @@ const elements = Object.freeze({
   rotateXButton: document.getElementById("rotateXButton"),
   rotateYButton: document.getElementById("rotateYButton"),
   rotateZButton: document.getElementById("rotateZButton"),
+  scaleOutput: document.getElementById("scaleOutput"),
+  scaleRange: document.getElementById("scaleRange"),
   sliceButton: document.getElementById("sliceButton"),
   sliceForm: document.getElementById("sliceForm"),
   statusIcon: document.getElementById("statusIcon"),
@@ -60,6 +62,7 @@ function initialState() {
     model: null,
     profileSourcesPromise: loadProfileSources(),
     result: null,
+    scalePercent: 100,
     sourceBuffer: null,
   });
 }
@@ -273,6 +276,7 @@ function setBusy(busy) {
   elements.rotateYButton.disabled = busy;
   elements.rotateZButton.disabled = busy;
   elements.resetModelButton.disabled = busy;
+  elements.scaleRange.disabled = busy || !state.model;
   refreshSliceReadiness();
 }
 
@@ -374,7 +378,10 @@ async function loadModel(file) {
   showStatus("working", "…", "Reading model", `${file.name} stays on this Chromebook.`, 0.04);
   const sourceBuffer = await file.arrayBuffer();
   const parsed = await parseModel(file, sourceBuffer);
-  updateState({ engine: parsed.engine, model: parsed.model, sourceBuffer, result: null });
+  updateState({ engine: parsed.engine, model: parsed.model, sourceBuffer, result: null, scalePercent: 100 });
+  elements.scaleRange.value = "100";
+  elements.scaleOutput.value = "100%";
+  elements.scaleRange.disabled = false;
   elements.emptyState.hidden = true;
   elements.viewerToolbar.hidden = false;
   elements.modelStats.hidden = false;
@@ -399,9 +406,44 @@ async function resetModel() {
   showStatus("working", "…", "Resetting model", "Restoring the original orientation and scale.", 0.1);
   const syntheticFile = new File([state.sourceBuffer], state.model.name, { type: "model/stl" });
   const parsed = await parseModel(syntheticFile, state.sourceBuffer);
-  updateState({ engine: parsed.engine, model: Object.freeze({ ...parsed.model, bytes: state.model.bytes }), result: null });
+  updateState({
+    engine: parsed.engine,
+    model: Object.freeze({ ...parsed.model, bytes: state.model.bytes }),
+    result: null,
+    scalePercent: 100,
+  });
+  elements.scaleRange.value = "100";
+  elements.scaleOutput.value = "100%";
   updateModelDisplay();
   showStatus("success", "✓", "Model reset", "The original STL orientation has been restored.", Number.NaN);
+}
+
+function scaleModel(scalePercent) {
+  if (!state.engine || !state.model) {
+    showToast("Load an STL before scaling it.");
+    return;
+  }
+  if (!Number.isInteger(scalePercent) || scalePercent < 10 || scalePercent > 300) {
+    throw new RangeError(`Model scale must be a whole percentage from 10% through 300%. Received ${scalePercent}%.`);
+  }
+  if (scalePercent === state.scalePercent) return;
+  clearResult();
+  const scaleFactor = scalePercent / state.scalePercent;
+  state.engine.scale(scaleFactor, scaleFactor, scaleFactor);
+  updateState({ scalePercent });
+  updateModelDisplay();
+  const machineKey = elements.printerSelect.value;
+  const problem = machineKey ? fitProblem(currentBounds(), machineForKey(machineKey)) : null;
+  if (!problem) {
+    const bounds = currentBounds();
+    showStatus(
+      "success",
+      "✓",
+      `Model scaled to ${scalePercent}%`,
+      `New size: ${formattedMillimeters(bounds.x)} × ${formattedMillimeters(bounds.y)} × ${formattedMillimeters(bounds.z)} mm.`,
+      Number.NaN,
+    );
+  }
 }
 
 function rotateModel(x, y, z) {
@@ -626,6 +668,14 @@ elements.printerSelect.addEventListener("change", updatePrinter);
 elements.infillRange.addEventListener("input", () => {
   elements.infillOutput.value = `${elements.infillRange.value}%`;
   markSettingsChanged();
+});
+elements.scaleRange.addEventListener("input", () => {
+  elements.scaleOutput.value = `${elements.scaleRange.value}%`;
+  try {
+    scaleModel(Number.parseInt(elements.scaleRange.value, 10));
+  } catch (error) {
+    handleError(error, "Model scaling");
+  }
 });
 elements.qualitySelect.addEventListener("change", markSettingsChanged);
 elements.supportsToggle.addEventListener("change", markSettingsChanged);

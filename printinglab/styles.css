@@ -345,7 +345,11 @@ select { width: 100%; min-height: 42px; border: 1px solid var(--line-strong); bo
 .range-head { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; }
 .range-head output { color: var(--cyan); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 850; }
 input[type="range"] { width: 100%; accent-color: var(--cyan); }
+input[type="range"]:disabled { cursor: not-allowed; opacity: .45; }
 .range-scale { display: flex; justify-content: space-between; margin-top: 2px; color: #708097; font-size: 9px; }
+.scale-control { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.scale-control .range-head { margin-top: 0; }
+.scale-control .field-label { margin-bottom: 0; }
 
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; }
 .switch-row + .switch-row { margin-top: 15px; }

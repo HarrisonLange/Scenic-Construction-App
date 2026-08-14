@@ -119,7 +119,17 @@
         </fieldset>
 
         <fieldset>
-          <legend><span>3</span> Quality</legend>
+          <legend><span>3</span> Size &amp; quality</legend>
+          <div class="scale-control">
+            <div class="range-head">
+              <label class="field-label" for="scaleRange">Model scale</label>
+              <output id="scaleOutput" for="scaleRange">100%</output>
+            </div>
+            <input id="scaleRange" type="range" min="10" max="300" step="5" value="100" disabled>
+            <div class="range-scale" aria-hidden="true"><span>10%</span><span>Original</span><span>300%</span></div>
+            <p class="field-help">Uniform scaling keeps the model proportions unchanged.</p>
+          </div>
+
           <label class="field-label" for="qualitySelect">Layer height</label>
           <select id="qualitySelect">
             <option value="draft">Draft · 0.28 mm</option>
