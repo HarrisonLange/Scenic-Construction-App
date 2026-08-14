@@ -1,0 +1,18 @@
+{
+  "name": "SDSCPA 3D Printing Lab",
+  "short_name": "3D Print Lab",
+  "description": "A simple, local Chromebook slicer for classroom 3D printing.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080b12",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

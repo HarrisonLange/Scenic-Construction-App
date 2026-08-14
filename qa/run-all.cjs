@@ -20,9 +20,11 @@ const mime = {
   '.jpg': 'image/jpeg',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.png': 'image/png',
   '.stl': 'model/stl',
   '.svg': 'image/svg+xml',
+  '.wasm': 'application/wasm',
 };
 
 const server = http.createServer((request, response) => {

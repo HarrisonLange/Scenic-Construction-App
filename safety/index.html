@@ -180,7 +180,7 @@ function sdscpaSharedFailed(){
     <div id="modList"></div>
     <div id="quizGate">
       <h2>🧯 Day 5 — Certification Quiz</h2>
-      <p>The quiz covers <b>everything</b> in your modules — every rule and every tool, from this year and every year before. Answer every question correctly to earn your safety certificate. Download it, have your <b>parent/guardian sign it</b>, and submit it to your teacher — then complete your teacher's <b>hands-on demonstrations and guided practice</b> before using any equipment.</p>
+      <p>The quiz covers <b>everything</b> in your modules — every rule and every tool, from this year and every year before. If you miss a question, review its related module before trying again. Correct answers carry forward, so each retry includes only the questions you still need to correct. Answer every question correctly to earn your safety certificate. Download it, have your <b>parent/guardian sign it</b>, and submit it to your teacher — then complete your teacher's <b>hands-on demonstrations and guided practice</b> before using any equipment.</p>
       <button id="quizStartBtn" disabled>Take the safety quiz</button>
       <div class="gate-note" id="gateNote"></div>
     </div>
@@ -1227,10 +1227,16 @@ function grade(){
 }
 function cleanState(value){
   const object = value && typeof value === 'object' ? value : {};
+  const legacyPending = object.pendingByGrade && typeof object.pendingByGrade === 'object'
+    ? object.pendingByGrade[String(grade() || 6)]
+    : [];
   return {
     trained: object.trained && typeof object.trained === 'object' ? object.trained : {},
     retrain: object.retrain && typeof object.retrain === 'object' ? object.retrain : {},
-    passed: !!object.passed
+    passed: !!object.passed,
+    pendingQuestionKeys: Array.isArray(object.pendingQuestionKeys)
+      ? object.pendingQuestionKeys.slice()
+      : Array.isArray(legacyPending) ? legacyPending.slice() : []
   };
 }
 let progress = { byGrade:{} };
@@ -1301,6 +1307,20 @@ function show(view){
 /* ── Home: module list + quiz gate ── */
 function modules(){ return forGrade(SAFETY_MODULES); }
 function questions(){ return forGrade(SAFETY_QUESTIONS).filter(q => modules().some(m => m.id === q.module)); }
+function questionKey(q){ return q.module + '\u241f' + q.q; }
+function pendingQuestionKeys(){ return state.pendingQuestionKeys || []; }
+function pendingQuestions(){
+  const pending = new Set(pendingQuestionKeys());
+  return pending.size ? questions().filter(q=>pending.has(questionKey(q))) : [];
+}
+function setPendingQuestions(items){
+  state.pendingQuestionKeys = items.map(questionKey);
+}
+function clearPendingQuestions(){ state.pendingQuestionKeys = []; }
+function attemptQuestions(){
+  const pending = pendingQuestions();
+  return pendingQuestionKeys().length ? pending : questions();
+}
 function allTrained(){ return modules().every(m => state.trained[m.id] && !state.retrain[m.id]); }
 function sectionMins(s){ return (!s.type || s.type === 'read') ? 3 : 4; }
 function moduleMins(m){ return forGrade(m.sections).reduce((t,s)=>t+sectionMins(s), 0); }
@@ -1360,9 +1380,12 @@ function renderHome(){
     group.forEach(m=>list.appendChild(moduleCard(m)));
   });
   const ready = allTrained() && questions().length > 0;
+  const pendingCount = pendingQuestions().length;
   $('quizStartBtn').disabled = !ready;
+  $('quizStartBtn').textContent = pendingCount ? 'Retry ' + pendingCount + ' missed question' + (pendingCount === 1 ? '' : 's') : 'Take the safety quiz';
   $('gateNote').textContent = state.passed && ready
     ? '✓ Passed! You can retake the quiz any time to re-download your certificate.'
+    : ready && pendingCount ? 'Module review complete. Your next attempt includes only the questions you previously missed.'
     : ready ? '' :
       Object.keys(state.retrain).length ? 'Retrain the ⚠ modules above to unlock the quiz again.'
       : 'Finish every module above to unlock the quiz.';
@@ -1589,13 +1612,19 @@ function restoreQuizSession(){
     return {q,selectedIndex:response.selectedIndex,correct:response.selectedIndex===q.answer};
   });
   if(responses.some(response=>!response) || responses.length !== saved.at) return false;
-  quiz={grade:saved.grade,qs,at:saved.at,responses};
+  quiz={grade:saved.grade,qs,at:saved.at,responses,totalQuestions:questions().length};
   show('viewQuiz');
   renderQuestion();
   return true;
 }
 $('quizStartBtn').addEventListener('click', ()=>{
-  quiz = { grade:grade() || 6, qs:shuffle(questions()), at:0, responses:[] };
+  quiz = {
+    grade:grade() || 6,
+    qs:shuffle(attemptQuestions()),
+    at:0,
+    responses:[],
+    totalQuestions:questions().length
+  };
   saveQuizSession();
   show('viewQuiz');
   renderQuestion();
@@ -1636,8 +1665,11 @@ function finishQuiz(){
   clearQuizSession();
   const wrong = quiz.responses.filter(response=>!response.correct);
   if(wrong.length === 0){
-    state.passed = true; save(quiz.grade);
+    state.passed = true;
+    clearPendingQuestions();
+    save(quiz.grade);
     card.innerHTML = '<div class="result-ok"><b>💯 100% — that\'s the only passing grade in safety.</b><br><br>' +
+      (quiz.qs.length < quiz.totalQuestions ? 'You corrected every remaining question. Your earlier correct answers carried forward.<br><br>' : '') +
       'Download your certificate and submit it to your teacher.</div>' +
       '<button class="primary-btn" id="backHomeBtn">Back to modules</button>';
     if(window.SDSCPA){
@@ -1646,7 +1678,7 @@ function finishQuiz(){
         heading:'Safety training complete!',
         lab:'Safety Lab',
         line:'passed the full theatre safety quiz with a perfect score (grade ' + quiz.grade + ' level)',
-        stats:[['SCORE','100%','#22c55e'], ['QUESTIONS', quiz.qs.length, '#3b82f6'], ['GRADE', quiz.grade, '#fbbf24']],
+        stats:[['SCORE','100%','#22c55e'], ['QUESTIONS', quiz.totalQuestions, '#3b82f6'], ['GRADE', quiz.grade, '#fbbf24']],
         file:'SDSCPA-Safety-Certificate'
       });
     }
@@ -1654,6 +1686,7 @@ function finishQuiz(){
     const mods = [...new Set(wrong.map(response=>response.q.module))];
     state.passed = false;
     mods.forEach(id=>{ state.retrain[id] = true; });
+    setPendingQuestions(wrong.map(response=>response.q));
     save(quiz.grade);
     if(window.SDSCPA && SDSCPA.markIncomplete) SDSCPA.markIncomplete('safety');
     const modTitle = id => (SAFETY_MODULES.find(m=>m.id===id)||{}).title || id;
@@ -1664,7 +1697,7 @@ function finishQuiz(){
         '<b>Your answer:</b> ' + response.q.options[response.selectedIndex] + '<br>' +
         '<b>Correct answer:</b> ' + response.q.options[response.q.answer] +
         (response.q.why ? '<br>' + response.q.why : '') + '</span></li>').join('') + '</ul>' +
-      'Those modules are now marked <b>⚠ Retrain</b>. Go through them again, then retake the quiz.</div>' +
+      'Those modules are now marked <b>⚠ Retrain</b>. Go through them again, then retake only these missed questions. Questions you answered correctly will carry forward.</div>' +
       '<button class="primary-btn" id="backHomeBtn">Retrain now</button>';
   }
   card.querySelector('#backHomeBtn').addEventListener('click', ()=>{ show('viewHome'); renderHome(); });

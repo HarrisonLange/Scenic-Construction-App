@@ -210,13 +210,37 @@ function validateQuestionBank({ modules, questions }) {
       return {
         passed: state.passed,
         quizUnlocked: !document.querySelector('#quizStartBtn').disabled,
+        quizLabel: document.querySelector('#quizStartBtn').textContent,
         gateNote: document.querySelector('#gateNote').textContent,
       };
     });
     assert(!afterRetraining.passed, 'A failed retake kept the previous passing state.');
     assert(afterRetraining.quizUnlocked, 'Quiz did not unlock after completing required retraining.');
+    assert(/Retry 1 missed question/.test(afterRetraining.quizLabel), 'The retry did not identify the one remaining question.');
     assert(!/Passed/.test(afterRetraining.gateNote), 'Retraining alone incorrectly restored the passing message without a perfect retake.');
     assert.strictEqual(await page.evaluate(() => SDSCPA.getProgress().safety), undefined, 'Dashboard completion remained after a failed retake.');
+
+    const correctedRetry = await page.evaluate(() => {
+      const expectedQuestion = SAFETY_QUESTIONS[0];
+      document.querySelector('#quizStartBtn').click();
+      const retryCount = quiz.qs.length;
+      const retriedQuestion = quiz.qs[0];
+      document.querySelectorAll('#qCard .q-opt')[retriedQuestion.answer].click();
+      document.querySelector('#quizNextBtn').click();
+      return {
+        retryCount,
+        retriedQuestion: questionKey(retriedQuestion),
+        expectedQuestion: questionKey(expectedQuestion),
+        passed: state.passed,
+        pendingCount: pendingQuestions().length,
+        resultText: document.querySelector('#qCard').textContent,
+      };
+    });
+    assert.strictEqual(correctedRetry.retryCount, 1, 'The retry included questions the student previously answered correctly.');
+    assert.strictEqual(correctedRetry.retriedQuestion, correctedRetry.expectedQuestion, 'The retry did not present the missed question.');
+    assert(correctedRetry.passed, 'Correcting the remaining question did not complete certification.');
+    assert.strictEqual(correctedRetry.pendingCount, 0, 'The corrected question remained pending.');
+    assert(/earlier correct answers carried forward/i.test(correctedRetry.resultText), 'The retry result did not explain that earlier correct answers carried forward.');
 
     await page.evaluate(() => {
       localStorage.setItem(GRADE_KEY, '10');

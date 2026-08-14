@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="A simple, local Chromebook slicer for SDSCPA 3D printing labs.">
+  <title>SDSCPA — 3D Printing Lab</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="back-link" href="../" aria-label="Back to all labs">&lsaquo; Labs</a>
+    <a class="brand" href="../" aria-label="SDSCPA labs home">
+      <svg class="brand-mark" viewBox="0 0 196 50" aria-hidden="true">
+        <defs>
+          <linearGradient id="brand-gradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#7ac143"/><stop offset=".17" stop-color="#f7941e"/>
+            <stop offset=".34" stop-color="#ed1c45"/><stop offset=".50" stop-color="#ec008c"/>
+            <stop offset=".66" stop-color="#92278f"/><stop offset=".83" stop-color="#2e3192"/>
+            <stop offset="1" stop-color="#00aeef"/>
+          </linearGradient>
+        </defs>
+        <text x="0" y="40" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="46" fill="url(#brand-gradient)">SDSCPA</text>
+      </svg>
+      <span>3D Printing Lab</span>
+    </a>
+    <div class="local-badge" id="localBadge" title="Models and slicing stay on this Chromebook">
+      <span class="local-dot" aria-hidden="true"></span>
+      <span id="localBadgeText">Local processing</span>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="workspace" aria-labelledby="pageTitle">
+      <div class="workspace-head">
+        <div>
+          <p class="eyebrow">Chromebook slicer</p>
+          <h1 id="pageTitle">Prepare a model to print</h1>
+          <p class="subtitle">Your model never leaves this device. Load an STL, choose a few settings, then export printer G-code.</p>
+        </div>
+        <div class="engine-note" aria-label="Slicing engine information">
+          <span>Powered by</span>
+          <strong>Kiri:Moto + Orca profiles</strong>
+        </div>
+      </div>
+
+      <div class="viewer-card" id="dropZone">
+        <canvas id="modelCanvas" aria-label="Three-dimensional preview of the loaded model"></canvas>
+        <div class="bed-label" id="bedLabel">Choose a printer to see its build plate</div>
+
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M18 10h28v9H18zM22 19h20v10l-10 6-10-6zM29 35h6v8h-6z"/>
+              <path d="M12 48h40v7H12zM15 43h34v5H15z"/>
+            </svg>
+          </div>
+          <h2>Drop an STL here</h2>
+          <p>or choose a file from your Chromebook</p>
+          <button class="button primary" id="chooseFileButton" type="button">Choose STL</button>
+          <input id="modelFile" type="file" accept=".stl,model/stl,application/sla" aria-label="Choose an STL model">
+          <small>Maximum file size: 64 MB</small>
+        </div>
+
+        <div class="viewer-toolbar" id="viewerToolbar" hidden>
+          <button class="tool-button" id="rotateXButton" type="button" title="Rotate 90 degrees around X">X <span>90°</span></button>
+          <button class="tool-button" id="rotateYButton" type="button" title="Rotate 90 degrees around Y">Y <span>90°</span></button>
+          <button class="tool-button" id="rotateZButton" type="button" title="Rotate 90 degrees around Z">Z <span>90°</span></button>
+          <button class="tool-button" id="resetModelButton" type="button" title="Reset model orientation and scale">Reset</button>
+        </div>
+
+        <div class="model-stats" id="modelStats" hidden aria-live="polite">
+          <div><span>Model</span><strong id="modelName">—</strong></div>
+          <div><span>Size</span><strong id="modelSize">—</strong></div>
+          <div><span>Triangles</span><strong id="triangleCount">—</strong></div>
+        </div>
+      </div>
+
+      <div class="status-panel" id="statusPanel" role="status" aria-live="polite">
+        <div class="status-icon" id="statusIcon" aria-hidden="true">1</div>
+        <div class="status-copy">
+          <strong id="statusTitle">Start with your printer</strong>
+          <span id="statusMessage">“H1S” is not a Bambu Lab model. Confirm whether your lab has H2S or P1S printers.</span>
+        </div>
+        <div class="progress-track" id="progressTrack" hidden><div id="progressBar"></div></div>
+      </div>
+    </section>
+
+    <aside class="settings-panel" aria-labelledby="settingsTitle">
+      <div class="settings-head">
+        <div>
+          <p class="eyebrow">Print setup</p>
+          <h2 id="settingsTitle">Basic settings</h2>
+        </div>
+        <span class="step-pill">0.4 mm nozzle</span>
+      </div>
+
+      <form id="sliceForm">
+        <fieldset>
+          <legend><span>1</span> Machine</legend>
+          <label class="field-label" for="printerSelect">Printer in your lab</label>
+          <select id="printerSelect" required>
+            <option value="">Choose the actual printer</option>
+            <option value="h2s">Bambu Lab H2S</option>
+            <option value="p1s">Bambu Lab P1S</option>
+          </select>
+          <p class="field-help">Check the model name printed on the machine. The wrong profile can damage a print or the printer.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend><span>2</span> Material</legend>
+          <div class="segmented" role="radiogroup" aria-label="Filament material">
+            <label><input type="radio" name="material" value="pla" checked><span><b>PLA</b><small>Best for class</small></span></label>
+            <label><input type="radio" name="material" value="petg"><span><b>PETG</b><small>More durable</small></span></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><span>3</span> Quality</legend>
+          <label class="field-label" for="qualitySelect">Layer height</label>
+          <select id="qualitySelect">
+            <option value="draft">Draft · 0.28 mm</option>
+            <option value="standard" selected>Standard · 0.20 mm</option>
+            <option value="fine">Fine · 0.16 mm</option>
+          </select>
+
+          <div class="range-head">
+            <label class="field-label" for="infillRange">Infill</label>
+            <output id="infillOutput" for="infillRange">15%</output>
+          </div>
+          <input id="infillRange" type="range" min="5" max="40" step="5" value="15">
+          <div class="range-scale" aria-hidden="true"><span>Light</span><span>Strong</span></div>
+        </fieldset>
+
+        <fieldset>
+          <legend><span>4</span> Helpers</legend>
+          <label class="switch-row" for="supportsToggle">
+            <span><b>Automatic supports</b><small>Add material under steep overhangs</small></span>
+            <input id="supportsToggle" type="checkbox" role="switch"><i aria-hidden="true"></i>
+          </label>
+          <label class="switch-row" for="brimToggle">
+            <span><b>Brim</b><small>Improve first-layer grip for narrow parts</small></span>
+            <input id="brimToggle" type="checkbox" role="switch"><i aria-hidden="true"></i>
+          </label>
+        </fieldset>
+
+        <div class="action-area">
+          <button class="button slice-button" id="sliceButton" type="submit" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4zm0 5l8 4 8-4M4 17l8 4 8-4"/></svg>
+            Slice model
+          </button>
+          <button class="button export-button" id="exportButton" type="button" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5l5 5 5-5M5 20h14"/></svg>
+            Download G-code
+          </button>
+          <p class="teacher-check">Teacher: validate one test file in Bambu Studio before student production use.</p>
+        </div>
+      </form>
+
+      <div class="result-card" id="resultCard" hidden>
+        <div><span>Layers</span><strong id="resultLayers">—</strong></div>
+        <div><span>G-code</span><strong id="resultBytes">—</strong></div>
+        <div><span>Profile</span><strong id="resultProfile">—</strong></div>
+      </div>
+
+      <footer class="settings-footer">
+        <a href="THIRD_PARTY_NOTICES.md">Open-source notices</a>
+        <span aria-hidden="true">•</span>
+        <span>No upload. No account.</span>
+      </footer>
+    </aside>
+  </main>
+
+  <div class="toast" id="toast" role="alert" aria-live="assertive" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
