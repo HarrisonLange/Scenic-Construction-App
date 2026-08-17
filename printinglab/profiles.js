@@ -1,9 +1,18 @@
 const PROFILE_REVISION = "Bambu Studio 9a530f7 · Kiri:Moto d138275";
 
+const HARDENED_STEEL_NOZZLE = Object.freeze({
+  diameter: 0.4,
+  extruderType: "Direct Drive",
+  extruderVariant: "Direct Drive Standard",
+  type: "hardened_steel",
+  volumeType: "Standard",
+});
+
 const MACHINES = Object.freeze({
   h2s: Object.freeze({
     key: "h2s",
     name: "Bambu Lab H2S",
+    nozzle: HARDENED_STEEL_NOZZLE,
     width: 340,
     depth: 320,
     height: 340,
@@ -11,6 +20,7 @@ const MACHINES = Object.freeze({
   p1s: Object.freeze({
     key: "p1s",
     name: "Bambu Lab P1S",
+    nozzle: HARDENED_STEEL_NOZZLE,
     width: 256,
     depth: 256,
     height: 256,
@@ -22,6 +32,7 @@ const MATERIALS = Object.freeze({
     key: "pla",
     name: "Generic PLA",
     code: "PLA",
+    filamentId: "GFL99",
     nozzle: 220,
     bed: 55,
     fan: 255,
@@ -34,6 +45,7 @@ const MATERIALS = Object.freeze({
     key: "petg",
     name: "Generic PETG",
     code: "PETG",
+    filamentId: "GFG99",
     nozzle: 255,
     bed: 70,
     fan: 190,
@@ -98,13 +110,39 @@ async function fetchJsonWithRetries(url, attempts) {
   throw lastError;
 }
 
+async function fetchBytesAttempt(url) {
+  const response = await fetch(url, { cache: "no-cache" });
+  if (!response.ok) {
+    const responseBody = await response.text();
+    throw new ProfileLoadError(`Could not load package asset ${url}. HTTP ${response.status}. Response: ${responseBody.slice(0, 300)}`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function fetchBytesWithRetries(url, attempts) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetchBytesAttempt(url);
+    } catch (error) {
+      lastError = error;
+      console.warn("Package asset request failed", { url, attempt, attempts, error: error.message });
+    }
+  }
+  throw lastError;
+}
+
 async function loadProfileSources() {
-  const [h2sStart, h2sEnd, p1s] = await Promise.all([
+  const [h2sStart, h2sEnd, h2sProjectSettings, p1s, p1sProjectSettings, packageThumbnail, packageThumbnailSmall] = await Promise.all([
     fetchJsonWithRetries("vendor/profiles/h2s-start.json", 3),
     fetchJsonWithRetries("vendor/profiles/h2s-end.json", 3),
+    fetchJsonWithRetries("vendor/profiles/h2s-project-settings.json", 3),
     fetchJsonWithRetries("vendor/profiles/p1s.json", 3),
+    fetchJsonWithRetries("vendor/profiles/p1s-project-settings.json", 3),
+    fetchBytesWithRetries("assets/package-thumbnail-512.png", 3),
+    fetchBytesWithRetries("assets/package-thumbnail-128.png", 3),
   ]);
-  return Object.freeze({ h2sStart, h2sEnd, p1s });
+  return Object.freeze({ h2sStart, h2sEnd, h2sProjectSettings, p1s, p1sProjectSettings, packageThumbnail, packageThumbnailSmall });
 }
 
 function evaluateTemplateExpression(expression, context) {
@@ -203,6 +241,95 @@ function renderBambuTemplate(template, context, sourceName) {
   return rendered.split(/\r?\n/);
 }
 
+function isSectionHeader(line) {
+  return /^;=+.+?=+\s*$/.test(line.trim());
+}
+
+function isBedLevelingSectionStart(line) {
+  return /^;=+\s*bed leveling\s*=+\s*$/i.test(line.trim());
+}
+
+function isBedLevelingSectionEnd(line) {
+  return /^;=+\s*bed leveling end\s*=+\s*$/i.test(line.trim());
+}
+
+function isActiveBedLevelingDirective(line) {
+  const command = line.trim();
+  if (!command || command.startsWith(";")) return false;
+  return /^G29(?:\s|$)/i.test(command)
+    || /^G29\.20(?:\s|$)/i.test(command)
+    || /^M1002\s+judge_flag\s+g29_before_print_flag(?:\s|$)/i.test(command)
+    || /^M1002\s+gcode_claim_action\s*:\s*1(?:\s*;|\s*$)/i.test(command);
+}
+
+function removeAutomaticBedLeveling(lines, sourceName) {
+  if (!Array.isArray(lines)) {
+    throw new TypeError(`Profile ${sourceName} start G-code must be an array of lines.`);
+  }
+
+  const filtered = [];
+  let removingLevelingSection = false;
+  let simplifyingHomeSection = false;
+  let removedLevelingSection = false;
+
+  for (const line of lines) {
+    if (typeof line !== "string") {
+      throw new TypeError(`Profile ${sourceName} start G-code contains a non-string line.`);
+    }
+
+    if (removingLevelingSection) {
+      if (isBedLevelingSectionEnd(line)) {
+        removingLevelingSection = false;
+        continue;
+      }
+      if (!isSectionHeader(line)) continue;
+      removingLevelingSection = false;
+    }
+
+    if (isBedLevelingSectionStart(line)) {
+      removingLevelingSection = true;
+      removedLevelingSection = true;
+      continue;
+    }
+
+    const normalized = line.trim().toLowerCase();
+    if (/^;=+\s*home after wipe mouth\s*=+\s*$/.test(normalized)) {
+      simplifyingHomeSection = true;
+      filtered.push(line);
+      continue;
+    }
+    if (/^;=+\s*home after wipe mouth end\s*=+\s*$/.test(normalized)) {
+      simplifyingHomeSection = false;
+      filtered.push(line);
+      continue;
+    }
+    if (simplifyingHomeSection && (
+      /g29_before_print_flag/i.test(line)
+      || /^\s*M622\s+J0(?:\s|$)/i.test(line)
+      || /^\s*M623(?:\s|$)/i.test(line)
+    )) {
+      continue;
+    }
+
+    filtered.push(line);
+  }
+
+  if (removingLevelingSection) {
+    throw new TemplateRenderError(`Profile ${sourceName} contains an unclosed automatic bed-leveling section.`);
+  }
+  if (simplifyingHomeSection) {
+    throw new TemplateRenderError(`Profile ${sourceName} contains an unclosed post-wipe homing section.`);
+  }
+  if (!removedLevelingSection) {
+    throw new TemplateRenderError(`Profile ${sourceName} does not contain the expected automatic bed-leveling section.`);
+  }
+  const activeDirective = filtered.find(isActiveBedLevelingDirective);
+  if (activeDirective) {
+    throw new TemplateRenderError(`Profile ${sourceName} still contains active bed-leveling directive "${activeDirective.trim()}".`);
+  }
+  return filtered;
+}
+
 function createTemplateContext(material, bounds) {
   const printMin = [
     Math.max(0, (340 - bounds.x) / 2),
@@ -224,7 +351,7 @@ function createTemplateContext(material, bounds) {
     max_layer_z: bounds.z,
     max_print_z: bounds.z,
     min_vitrification_temperature: material.vitrification,
-    nozzle_diameter: [0.4],
+    nozzle_diameter: [HARDENED_STEEL_NOZZLE.diameter],
     nozzle_temperature: [material.nozzle],
     nozzle_temperature_initial_layer: [material.nozzle],
     overall_chamber_temperature: 0,
@@ -242,7 +369,10 @@ function buildH2sDevice(profileSources, material, bounds) {
     "; SDSCPA 3D Printing Lab",
     `; Profile sources: ${PROFILE_REVISION}`,
     `; Printer: Bambu Lab H2S 0.4 mm | Material: ${material.name}`,
+    "; Filament source: AMS (automatic slot mapping)",
+    "; Automatic bed leveling: disabled",
   ];
+  const startGcode = renderBambuTemplate(startTemplate, context, "H2S start");
   return Object.freeze({
     mode: "FDM",
     internal: 0,
@@ -260,12 +390,12 @@ function buildH2sDevice(profileSources, material, bounds) {
       "M73 L{layer}",
       "M991 S0 P{layer-1} ; notify layer change",
     ],
-    gcodePre: [...profileHeader, ...renderBambuTemplate(startTemplate, context, "H2S start")],
+    gcodePre: [...profileHeader, ...removeAutomaticBedLeveling(startGcode, "H2S start")],
     gcodePost: renderBambuTemplate(endTemplate, context, "H2S end"),
     gcodeFExt: "gcode",
     gcodeTime: 1,
-    deviceName: "Bambu Lab H2S 0.4 nozzle",
-    extruders: [{ extFilament: 1.75, extNozzle: 0.4, extOffsetX: 0, extOffsetY: 0 }],
+    deviceName: "Bambu Lab H2S 0.4 hardened steel nozzle",
+    extruders: [{ extFilament: 1.75, extNozzle: HARDENED_STEEL_NOZZLE.diameter, extOffsetX: 0, extOffsetY: 0 }],
   });
 }
 
@@ -276,12 +406,14 @@ function buildP1sDevice(profileSources, material) {
   }
   return Object.freeze({
     ...source,
-    deviceName: "Bambu Lab P1S 0.4 nozzle",
+    deviceName: "Bambu Lab P1S 0.4 hardened steel nozzle",
     gcodePre: [
       "; SDSCPA 3D Printing Lab",
       `; Profile sources: ${PROFILE_REVISION}`,
       `; Printer: Bambu Lab P1S 0.4 mm | Material: ${material.name}`,
-      ...source.gcodePre,
+      "; Filament source: AMS (automatic slot mapping)",
+      "; Automatic bed leveling: disabled",
+      ...removeAutomaticBedLeveling(source.gcodePre, "P1S start"),
     ],
   });
 }
@@ -375,5 +507,6 @@ export {
   loadProfileSources,
   machineForKey,
   materialForKey,
+  removeAutomaticBedLeveling,
   qualityForKey,
 };

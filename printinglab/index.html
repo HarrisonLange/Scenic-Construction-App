@@ -95,7 +95,7 @@
           <p class="eyebrow">Print setup</p>
           <h2 id="settingsTitle">Basic settings</h2>
         </div>
-        <span class="step-pill">0.4 mm nozzle</span>
+        <span class="step-pill">AMS · 0.4 mm hardened steel</span>
       </div>
 
       <form id="sliceForm">
@@ -116,6 +116,7 @@
             <label><input type="radio" name="material" value="pla" checked><span><b>PLA</b><small>Best for class</small></span></label>
             <label><input type="radio" name="material" value="petg"><span><b>PETG</b><small>More durable</small></span></label>
           </div>
+          <p class="field-help">Filament feeds from the AMS. Bambu Studio will match this material to a loaded slot.</p>
         </fieldset>
 
         <fieldset>
@@ -164,15 +165,14 @@
           </button>
           <button class="button export-button" id="exportButton" type="button" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5l5 5 5-5M5 20h14"/></svg>
-            Download G-code
+            Download Bambu file
           </button>
-          <p class="teacher-check">Teacher: validate one test file in Bambu Studio before student production use.</p>
         </div>
       </form>
 
       <div class="result-card" id="resultCard" hidden>
         <div><span>Layers</span><strong id="resultLayers">—</strong></div>
-        <div><span>G-code</span><strong id="resultBytes">—</strong></div>
+        <div><span>Print file</span><strong id="resultBytes">—</strong></div>
         <div><span>Profile</span><strong id="resultProfile">—</strong></div>
       </div>
 

@@ -1,13 +1,16 @@
-const CACHE_NAME = "sdscpa-printing-lab-v6";
+const CACHE_NAME = "sdscpa-printing-lab-v12";
 const APP_FILES = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./gcode-package.js",
   "./profiles.js",
   "./icon.svg",
   "./manifest.webmanifest",
   "./THIRD_PARTY_NOTICES.md",
+  "./assets/package-thumbnail-512.png",
+  "./assets/package-thumbnail-128.png",
   "./licenses/KIRI-MOTO-MIT.txt",
   "./licenses/BAMBU-STUDIO-AGPL-3.0.txt",
   "./vendor/kiri/kiri-engine.js",
@@ -16,7 +19,9 @@ const APP_FILES = [
   "./vendor/wasm/manifold.wasm",
   "./vendor/profiles/h2s-start.json",
   "./vendor/profiles/h2s-end.json",
+  "./vendor/profiles/h2s-project-settings.json",
   "./vendor/profiles/p1s.json",
+  "./vendor/profiles/p1s-project-settings.json",
 ];
 
 async function cacheApplication() {
