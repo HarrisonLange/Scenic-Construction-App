@@ -429,8 +429,8 @@ function createDevice(machineKey, materialKey, bounds, profileSources) {
 function createProcess(materialKey, qualityKey, infillPercent, supportsEnabled, brimEnabled) {
   const material = requireRecord(MATERIALS, materialKey, "material");
   const quality = requireRecord(QUALITIES, qualityKey, "quality");
-  if (!Number.isFinite(infillPercent) || infillPercent < 5 || infillPercent > 40) {
-    throw new RangeError(`Infill must be from 5 to 40 percent. Received ${String(infillPercent)}.`);
+  if (!Number.isFinite(infillPercent) || infillPercent < 5 || infillPercent > 30) {
+    throw new RangeError(`Infill must be from 5 to 30 percent. Received ${String(infillPercent)}.`);
   }
   return Object.freeze({
     processName: `${quality.name} ${material.code}`,

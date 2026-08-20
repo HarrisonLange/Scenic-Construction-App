@@ -93,8 +93,8 @@ function serializeMeshToBinaryStl(mesh) {
 }
 
 function createCuraOverrides(machine, material, quality, infillPercent, supportsEnabled, brimEnabled) {
-  if (!Number.isFinite(infillPercent) || infillPercent < 5 || infillPercent > 40) {
-    throw new RangeError(`Infill must be from 5 to 40 percent. Received ${String(infillPercent)}.`);
+  if (!Number.isFinite(infillPercent) || infillPercent < 5 || infillPercent > 30) {
+    throw new RangeError(`Infill must be from 5 to 30 percent. Received ${String(infillPercent)}.`);
   }
   const fanPercent = Math.round(material.fan / 255 * 100);
   return Object.freeze([

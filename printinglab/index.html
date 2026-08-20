@@ -70,6 +70,7 @@
           <button class="tool-button" id="rotateYButton" type="button" title="Rotate 90 degrees around Y">Y <span>90°</span></button>
           <button class="tool-button" id="rotateZButton" type="button" title="Rotate 90 degrees around Z">Z <span>90°</span></button>
           <button class="tool-button" id="resetModelButton" type="button" title="Reset model orientation and scale">Reset</button>
+          <button class="tool-button clear-model-button" id="clearModelButton" type="button" title="Clear loaded model">Clear</button>
         </div>
 
         <div class="model-stats" id="modelStats" hidden aria-live="polite">
@@ -123,10 +124,10 @@
           <legend><span>3</span> Size &amp; quality</legend>
           <div class="scale-control">
             <div class="range-head">
-              <label class="field-label" for="scaleRange">Model scale</label>
-              <output id="scaleOutput" for="scaleRange">100%</output>
+              <label class="field-label" id="scaleLabel" for="scaleInput">Model scale</label>
+              <span class="percent-field"><input id="scaleInput" type="number" min="10" max="300" step="1" value="100" inputmode="numeric" disabled><span aria-hidden="true">%</span></span>
             </div>
-            <input id="scaleRange" type="range" min="10" max="300" step="5" value="100" disabled>
+            <input id="scaleRange" type="range" min="10" max="300" step="1" value="100" aria-labelledby="scaleLabel" disabled>
             <div class="range-scale" aria-hidden="true"><span>10%</span><span>Original</span><span>300%</span></div>
             <p class="field-help">Uniform scaling keeps the model proportions unchanged.</p>
           </div>
@@ -139,10 +140,10 @@
           </select>
 
           <div class="range-head">
-            <label class="field-label" for="infillRange">Infill</label>
-            <output id="infillOutput" for="infillRange">15%</output>
+            <label class="field-label" id="infillLabel" for="infillInput">Infill</label>
+            <span class="percent-field"><input id="infillInput" type="number" min="5" max="30" step="1" value="15" inputmode="numeric"><span aria-hidden="true">%</span></span>
           </div>
-          <input id="infillRange" type="range" min="5" max="40" step="5" value="15">
+          <input id="infillRange" type="range" min="5" max="30" step="1" value="15" aria-labelledby="infillLabel">
           <div class="range-scale" aria-hidden="true"><span>Light</span><span>Strong</span></div>
         </fieldset>
 

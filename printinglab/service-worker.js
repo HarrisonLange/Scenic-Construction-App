@@ -1,4 +1,4 @@
-const CACHE_NAME = "sdscpa-printing-lab-v15";
+const CACHE_NAME = "sdscpa-printing-lab-v17";
 const APP_FILES = [
   "./",
   "./index.html",

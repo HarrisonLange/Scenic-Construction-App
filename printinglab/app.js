@@ -11,6 +11,8 @@ import {
 } from "./profiles.js";
 
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
+const INFILL_LIMITS = Object.freeze({ min: 5, max: 30 });
+const SCALE_LIMITS = Object.freeze({ min: 10, max: 300 });
 const ENGINE_OPTIONS = Object.freeze({
   workURL: new URL("./vendor/kiri/kiri-worker.js", import.meta.url).href,
   poolURL: new URL("./vendor/kiri/kiri-pool.js", import.meta.url).href,
@@ -20,10 +22,11 @@ const elements = Object.freeze({
   bedLabel: document.getElementById("bedLabel"),
   brimToggle: document.getElementById("brimToggle"),
   chooseFileButton: document.getElementById("chooseFileButton"),
+  clearModelButton: document.getElementById("clearModelButton"),
   dropZone: document.getElementById("dropZone"),
   emptyState: document.getElementById("emptyState"),
   exportButton: document.getElementById("exportButton"),
-  infillOutput: document.getElementById("infillOutput"),
+  infillInput: document.getElementById("infillInput"),
   infillRange: document.getElementById("infillRange"),
   localBadgeText: document.getElementById("localBadgeText"),
   modelCanvas: document.getElementById("modelCanvas"),
@@ -44,7 +47,7 @@ const elements = Object.freeze({
   rotateXButton: document.getElementById("rotateXButton"),
   rotateYButton: document.getElementById("rotateYButton"),
   rotateZButton: document.getElementById("rotateZButton"),
-  scaleOutput: document.getElementById("scaleOutput"),
+  scaleInput: document.getElementById("scaleInput"),
   scaleRange: document.getElementById("scaleRange"),
   sliceButton: document.getElementById("sliceButton"),
   sliceForm: document.getElementById("sliceForm"),
@@ -279,7 +282,9 @@ function setBusy(busy) {
   elements.rotateYButton.disabled = busy;
   elements.rotateZButton.disabled = busy;
   elements.resetModelButton.disabled = busy;
+  elements.clearModelButton.disabled = busy;
   elements.scaleRange.disabled = busy || !state.model;
+  elements.scaleInput.disabled = busy || !state.model;
   refreshSliceReadiness();
 }
 
@@ -336,6 +341,20 @@ function createEngine() {
   return new Engine(ENGINE_OPTIONS);
 }
 
+function percentageInteger(rawValue, limits, label) {
+  const value = Number(rawValue);
+  if (!Number.isInteger(value) || value < limits.min || value > limits.max) {
+    throw new RangeError(`${label} must be a whole percentage from ${limits.min}% through ${limits.max}%. Received ${String(rawValue)}%.`);
+  }
+  return value;
+}
+
+function updatePercentageControl(range, input, value) {
+  const text = String(value);
+  range.value = text;
+  input.value = text;
+}
+
 function assertStlFile(file) {
   if (!file.name.toLowerCase().endsWith(".stl")) {
     throw new TypeError(`Unsupported file "${file.name}". Choose an STL file.`);
@@ -382,9 +401,9 @@ async function loadModel(file) {
   const sourceBuffer = await file.arrayBuffer();
   const parsed = await parseModel(file, sourceBuffer);
   updateState({ engine: parsed.engine, model: parsed.model, sourceBuffer, result: null, scalePercent: 100 });
-  elements.scaleRange.value = "100";
-  elements.scaleOutput.value = "100%";
+  updatePercentageControl(elements.scaleRange, elements.scaleInput, 100);
   elements.scaleRange.disabled = false;
+  elements.scaleInput.disabled = false;
   elements.emptyState.hidden = true;
   elements.viewerToolbar.hidden = false;
   elements.modelStats.hidden = false;
@@ -415,10 +434,31 @@ async function resetModel() {
     result: null,
     scalePercent: 100,
   });
-  elements.scaleRange.value = "100";
-  elements.scaleOutput.value = "100%";
+  updatePercentageControl(elements.scaleRange, elements.scaleInput, 100);
   updateModelDisplay();
   showStatus("success", "✓", "Model reset", "The original STL orientation has been restored.", Number.NaN);
+}
+
+function clearLoadedModel() {
+  if (!state.engine || !state.model) {
+    throw new Error("Load a model before clearing it.");
+  }
+  disposeObject(state.engine.widget.mesh);
+  preview.clearModel();
+  updateState({ engine: null, model: null, result: null, scalePercent: 100, sourceBuffer: null });
+  updatePercentageControl(elements.scaleRange, elements.scaleInput, 100);
+  elements.scaleRange.disabled = true;
+  elements.scaleInput.disabled = true;
+  elements.modelFile.value = "";
+  elements.modelName.textContent = "—";
+  elements.modelSize.textContent = "—";
+  elements.triangleCount.textContent = "—";
+  elements.emptyState.hidden = false;
+  elements.viewerToolbar.hidden = true;
+  elements.modelStats.hidden = true;
+  elements.exportButton.hidden = true;
+  elements.resultCard.hidden = true;
+  updatePrinter();
 }
 
 function scaleModel(scalePercent) {
@@ -426,9 +466,7 @@ function scaleModel(scalePercent) {
     showToast("Load an STL before scaling it.");
     return;
   }
-  if (!Number.isInteger(scalePercent) || scalePercent < 10 || scalePercent > 300) {
-    throw new RangeError(`Model scale must be a whole percentage from 10% through 300%. Received ${scalePercent}%.`);
-  }
+  percentageInteger(scalePercent, SCALE_LIMITS, "Model scale");
   if (scalePercent === state.scalePercent) return;
   clearResult();
   const scaleFactor = scalePercent / state.scalePercent;
@@ -447,6 +485,33 @@ function scaleModel(scalePercent) {
       Number.NaN,
     );
   }
+}
+
+function applyScalePercentage(rawValue) {
+  const value = percentageInteger(rawValue, SCALE_LIMITS, "Model scale");
+  updatePercentageControl(elements.scaleRange, elements.scaleInput, value);
+  scaleModel(value);
+}
+
+function applyInfillPercentage(rawValue) {
+  const value = percentageInteger(rawValue, INFILL_LIMITS, "Infill");
+  updatePercentageControl(elements.infillRange, elements.infillInput, value);
+  markSettingsChanged();
+}
+
+function commitTypedPercentage(range, input, applyValue, action) {
+  try {
+    applyValue(input.value);
+  } catch (error) {
+    input.value = range.value;
+    handleError(error, action);
+  }
+}
+
+function commitTypedPercentageOnEnter(event, range, input, applyValue, action) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  commitTypedPercentage(range, input, applyValue, action);
 }
 
 function rotateModel(x, y, z) {
@@ -774,17 +839,41 @@ elements.dropZone.addEventListener("drop", (event) => {
 });
 elements.printerSelect.addEventListener("change", updatePrinter);
 elements.infillRange.addEventListener("input", () => {
-  elements.infillOutput.value = `${elements.infillRange.value}%`;
-  markSettingsChanged();
+  applyInfillPercentage(elements.infillRange.value);
 });
+elements.infillInput.addEventListener("change", () => commitTypedPercentage(
+  elements.infillRange,
+  elements.infillInput,
+  applyInfillPercentage,
+  "Infill",
+));
+elements.infillInput.addEventListener("keydown", (event) => commitTypedPercentageOnEnter(
+  event,
+  elements.infillRange,
+  elements.infillInput,
+  applyInfillPercentage,
+  "Infill",
+));
 elements.scaleRange.addEventListener("input", () => {
-  elements.scaleOutput.value = `${elements.scaleRange.value}%`;
   try {
-    scaleModel(Number.parseInt(elements.scaleRange.value, 10));
+    applyScalePercentage(elements.scaleRange.value);
   } catch (error) {
     handleError(error, "Model scaling");
   }
 });
+elements.scaleInput.addEventListener("change", () => commitTypedPercentage(
+  elements.scaleRange,
+  elements.scaleInput,
+  applyScalePercentage,
+  "Model scaling",
+));
+elements.scaleInput.addEventListener("keydown", (event) => commitTypedPercentageOnEnter(
+  event,
+  elements.scaleRange,
+  elements.scaleInput,
+  applyScalePercentage,
+  "Model scaling",
+));
 elements.qualitySelect.addEventListener("change", markSettingsChanged);
 elements.supportsToggle.addEventListener("change", markSettingsChanged);
 elements.brimToggle.addEventListener("change", markSettingsChanged);
@@ -793,6 +882,13 @@ elements.rotateXButton.addEventListener("click", () => rotateModel(Math.PI / 2, 
 elements.rotateYButton.addEventListener("click", () => rotateModel(0, Math.PI / 2, 0));
 elements.rotateZButton.addEventListener("click", () => rotateModel(0, 0, Math.PI / 2));
 elements.resetModelButton.addEventListener("click", () => resetModel().catch((error) => handleError(error, "Model reset")));
+elements.clearModelButton.addEventListener("click", () => {
+  try {
+    clearLoadedModel();
+  } catch (error) {
+    handleError(error, "Model clearing");
+  }
+});
 elements.sliceForm.addEventListener("submit", (event) => {
   event.preventDefault();
   sliceModel().catch((error) => handleError(error, "Slicing"));

@@ -253,6 +253,7 @@ h1 { margin-bottom: 9px; font-size: clamp(25px, 3vw, 39px); line-height: 1.05; l
 }
 
 .tool-button span { color: var(--muted); font-weight: 600; }
+.clear-model-button { border-color: rgba(255, 107, 107, .45); color: #ffb0b0; }
 
 .model-stats {
   position: absolute;
@@ -343,7 +344,12 @@ select { width: 100%; min-height: 42px; border: 1px solid var(--line-strong); bo
 .segmented input:focus-visible + span { outline: 3px solid rgba(0, 174, 239, .3); outline-offset: 2px; }
 
 .range-head { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; }
-.range-head output { color: var(--cyan); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 850; }
+.percent-field { display: flex; align-items: center; min-height: 30px; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--panel-2); color: var(--cyan); }
+.percent-field:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 174, 239, .16); }
+.percent-field input { width: 53px; border: 0; padding: 5px 2px 5px 7px; outline: 0; background: transparent; color: inherit; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 850; text-align: right; }
+.percent-field span { padding-right: 7px; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 850; }
+.percent-field input:disabled { cursor: not-allowed; opacity: .45; }
+.percent-field:has(input:invalid) { border-color: var(--red); }
 input[type="range"] { width: 100%; accent-color: var(--cyan); }
 input[type="range"]:disabled { cursor: not-allowed; opacity: .45; }
 .range-scale { display: flex; justify-content: space-between; margin-top: 2px; color: #708097; font-size: 9px; }
