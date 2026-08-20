@@ -1,4 +1,4 @@
-const PROFILE_REVISION = "Bambu Studio 9a530f7 · Kiri:Moto d138275";
+const PROFILE_REVISION = "Bambu Studio 9a530f7 · CuraEngine 4.6.1";
 
 const HARDENED_STEEL_NOZZLE = Object.freeze({
   diameter: 0.4,
@@ -448,7 +448,7 @@ function createProcess(materialKey, qualityKey, infillPercent, supportsEnabled, 
     sliceFillRepeat: 1,
     sliceDetectThin: "basic",
     sliceSupportType: supportsEnabled ? "automatic" : "disabled",
-    sliceSupportTree: false,
+    sliceSupportTree: supportsEnabled,
     sliceSupportAngle: 50,
     sliceSupportDensity: 0.15,
     sliceSupportOffset: 0.5,

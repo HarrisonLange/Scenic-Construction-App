@@ -306,7 +306,7 @@ function plateJson(modelName, bounds, machine, material, quality) {
   });
 }
 
-function sliceInfo(modelName, machine, material, layers, supportsEnabled) {
+function sliceInfo(modelName, machine, material, layers, estimatedSeconds, supportsEnabled) {
   const name = xmlEscape(modelName);
   const layerEnd = Math.max(0, layers - 1);
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -314,7 +314,7 @@ function sliceInfo(modelName, machine, material, layers, supportsEnabled) {
   <header><header_item key="X-BBL-Client-Type" value="slicer"/><header_item key="X-BBL-Client-Version" value="02.08.02.60"/></header>
   <plate>
     <metadata key="index" value="1"/><metadata key="extruder_type" value="0"/><metadata key="nozzle_volume_type" value="0"/><metadata key="printer_model_id" value=""/><metadata key="nozzle_diameters" value="${machine.nozzle.diameter}"/>
-    <metadata key="timelapse_type" value="0"/><metadata key="prediction" value="0"/><metadata key="weight" value=""/><metadata key="pause_count" value="0"/><metadata key="first_layer_time" value="0.000000"/><metadata key="outside" value="false"/>
+    <metadata key="timelapse_type" value="0"/><metadata key="prediction" value="${estimatedSeconds}"/><metadata key="weight" value=""/><metadata key="pause_count" value="0"/><metadata key="first_layer_time" value="0.000000"/><metadata key="outside" value="false"/>
     <metadata key="support_used" value="${supportsEnabled ? "true" : "false"}"/><metadata key="label_object_enabled" value="false"/><metadata key="support_material_on_wipe_tower" value="false"/><metadata key="enable_filament_dynamic_map" value="false"/><metadata key="has_filament_switcher" value="false"/>
     <metadata key="filament_maps" value="1"/><metadata key="limit_filament_maps" value="0"/>
     <object identify_id="1" name="${name}" skipped="false"/>
@@ -377,6 +377,11 @@ function projectSettings(template, machine, material, quality, supportsEnabled, 
     print_settings_id: `${quality.name} ${quality.layerHeight.toFixed(2)} mm @SDSCPA`,
     supertack_plate_temp: plateTemperature,
     supertack_plate_temp_initial_layer: plateTemperature,
+    support_critical_regions_only: "0",
+    support_on_build_plate_only: "1",
+    support_remove_small_overhang: "1",
+    support_style: "default",
+    support_type: "tree(auto)",
     textured_plate_temp: plateTemperature,
     textured_plate_temp_initial_layer: plateTemperature,
   }, null, 2);
@@ -391,7 +396,7 @@ function filamentSequence() {
   return JSON.stringify({ plate_1: { nozzle_sequence: [0], optimal_assignment: [0], sequence: [1] } });
 }
 
-function assertPackageInputs(gcode, modelName, bounds, layers) {
+function assertPackageInputs(gcode, modelName, bounds, layers, estimatedSeconds) {
   if (typeof gcode !== "string" || gcode.length < 1000) {
     throw new TypeError("A Bambu print package requires validated G-code.");
   }
@@ -404,10 +409,13 @@ function assertPackageInputs(gcode, modelName, bounds, layers) {
   if (!Number.isInteger(layers) || layers < 1) {
     throw new RangeError("A Bambu print package requires a positive layer count.");
   }
+  if (!Number.isInteger(estimatedSeconds) || estimatedSeconds < 1) {
+    throw new RangeError("A Bambu print package requires a positive whole-second time estimate.");
+  }
 }
 
-function createGcode3mf(gcode, modelName, bounds, machine, material, quality, layers, projectSettingsTemplate, packageThumbnails, supportsEnabled, brimEnabled) {
-  assertPackageInputs(gcode, modelName, bounds, layers);
+function createGcode3mf(gcode, modelName, bounds, machine, material, quality, layers, estimatedSeconds, projectSettingsTemplate, packageThumbnails, supportsEnabled, brimEnabled) {
+  assertPackageInputs(gcode, modelName, bounds, layers, estimatedSeconds);
   if (!(packageThumbnails?.full instanceof Uint8Array) || !(packageThumbnails?.small instanceof Uint8Array)) {
     throw new TypeError("A Bambu print package requires full-size and small PNG thumbnails.");
   }
@@ -428,7 +436,7 @@ function createGcode3mf(gcode, modelName, bounds, machine, material, quality, la
     { name: "Metadata/_rels/model_settings.config.rels", contents: gcodeRelationships() },
     { name: "Metadata/cut_information.xml", contents: cutInformation() },
     { name: "Metadata/plate_1.json", contents: plateJson(modelName, bounds, machine, material, quality) },
-    { name: "Metadata/slice_info.config", contents: sliceInfo(modelName, machine, material, layers, supportsEnabled) },
+    { name: "Metadata/slice_info.config", contents: sliceInfo(modelName, machine, material, layers, estimatedSeconds, supportsEnabled) },
     { name: "Metadata/filament_sequence.json", contents: filamentSequence() },
     { name: "Metadata/plate_1.gcode.md5", contents: md5Hex(gcodeBytes) },
     { name: "Metadata/plate_1.gcode", contents: gcodeBytes },

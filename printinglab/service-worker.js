@@ -1,9 +1,11 @@
-const CACHE_NAME = "sdscpa-printing-lab-v12";
+const CACHE_NAME = "sdscpa-printing-lab-v15";
 const APP_FILES = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./cura-slicer.js",
+  "./gcode-time-estimates.js",
   "./gcode-package.js",
   "./profiles.js",
   "./icon.svg",
@@ -13,6 +15,8 @@ const APP_FILES = [
   "./assets/package-thumbnail-128.png",
   "./licenses/KIRI-MOTO-MIT.txt",
   "./licenses/BAMBU-STUDIO-AGPL-3.0.txt",
+  "./licenses/CURA-WASM-LICENSE.txt",
+  "./vendor/cura/cura-wasm.js",
   "./vendor/kiri/kiri-engine.js",
   "./vendor/kiri/kiri-worker.js",
   "./vendor/kiri/kiri-pool.js",

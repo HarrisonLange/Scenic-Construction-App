@@ -43,7 +43,7 @@
         </div>
         <div class="engine-note" aria-label="Slicing engine information">
           <span>Powered by</span>
-          <strong>Kiri:Moto + Orca profiles</strong>
+          <strong>Kiri:Moto preview + CuraEngine slicing</strong>
         </div>
       </div>
 
@@ -149,7 +149,7 @@
         <fieldset>
           <legend><span>4</span> Helpers</legend>
           <label class="switch-row" for="supportsToggle">
-            <span><b>Automatic supports</b><small>Add material under steep overhangs</small></span>
+            <span><b>Tree supports</b><small>Grow supports only from the build plate</small></span>
             <input id="supportsToggle" type="checkbox" role="switch"><i aria-hidden="true"></i>
           </label>
           <label class="switch-row" for="brimToggle">
@@ -172,6 +172,7 @@
 
       <div class="result-card" id="resultCard" hidden>
         <div><span>Layers</span><strong id="resultLayers">—</strong></div>
+        <div><span>Estimated time</span><strong id="resultTime">—</strong></div>
         <div><span>Print file</span><strong id="resultBytes">—</strong></div>
         <div><span>Profile</span><strong id="resultProfile">—</strong></div>
       </div>

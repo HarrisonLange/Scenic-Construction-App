@@ -4,7 +4,11 @@ This browser application performs all model processing and slicing locally on th
 
 ## Kiri:Moto
 
-The browser slicing engine is built from [GridSpace/grid-apps](https://github.com/GridSpace/grid-apps) commit `d138275bbe9d4e4030d8cb8b2dcf66607da9295a`. Kiri:Moto is Copyright 2014–2018 Stewart Allen and is distributed under the MIT License. The full license is included at `licenses/KIRI-MOTO-MIT.txt`.
+The STL parsing and 3D preview engine is built from [GridSpace/grid-apps](https://github.com/GridSpace/grid-apps) commit `d138275bbe9d4e4030d8cb8b2dcf66607da9295a`. Kiri:Moto is Copyright 2014–2018 Stewart Allen and is distributed under the MIT License. The full license is included at `licenses/KIRI-MOTO-MIT.txt`.
+
+## CuraEngine WebAssembly
+
+Local toolpath generation, including tree supports, uses [Cloud-CNC/cura-wasm](https://github.com/Cloud-CNC/cura-wasm) version `1.5.2`, which embeds Ultimaker CuraEngine `4.6.1` as WebAssembly. The combined MIT, LGPL-3.0-or-later, and AGPL-3.0-or-later license text supplied with that distribution is included at `licenses/CURA-WASM-LICENSE.txt`. The corresponding published source is available from the linked repository and its documented CuraEngine upstream.
 
 ## Bambu Studio profiles
 
