@@ -35,10 +35,18 @@ function installedBrowser() {
       page.on('dialog', (dialog) => dialog.dismiss());
       await page.goto(`http://127.0.0.1:8099/${route}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
       await page.waitForTimeout(700);
+      const routeUrl = page.url();
 
       let tested = 0;
       for (let pass = 0; pass < 2; pass += 1) {
-        const controls = await page.locator('button:visible, [role="tab"]:visible').elementHandles();
+        if (page.url() !== routeUrl) break;
+        let controls;
+        try {
+          controls = await page.locator('button:visible, [role="tab"]:visible').elementHandles();
+        } catch (error) {
+          if (/execution context was destroyed|navigation/i.test(error.message)) break;
+          throw error;
+        }
         for (const control of controls.slice(0, 100)) {
           let descriptor;
           try {

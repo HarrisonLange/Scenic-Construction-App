@@ -8,6 +8,10 @@ function curaOverride(key, value) {
   return Object.freeze({ key, value });
 }
 
+function curaExtruderOverride(key, value) {
+  return Object.freeze({ key, scope: "e0", value });
+}
+
 function transformedCoordinate(position, offset, matrix) {
   const x = position.getX(offset);
   const y = position.getY(offset);
@@ -114,25 +118,10 @@ function createCuraOverrides(machine, material, quality, infillPercent, supports
     curaOverride("top_layers", 4),
     curaOverride("infill_sparse_density", infillPercent),
     curaOverride("infill_pattern", "gyroid"),
-    curaOverride("material_diameter", 1.75),
-    curaOverride("material_flow", material.flow * 100),
-    curaOverride("material_print_temperature", material.nozzle),
-    curaOverride("material_print_temperature_layer_0", material.nozzle),
-    curaOverride("material_initial_print_temperature", material.nozzle),
-    curaOverride("material_final_print_temperature", material.nozzle),
-    curaOverride("material_bed_temperature", material.bed),
-    curaOverride("material_bed_temperature_layer_0", material.bed),
     curaOverride("speed_print", 110),
     curaOverride("speed_wall_0", 80),
     curaOverride("speed_travel", 300),
     curaOverride("speed_layer_0", 35),
-    curaOverride("cool_fan_speed", fanPercent),
-    curaOverride("cool_fan_speed_0", 0),
-    curaOverride("cool_fan_full_layer", material.key === "pla" ? 2 : 3),
-    curaOverride("cool_min_layer_time", 8),
-    curaOverride("retraction_amount", 0.8),
-    curaOverride("retraction_speed", 35),
-    curaOverride("retraction_hop", 0.2),
     curaOverride("relative_extrusion", true),
     curaOverride("support_enable", supportsEnabled),
     curaOverride("support_structure", "tree"),
@@ -149,6 +138,22 @@ function createCuraOverrides(machine, material, quality, infillPercent, supports
     curaOverride("support_xy_distance", 0.5),
     curaOverride("adhesion_type", brimEnabled ? "brim" : "none"),
     curaOverride("brim_width", 5),
+    curaExtruderOverride("material_diameter", 1.75),
+    curaExtruderOverride("material_flow", material.flow * 100),
+    curaExtruderOverride("material_flow_layer_0", material.flow * 100),
+    curaExtruderOverride("material_print_temperature", material.nozzle),
+    curaExtruderOverride("material_print_temperature_layer_0", material.nozzle),
+    curaExtruderOverride("material_initial_print_temperature", material.nozzle),
+    curaExtruderOverride("material_final_print_temperature", material.nozzle),
+    curaExtruderOverride("material_bed_temperature", material.bed),
+    curaExtruderOverride("material_bed_temperature_layer_0", material.bed),
+    curaExtruderOverride("cool_fan_speed", fanPercent),
+    curaExtruderOverride("cool_fan_speed_0", 0),
+    curaExtruderOverride("cool_fan_full_layer", material.key === "pla" ? 2 : 3),
+    curaExtruderOverride("cool_min_layer_time", 8),
+    curaExtruderOverride("retraction_amount", 0.8),
+    curaExtruderOverride("retraction_speed", 35),
+    curaExtruderOverride("retraction_hop", 0.2),
   ]);
 }
 

@@ -6,14 +6,15 @@ function positiveSeconds(value, label) {
   return Math.round(seconds);
 }
 
-function estimatedPrintSeconds(gcode, metadata) {
+function estimatedPrintSeconds(gcode, metadata, startupSeconds) {
   const metadataSeconds = positiveSeconds(metadata?.printTime, "CuraEngine print time");
+  const preparationSeconds = positiveSeconds(startupSeconds, "Printer startup time");
   const timeMarker = gcode.match(/(?:^|\n);TIME:(\d+(?:\.\d+)?)(?:\n|$)/i);
   if (!timeMarker) {
     throw new Error("CuraEngine G-code is missing its total print-time estimate.");
   }
   positiveSeconds(timeMarker[1], "CuraEngine G-code time");
-  return metadataSeconds;
+  return metadataSeconds + preparationSeconds;
 }
 
 function formattedDuration(seconds) {
@@ -39,10 +40,12 @@ function finalElapsedSeconds(lines) {
   return Math.max(...values);
 }
 
-function layerTimeCommand(layerIndex, elapsedSeconds, finalElapsed, totalSeconds, previousProgress, previousMinutes) {
-  const ratio = Math.max(0, Math.min(1, elapsedSeconds / finalElapsed));
-  const progress = Math.max(previousProgress, Math.min(99, Math.floor(ratio * 100)));
-  const minutes = Math.min(previousMinutes, Math.max(0, Math.floor(totalSeconds * (1 - ratio) / 60)));
+function layerTimeCommand(layerIndex, elapsedSeconds, finalElapsed, totalSeconds, startupSeconds, previousProgress, previousMinutes) {
+  const printRatio = Math.max(0, Math.min(1, elapsedSeconds / finalElapsed));
+  const printSeconds = totalSeconds - startupSeconds;
+  const overallRatio = (startupSeconds + elapsedSeconds) / totalSeconds;
+  const progress = Math.max(previousProgress, Math.min(99, Math.floor(overallRatio * 100)));
+  const minutes = Math.min(previousMinutes, Math.max(0, Math.ceil(printSeconds * (1 - printRatio) / 60)));
   return Object.freeze({
     command: `M73 L${layerIndex + 1}\nM73 P${progress} R${minutes}`,
     minutes,
@@ -50,8 +53,12 @@ function layerTimeCommand(layerIndex, elapsedSeconds, finalElapsed, totalSeconds
   });
 }
 
-function addBambuTimeEstimates(gcode, totalSeconds, expectedLayers) {
+function addBambuTimeEstimates(gcode, totalSeconds, expectedLayers, startupSeconds) {
   const seconds = positiveSeconds(totalSeconds, "Bambu print time");
+  const preparationSeconds = positiveSeconds(startupSeconds, "Printer startup time");
+  if (preparationSeconds >= seconds) {
+    throw new RangeError(`Printer startup time must be shorter than the total print time. Received ${preparationSeconds} of ${seconds} seconds.`);
+  }
   if (!Number.isInteger(expectedLayers) || expectedLayers < 1) {
     throw new RangeError(`Bambu time estimates require a positive layer count. Received ${String(expectedLayers)}.`);
   }
@@ -68,7 +75,7 @@ function addBambuTimeEstimates(gcode, totalSeconds, expectedLayers) {
   const finalElapsed = finalElapsedSeconds(lines);
   let elapsedSeconds = 0;
   let previousProgress = 0;
-  let previousMinutes = Math.floor(seconds / 60);
+  let previousMinutes = Math.ceil(seconds / 60);
   let layerCommands = 0;
   const output = [`M73 P0 R${previousMinutes}`];
 
@@ -87,6 +94,7 @@ function addBambuTimeEstimates(gcode, totalSeconds, expectedLayers) {
       elapsedSeconds,
       finalElapsed,
       seconds,
+      preparationSeconds,
       previousProgress,
       previousMinutes,
     );

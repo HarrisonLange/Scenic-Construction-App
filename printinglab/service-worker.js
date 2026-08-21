@@ -1,4 +1,4 @@
-const CACHE_NAME = "sdscpa-printing-lab-v17";
+const CACHE_NAME = "sdscpa-printing-lab-v21";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -11,8 +11,6 @@ const APP_FILES = [
   "./icon.svg",
   "./manifest.webmanifest",
   "./THIRD_PARTY_NOTICES.md",
-  "./assets/package-thumbnail-512.png",
-  "./assets/package-thumbnail-128.png",
   "./licenses/KIRI-MOTO-MIT.txt",
   "./licenses/BAMBU-STUDIO-AGPL-3.0.txt",
   "./licenses/CURA-WASM-LICENSE.txt",

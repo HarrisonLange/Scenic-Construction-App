@@ -16,6 +16,7 @@ const MACHINES = Object.freeze({
     width: 340,
     depth: 320,
     height: 340,
+    startupBaseSeconds: 240,
   }),
   p1s: Object.freeze({
     key: "p1s",
@@ -24,6 +25,7 @@ const MACHINES = Object.freeze({
     width: 256,
     depth: 256,
     height: 256,
+    startupBaseSeconds: 240,
   }),
 });
 
@@ -36,9 +38,10 @@ const MATERIALS = Object.freeze({
     nozzle: 220,
     bed: 55,
     fan: 255,
-    flow: 0.98,
+    flow: 1,
     maxFlow: 12,
     density: 1.24,
+    startupHeatingSeconds: 60,
     vitrification: 45,
   }),
   petg: Object.freeze({
@@ -49,9 +52,10 @@ const MATERIALS = Object.freeze({
     nozzle: 255,
     bed: 70,
     fan: 190,
-    flow: 0.95,
+    flow: 1,
     maxFlow: 12,
     density: 1.27,
+    startupHeatingSeconds: 120,
     vitrification: 70,
   }),
 });
@@ -110,39 +114,15 @@ async function fetchJsonWithRetries(url, attempts) {
   throw lastError;
 }
 
-async function fetchBytesAttempt(url) {
-  const response = await fetch(url, { cache: "no-cache" });
-  if (!response.ok) {
-    const responseBody = await response.text();
-    throw new ProfileLoadError(`Could not load package asset ${url}. HTTP ${response.status}. Response: ${responseBody.slice(0, 300)}`);
-  }
-  return new Uint8Array(await response.arrayBuffer());
-}
-
-async function fetchBytesWithRetries(url, attempts) {
-  let lastError = null;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      return await fetchBytesAttempt(url);
-    } catch (error) {
-      lastError = error;
-      console.warn("Package asset request failed", { url, attempt, attempts, error: error.message });
-    }
-  }
-  throw lastError;
-}
-
 async function loadProfileSources() {
-  const [h2sStart, h2sEnd, h2sProjectSettings, p1s, p1sProjectSettings, packageThumbnail, packageThumbnailSmall] = await Promise.all([
+  const [h2sStart, h2sEnd, h2sProjectSettings, p1s, p1sProjectSettings] = await Promise.all([
     fetchJsonWithRetries("vendor/profiles/h2s-start.json", 3),
     fetchJsonWithRetries("vendor/profiles/h2s-end.json", 3),
     fetchJsonWithRetries("vendor/profiles/h2s-project-settings.json", 3),
     fetchJsonWithRetries("vendor/profiles/p1s.json", 3),
     fetchJsonWithRetries("vendor/profiles/p1s-project-settings.json", 3),
-    fetchBytesWithRetries("assets/package-thumbnail-512.png", 3),
-    fetchBytesWithRetries("assets/package-thumbnail-128.png", 3),
   ]);
-  return Object.freeze({ h2sStart, h2sEnd, h2sProjectSettings, p1s, p1sProjectSettings, packageThumbnail, packageThumbnailSmall });
+  return Object.freeze({ h2sStart, h2sEnd, h2sProjectSettings, p1s, p1sProjectSettings });
 }
 
 function evaluateTemplateExpression(expression, context) {

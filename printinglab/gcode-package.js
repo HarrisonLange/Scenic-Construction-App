@@ -315,10 +315,10 @@ function sliceInfo(modelName, machine, material, layers, estimatedSeconds, suppo
   <plate>
     <metadata key="index" value="1"/><metadata key="extruder_type" value="0"/><metadata key="nozzle_volume_type" value="0"/><metadata key="printer_model_id" value=""/><metadata key="nozzle_diameters" value="${machine.nozzle.diameter}"/>
     <metadata key="timelapse_type" value="0"/><metadata key="prediction" value="${estimatedSeconds}"/><metadata key="weight" value=""/><metadata key="pause_count" value="0"/><metadata key="first_layer_time" value="0.000000"/><metadata key="outside" value="false"/>
-    <metadata key="support_used" value="${supportsEnabled ? "true" : "false"}"/><metadata key="label_object_enabled" value="false"/><metadata key="support_material_on_wipe_tower" value="false"/><metadata key="enable_filament_dynamic_map" value="false"/><metadata key="has_filament_switcher" value="false"/>
+    <metadata key="support_used" value="${supportsEnabled ? "true" : "false"}"/><metadata key="label_object_enabled" value="false"/><metadata key="support_material_on_wipe_tower" value="false"/><metadata key="enable_filament_dynamic_map" value="false"/><metadata key="has_filament_switcher" value="true"/>
     <metadata key="filament_maps" value="1"/><metadata key="limit_filament_maps" value="0"/>
     <object identify_id="1" name="${name}" skipped="false"/>
-    <filament id="1" tray_info_idx="" type="${xmlEscape(material.code)}" color="#00AEEF" used_m="0.00" used_g="0.00" group_id="0" nozzle_diameter="${machine.nozzle.diameter.toFixed(2)}" volume_type="${xmlEscape(machine.nozzle.volumeType)}" used_for_object="true" used_for_support="${supportsEnabled ? "true" : "false"}" total_load_time="0.00" total_unload_time="0.00"/>
+    <filament id="1" tray_info_idx="${xmlEscape(material.filamentId)}" type="${xmlEscape(material.code)}" color="#00AEEF" used_m="0.00" used_g="0.00" group_id="0" nozzle_diameter="${machine.nozzle.diameter.toFixed(2)}" volume_type="${xmlEscape(machine.nozzle.volumeType)}" used_for_object="true" used_for_support="${supportsEnabled ? "true" : "false"}" total_load_time="0.00" total_unload_time="0.00"/>
     <nozzle id="0" extruder_id="1" nozzle_diameter="${machine.nozzle.diameter}" volume_type="${xmlEscape(machine.nozzle.volumeType)}"/>
     <layer_filament_lists><layer_filament_list filament_list="0" layer_ranges="0 ${layerEnd}"/></layer_filament_lists>
   </plate>
@@ -359,6 +359,7 @@ function projectSettings(template, machine, material, quality, supportsEnabled, 
     hot_plate_temp: plateTemperature,
     hot_plate_temp_initial_layer: plateTemperature,
     initial_layer_print_height: String(quality.firstLayerHeight),
+    has_filament_switcher: "1",
     layer_height: String(quality.layerHeight),
     name: "project_settings",
     nozzle_diameter: [String(machine.nozzle.diameter)],
@@ -375,6 +376,7 @@ function projectSettings(template, machine, material, quality, supportsEnabled, 
     printer_technology: "FFF",
     printer_variant: String(machine.nozzle.diameter),
     print_settings_id: `${quality.name} ${quality.layerHeight.toFixed(2)} mm @SDSCPA`,
+    single_extruder_multi_material: "1",
     supertack_plate_temp: plateTemperature,
     supertack_plate_temp_initial_layer: plateTemperature,
     support_critical_regions_only: "0",

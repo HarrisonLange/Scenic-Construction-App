@@ -119,6 +119,19 @@ function createBedGrid(three, machine) {
   return group;
 }
 
+async function pngBytes(canvas) {
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (!result) {
+        reject(new Error("The browser could not encode the model thumbnail as PNG."));
+        return;
+      }
+      resolve(result);
+    }, "image/png");
+  });
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
 function createPreview(canvas) {
   const three = globalThis.THREE;
   if (!three) {
@@ -138,6 +151,7 @@ function createPreview(canvas) {
   scene.add(keyLight);
 
   let bedObject = null;
+  let modelBounds = null;
   let modelObject = null;
   let target = new three.Vector3(0, 0, 30);
   let distance = 520;
@@ -196,6 +210,7 @@ function createPreview(canvas) {
     modelObject = new three.Group();
     modelObject.add(solid, wire);
     scene.add(modelObject);
+    modelBounds = Object.freeze({ x: bounds.x, y: bounds.y, z: bounds.z });
     target = new three.Vector3(0, 0, bounds.z * 0.42);
     distance = Math.max(180, Math.max(bounds.x, bounds.y, bounds.z) * 2.6);
     updateCamera();
@@ -206,7 +221,71 @@ function createPreview(canvas) {
     scene.remove(modelObject);
     disposeObject(modelObject);
     modelObject = null;
+    modelBounds = null;
     updateCamera();
+  }
+
+  async function renderModelThumbnail(size) {
+    if (!modelObject || !modelBounds) {
+      throw new Error("Load a model before creating its print thumbnail.");
+    }
+    if (!Number.isInteger(size) || size < 1) {
+      throw new RangeError(`Model thumbnail size must be a positive whole number. Received ${String(size)}.`);
+    }
+    const thumbnailCamera = camera.clone();
+    const thumbnailTarget = new three.Vector3(0, 0, modelBounds.z * 0.42);
+    const thumbnailDistance = Math.max(modelBounds.x, modelBounds.y, modelBounds.z) * 2.8;
+    const horizontal = Math.cos(0.62) * thumbnailDistance;
+    thumbnailCamera.aspect = 1;
+    thumbnailCamera.position.set(
+      Math.cos(-0.72) * horizontal,
+      Math.sin(-0.72) * horizontal,
+      Math.sin(0.62) * thumbnailDistance + thumbnailTarget.z * 0.2,
+    );
+    thumbnailCamera.lookAt(thumbnailTarget);
+    thumbnailCamera.updateProjectionMatrix();
+
+    const renderTarget = new three.WebGLRenderTarget(size, size);
+    const previousTarget = renderer.getRenderTarget();
+    const previousClearColor = renderer.getClearColor(new three.Color()).clone();
+    const previousClearAlpha = renderer.getClearAlpha();
+    const previousBedVisibility = bedObject?.visible;
+    if (bedObject) bedObject.visible = false;
+    try {
+      renderer.setRenderTarget(renderTarget);
+      renderer.setClearColor(0x08111f, 1);
+      renderer.clear();
+      renderer.render(scene, thumbnailCamera);
+      const pixels = new Uint8Array(size * size * 4);
+      renderer.readRenderTargetPixels(renderTarget, 0, 0, size, size, pixels);
+      const flippedPixels = new Uint8ClampedArray(pixels.length);
+      const rowBytes = size * 4;
+      for (let row = 0; row < size; row += 1) {
+        const sourceStart = (size - row - 1) * rowBytes;
+        flippedPixels.set(pixels.subarray(sourceStart, sourceStart + rowBytes), row * rowBytes);
+      }
+      const thumbnailCanvas = document.createElement("canvas");
+      thumbnailCanvas.width = size;
+      thumbnailCanvas.height = size;
+      const context = thumbnailCanvas.getContext("2d");
+      if (!context) {
+        throw new Error("The browser could not create a two-dimensional model thumbnail canvas.");
+      }
+      context.putImageData(new ImageData(flippedPixels, size, size), 0, 0);
+      return await pngBytes(thumbnailCanvas);
+    } finally {
+      renderer.setRenderTarget(previousTarget);
+      renderer.setClearColor(previousClearColor, previousClearAlpha);
+      if (bedObject && previousBedVisibility !== undefined) bedObject.visible = previousBedVisibility;
+      renderTarget.dispose();
+      updateCamera();
+    }
+  }
+
+  async function renderThumbnails() {
+    const full = await renderModelThumbnail(512);
+    const small = await renderModelThumbnail(128);
+    return Object.freeze({ full, small });
   }
 
   canvas.addEventListener("pointerdown", (event) => {
@@ -232,7 +311,7 @@ function createPreview(canvas) {
   }, { passive: false });
   globalThis.addEventListener("resize", resize);
   resize();
-  return Object.freeze({ clearModel, resize, setBed, setModel });
+  return Object.freeze({ clearModel, renderThumbnails, resize, setBed, setModel });
 }
 
 const preview = createPreview(elements.modelCanvas);
@@ -536,7 +615,7 @@ function localSliceProgress(percent, supportsEnabled) {
   showStatus("working", "…", "Slicing on this Chromebook", message, progress);
 }
 
-function createBambuStudioCompatibleGcode(gcode, machine, material, layers, bounds, supportsEnabled, estimatedSeconds) {
+function createBambuStudioCompatibleGcode(gcode, machine, material, layers, bounds, supportsEnabled, estimatedSeconds, startupSeconds) {
   if (!Number.isInteger(layers) || layers < 1) {
     throw new RangeError(`Bambu Studio export requires a positive layer count. Received ${String(layers)}.`);
   }
@@ -546,6 +625,7 @@ function createBambuStudioCompatibleGcode(gcode, machine, material, layers, boun
     "; HEADER_BLOCK_START",
     "; generated by BambuStudio-compatible SDSCPA 3D Printing Lab",
     `; model printing time: ${formattedDuration(estimatedSeconds)}; total estimated time: ${formattedDuration(estimatedSeconds)}`,
+    `; startup time: ${formattedDuration(startupSeconds)}`,
     `; total layer number: ${layers}`,
     `; filament_density: ${material.density}`,
     "; filament_diameter: 1.75",
@@ -556,6 +636,7 @@ function createBambuStudioCompatibleGcode(gcode, machine, material, layers, boun
     "; filament_colour = #00AEEF",
     `; filament_density = ${material.density}`,
     "; filament_diameter = 1.75",
+    `; filament_flow_ratio = ${material.flow}`,
     `; filament_ids = ${material.filamentId}`,
     "; filament_map = 1",
     `; filament_type = ${material.code}`,
@@ -606,10 +687,12 @@ function validateGcode(gcode, machine) {
     [/(?:^|\n); support_type = tree\(auto\)(?:\n|$)/m, "tree-support type"],
     [/(?:^|\n); support_on_build_plate_only = 1(?:\n|$)/m, "build-plate-only support placement"],
     [/(?:^|\n); model printing time: .+; total estimated time: .+(?:\n|$)/m, "print-time estimate header"],
+    [/(?:^|\n); startup time: .+(?:\n|$)/m, "startup-time estimate header"],
     [/(?:^|\n)M73 P0 R\d+(?:\n|$)/m, "initial progress and time-left command"],
     [/(?:^|\n)M73 L1(?:\n|$)/m, "first-layer progress command"],
     [/(?:^|\n)M73 P100 R0(?:\n|$)/m, "completed progress and time-left command"],
     [/(?:^|\n); filament_ids = GF(?:L|G)99(?:\n|$)/m, "generic AMS filament identifier"],
+    [/(?:^|\n); filament_flow_ratio = 1(?:\n|$)/m, "100% filament flow ratio"],
     [/(?:^|\n); Filament source: AMS \(automatic slot mapping\)(?:\n|$)/m, "AMS filament source"],
     [/(?:^|\n); Automatic bed leveling: disabled(?:\n|$)/m, "disabled automatic bed leveling marker"],
     [/(?:^|\n)M620 M\b/m, "AMS remapping command M620 M"],
@@ -682,11 +765,13 @@ async function sliceModel() {
   const profileSources = await state.profileSourcesPromise;
   const device = createDevice(machineKey, materialKey, bounds, profileSources);
   const material = materialForKey(materialKey);
+  const startupSeconds = machine.startupBaseSeconds + material.startupHeatingSeconds;
   const quality = qualityForKey(qualityKey);
   const supportsEnabled = elements.supportsToggle.checked;
   const brimEnabled = elements.brimToggle.checked;
   const overrides = createCuraOverrides(machine, material, quality, infill, supportsEnabled, brimEnabled);
   const stlBuffer = serializeMeshToBinaryStl(state.engine.widget.mesh);
+  const packageThumbnails = await preview.renderThumbnails();
 
   setBusy(true);
   showStatus(
@@ -701,9 +786,9 @@ async function sliceModel() {
     showStatus("working", "…", "Slicing on this Chromebook", "Writing and checking G-code.", 0.94);
     const rawGcode = injectDeviceGcode(sliced.gcode, device);
     const layers = layerCountFromGcode(rawGcode);
-    const estimatedSeconds = estimatedPrintSeconds(rawGcode, sliced.metadata);
-    const timedGcode = addBambuTimeEstimates(rawGcode, estimatedSeconds, layers);
-    const gcode = createBambuStudioCompatibleGcode(timedGcode, machine, material, layers, bounds, supportsEnabled, estimatedSeconds);
+    const estimatedSeconds = estimatedPrintSeconds(rawGcode, sliced.metadata, startupSeconds);
+    const timedGcode = addBambuTimeEstimates(rawGcode, estimatedSeconds, layers, startupSeconds);
+    const gcode = createBambuStudioCompatibleGcode(timedGcode, machine, material, layers, bounds, supportsEnabled, estimatedSeconds, startupSeconds);
     const bytes = validateGcode(gcode, machine);
     const result = Object.freeze({
       bounds,
@@ -715,9 +800,10 @@ async function sliceModel() {
       machine,
       material,
       metadata: sliced.metadata,
-      packageThumbnails: Object.freeze({ full: profileSources.packageThumbnail, small: profileSources.packageThumbnailSmall }),
+      packageThumbnails,
       projectSettings: machineKey === "h2s" ? profileSources.h2sProjectSettings : profileSources.p1sProjectSettings,
       quality,
+      startupSeconds,
       supportsEnabled,
     });
     updateState({ result });
@@ -727,7 +813,7 @@ async function sliceModel() {
     elements.resultTime.textContent = formattedDuration(result.estimatedSeconds);
     elements.resultCard.hidden = false;
     elements.exportButton.hidden = false;
-    showStatus("success", "✓", "Bambu print file ready", `Estimated time: ${formattedDuration(result.estimatedSeconds)}. Checked for ${machine.name} and AMS use.`, Number.NaN);
+    showStatus("success", "✓", "Bambu print file ready", `Estimated time: ${formattedDuration(result.estimatedSeconds)}, including ${formattedDuration(result.startupSeconds)} startup. Checked for ${machine.name} and AMS use.`, Number.NaN);
   } finally {
     setBusy(false);
   }
